@@ -988,5 +988,338 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Traumsymbol-Bibliothek API-Routen
+
+  // Kulturen
+  app.get('/api/cultures', async (req, res) => {
+    try {
+      const cultures = await storage.getAllCultures();
+      res.json(cultures);
+    } catch (error) {
+      console.error('Error fetching cultures:', error);
+      res.status(500).json({ message: 'Fehler beim Abrufen der Kulturen' });
+    }
+  });
+
+  app.get('/api/cultures/:id', async (req, res) => {
+    try {
+      const culture = await storage.getCulture(parseInt(req.params.id));
+      
+      if (!culture) {
+        return res.status(404).json({ message: 'Kultur nicht gefunden' });
+      }
+      
+      res.json(culture);
+    } catch (error) {
+      console.error('Error fetching culture:', error);
+      res.status(500).json({ message: 'Fehler beim Abrufen der Kultur' });
+    }
+  });
+
+  app.post('/api/cultures', authenticateJWT, async (req, res) => {
+    try {
+      const culture = await storage.createCulture(req.body);
+      res.status(201).json(culture);
+    } catch (error) {
+      console.error('Error creating culture:', error);
+      res.status(500).json({ message: 'Fehler beim Erstellen der Kultur' });
+    }
+  });
+
+  app.put('/api/cultures/:id', authenticateJWT, async (req, res) => {
+    try {
+      const culture = await storage.updateCulture(parseInt(req.params.id), req.body);
+      
+      if (!culture) {
+        return res.status(404).json({ message: 'Kultur nicht gefunden' });
+      }
+      
+      res.json(culture);
+    } catch (error) {
+      console.error('Error updating culture:', error);
+      res.status(500).json({ message: 'Fehler beim Aktualisieren der Kultur' });
+    }
+  });
+
+  app.delete('/api/cultures/:id', authenticateJWT, async (req, res) => {
+    try {
+      const deleted = await storage.deleteCulture(parseInt(req.params.id));
+      
+      if (!deleted) {
+        return res.status(404).json({ message: 'Kultur nicht gefunden' });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting culture:', error);
+      res.status(500).json({ message: 'Fehler beim Löschen der Kultur' });
+    }
+  });
+
+  // Traumsymbole
+  app.get('/api/dream-symbols', async (req, res) => {
+    try {
+      const { category, query } = req.query;
+      
+      let symbols;
+      if (category) {
+        symbols = await storage.getDreamSymbolsByCategory(category as string);
+      } else if (query) {
+        symbols = await storage.searchDreamSymbols(query as string);
+      } else {
+        symbols = await storage.getAllDreamSymbols();
+      }
+      
+      res.json(symbols);
+    } catch (error) {
+      console.error('Error fetching dream symbols:', error);
+      res.status(500).json({ message: 'Fehler beim Abrufen der Traumsymbole' });
+    }
+  });
+
+  app.get('/api/dream-symbols/:id', async (req, res) => {
+    try {
+      const symbol = await storage.getDreamSymbol(parseInt(req.params.id));
+      
+      if (!symbol) {
+        return res.status(404).json({ message: 'Traumsymbol nicht gefunden' });
+      }
+      
+      res.json(symbol);
+    } catch (error) {
+      console.error('Error fetching dream symbol:', error);
+      res.status(500).json({ message: 'Fehler beim Abrufen des Traumsymbols' });
+    }
+  });
+
+  app.post('/api/dream-symbols', authenticateJWT, async (req, res) => {
+    try {
+      const symbol = await storage.createDreamSymbol(req.body);
+      res.status(201).json(symbol);
+    } catch (error) {
+      console.error('Error creating dream symbol:', error);
+      res.status(500).json({ message: 'Fehler beim Erstellen des Traumsymbols' });
+    }
+  });
+
+  app.put('/api/dream-symbols/:id', authenticateJWT, async (req, res) => {
+    try {
+      const symbol = await storage.updateDreamSymbol(parseInt(req.params.id), req.body);
+      
+      if (!symbol) {
+        return res.status(404).json({ message: 'Traumsymbol nicht gefunden' });
+      }
+      
+      res.json(symbol);
+    } catch (error) {
+      console.error('Error updating dream symbol:', error);
+      res.status(500).json({ message: 'Fehler beim Aktualisieren des Traumsymbols' });
+    }
+  });
+
+  app.delete('/api/dream-symbols/:id', authenticateJWT, async (req, res) => {
+    try {
+      const deleted = await storage.deleteDreamSymbol(parseInt(req.params.id));
+      
+      if (!deleted) {
+        return res.status(404).json({ message: 'Traumsymbol nicht gefunden' });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting dream symbol:', error);
+      res.status(500).json({ message: 'Fehler beim Löschen des Traumsymbols' });
+    }
+  });
+
+  // Kulturelle Interpretationen
+  app.get('/api/cultural-interpretations', async (req, res) => {
+    try {
+      const { symbolId, cultureId } = req.query;
+      
+      let interpretations;
+      if (symbolId) {
+        interpretations = await storage.getCulturalInterpretationsBySymbolId(parseInt(symbolId as string));
+      } else if (cultureId) {
+        interpretations = await storage.getCulturalInterpretationsByCultureId(parseInt(cultureId as string));
+      } else {
+        return res.status(400).json({ message: 'Entweder symbolId oder cultureId muss angegeben werden' });
+      }
+      
+      res.json(interpretations);
+    } catch (error) {
+      console.error('Error fetching cultural interpretations:', error);
+      res.status(500).json({ message: 'Fehler beim Abrufen der kulturellen Interpretationen' });
+    }
+  });
+
+  app.get('/api/cultural-interpretations/:id', async (req, res) => {
+    try {
+      const interpretation = await storage.getCulturalInterpretation(parseInt(req.params.id));
+      
+      if (!interpretation) {
+        return res.status(404).json({ message: 'Kulturelle Interpretation nicht gefunden' });
+      }
+      
+      res.json(interpretation);
+    } catch (error) {
+      console.error('Error fetching cultural interpretation:', error);
+      res.status(500).json({ message: 'Fehler beim Abrufen der kulturellen Interpretation' });
+    }
+  });
+
+  app.post('/api/cultural-interpretations', authenticateJWT, async (req, res) => {
+    try {
+      const interpretation = await storage.createCulturalInterpretation(req.body);
+      res.status(201).json(interpretation);
+    } catch (error) {
+      console.error('Error creating cultural interpretation:', error);
+      res.status(500).json({ message: 'Fehler beim Erstellen der kulturellen Interpretation' });
+    }
+  });
+
+  app.put('/api/cultural-interpretations/:id', authenticateJWT, async (req, res) => {
+    try {
+      const interpretation = await storage.updateCulturalInterpretation(parseInt(req.params.id), req.body);
+      
+      if (!interpretation) {
+        return res.status(404).json({ message: 'Kulturelle Interpretation nicht gefunden' });
+      }
+      
+      res.json(interpretation);
+    } catch (error) {
+      console.error('Error updating cultural interpretation:', error);
+      res.status(500).json({ message: 'Fehler beim Aktualisieren der kulturellen Interpretation' });
+    }
+  });
+
+  app.delete('/api/cultural-interpretations/:id', authenticateJWT, async (req, res) => {
+    try {
+      const deleted = await storage.deleteCulturalInterpretation(parseInt(req.params.id));
+      
+      if (!deleted) {
+        return res.status(404).json({ message: 'Kulturelle Interpretation nicht gefunden' });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting cultural interpretation:', error);
+      res.status(500).json({ message: 'Fehler beim Löschen der kulturellen Interpretation' });
+    }
+  });
+
+  // Symbol-Vergleiche
+  app.get('/api/symbol-comparisons', async (req, res) => {
+    try {
+      const { symbolId } = req.query;
+      
+      if (!symbolId) {
+        return res.status(400).json({ message: 'symbolId muss angegeben werden' });
+      }
+      
+      const comparisons = await storage.getSymbolComparisonsBySymbolId(parseInt(symbolId as string));
+      res.json(comparisons);
+    } catch (error) {
+      console.error('Error fetching symbol comparisons:', error);
+      res.status(500).json({ message: 'Fehler beim Abrufen der Symbol-Vergleiche' });
+    }
+  });
+
+  app.get('/api/symbol-comparisons/:id', async (req, res) => {
+    try {
+      const comparison = await storage.getSymbolComparison(parseInt(req.params.id));
+      
+      if (!comparison) {
+        return res.status(404).json({ message: 'Symbol-Vergleich nicht gefunden' });
+      }
+      
+      res.json(comparison);
+    } catch (error) {
+      console.error('Error fetching symbol comparison:', error);
+      res.status(500).json({ message: 'Fehler beim Abrufen des Symbol-Vergleichs' });
+    }
+  });
+
+  app.post('/api/symbol-comparisons', authenticateJWT, async (req, res) => {
+    try {
+      const comparison = await storage.createSymbolComparison(req.body);
+      res.status(201).json(comparison);
+    } catch (error) {
+      console.error('Error creating symbol comparison:', error);
+      res.status(500).json({ message: 'Fehler beim Erstellen des Symbol-Vergleichs' });
+    }
+  });
+
+  app.put('/api/symbol-comparisons/:id', authenticateJWT, async (req, res) => {
+    try {
+      const comparison = await storage.updateSymbolComparison(parseInt(req.params.id), req.body);
+      
+      if (!comparison) {
+        return res.status(404).json({ message: 'Symbol-Vergleich nicht gefunden' });
+      }
+      
+      res.json(comparison);
+    } catch (error) {
+      console.error('Error updating symbol comparison:', error);
+      res.status(500).json({ message: 'Fehler beim Aktualisieren des Symbol-Vergleichs' });
+    }
+  });
+
+  app.delete('/api/symbol-comparisons/:id', authenticateJWT, async (req, res) => {
+    try {
+      const deleted = await storage.deleteSymbolComparison(parseInt(req.params.id));
+      
+      if (!deleted) {
+        return res.status(404).json({ message: 'Symbol-Vergleich nicht gefunden' });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting symbol comparison:', error);
+      res.status(500).json({ message: 'Fehler beim Löschen des Symbol-Vergleichs' });
+    }
+  });
+
+  // Benutzer-Favoriten
+  app.get('/api/user/symbol-favorites', authenticateJWT, async (req, res) => {
+    try {
+      const favorites = await storage.getUserSymbolFavoritesByUserId(req.user!.id);
+      res.json(favorites);
+    } catch (error) {
+      console.error('Error fetching user symbol favorites:', error);
+      res.status(500).json({ message: 'Fehler beim Abrufen der Benutzer-Favoriten' });
+    }
+  });
+
+  app.post('/api/user/symbol-favorites', authenticateJWT, async (req, res) => {
+    try {
+      const favorite = await storage.createUserSymbolFavorite({
+        userId: req.user!.id,
+        symbolId: req.body.symbolId,
+        notes: req.body.notes
+      });
+      
+      res.status(201).json(favorite);
+    } catch (error) {
+      console.error('Error creating user symbol favorite:', error);
+      res.status(500).json({ message: 'Fehler beim Erstellen des Benutzer-Favoriten' });
+    }
+  });
+
+  app.delete('/api/user/symbol-favorites/:id', authenticateJWT, async (req, res) => {
+    try {
+      const deleted = await storage.deleteUserSymbolFavorite(parseInt(req.params.id));
+      
+      if (!deleted) {
+        return res.status(404).json({ message: 'Benutzer-Favorit nicht gefunden' });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting user symbol favorite:', error);
+      res.status(500).json({ message: 'Fehler beim Löschen des Benutzer-Favoriten' });
+    }
+  });
+
   return httpServer;
 }

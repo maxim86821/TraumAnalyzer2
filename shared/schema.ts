@@ -390,3 +390,126 @@ export type InsertDreamContentEntry = z.infer<typeof insertDreamContentEntrySche
 
 export type ContentComment = typeof contentComments.$inferSelect;
 export type InsertContentComment = z.infer<typeof insertContentCommentSchema>;
+
+// Kulturelle Traumsymbol-Bibliothek
+
+// Kultur-Tabelle für die Verwaltung verschiedener kultureller Kontexte
+export const cultures = pgTable("cultures", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(), // Name der Kultur (z.B. "Westlich", "Chinesisch", "Indianisch")
+  description: text("description").notNull(), // Beschreibung der Kultur und ihrer Traumsymbolik
+  imageUrl: text("image_url"), // Optionales repräsentatives Bild
+  region: text("region"), // Geografische Region
+  historicalContext: text("historical_context"), // Historischer Kontext
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert-Schema für Kulturen
+export const insertCultureSchema = createInsertSchema(cultures).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  name: z.string().min(2, { message: "Name muss mindestens 2 Zeichen lang sein" }),
+  description: z.string().min(10, { message: "Beschreibung muss mindestens 10 Zeichen lang sein" }),
+});
+
+// Traumsymbol-Tabelle
+export const dreamSymbols = pgTable("dream_symbols", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(), // Name des Symbols (z.B. "Wasser", "Schlange", "Fliegen")
+  generalMeaning: text("general_meaning").notNull(), // Allgemeine Symbolbedeutung
+  imageUrl: text("image_url"), // Optionales Bild
+  category: text("category").notNull(), // Kategorie (z.B. "Natur", "Tiere", "Objekte", "Handlungen")
+  tags: text("tags").array(), // Tags für bessere Suche
+  popularity: integer("popularity").notNull().default(0), // Beliebtheit/Häufigkeit in Träumen (0-100)
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert-Schema für Traumsymbole
+export const insertDreamSymbolSchema = createInsertSchema(dreamSymbols).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  name: z.string().min(2, { message: "Name muss mindestens 2 Zeichen lang sein" }),
+  generalMeaning: z.string().min(10, { message: "Bedeutung muss mindestens 10 Zeichen lang sein" }),
+  category: z.string().min(2, { message: "Kategorie muss angegeben werden" }),
+  tags: z.array(z.string()).optional(),
+  popularity: z.number().min(0).max(100).default(50),
+});
+
+// Kulturspezifische Symbolinterpretationen
+export const culturalSymbolInterpretations = pgTable("cultural_symbol_interpretations", {
+  id: serial("id").primaryKey(),
+  symbolId: integer("symbol_id").notNull(), // Referenz zum Traumsymbol
+  cultureId: integer("culture_id").notNull(), // Referenz zur Kultur
+  interpretation: text("interpretation").notNull(), // Kulturspezifische Interpretation
+  examples: text("examples"), // Beispiele aus dieser Kultur
+  literaryReferences: text("literary_references"), // Literarische Quellen
+  additionalInfo: text("additional_info"), // Zusätzliche Informationen
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert-Schema für kulturelle Symbolinterpretationen
+export const insertCulturalInterpretationSchema = createInsertSchema(culturalSymbolInterpretations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  interpretation: z.string().min(10, { message: "Interpretation muss mindestens 10 Zeichen lang sein" }),
+});
+
+// Symbol-Vergleiche (zum Vergleichen desselben Symbols in verschiedenen Kulturen)
+export const symbolComparisons = pgTable("symbol_comparisons", {
+  id: serial("id").primaryKey(),
+  symbolId: integer("symbol_id").notNull(), // Referenz zum verglichenen Symbol
+  title: text("title").notNull(), // Titel des Vergleichs
+  content: text("content").notNull(), // Inhalt des Vergleichs
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert-Schema für Symbol-Vergleiche
+export const insertSymbolComparisonSchema = createInsertSchema(symbolComparisons).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  title: z.string().min(3, { message: "Titel muss mindestens 3 Zeichen lang sein" }),
+  content: z.string().min(50, { message: "Inhalt muss mindestens 50 Zeichen lang sein" }),
+});
+
+// Benutzer-Favoriten für Traumsymbole
+export const userSymbolFavorites = pgTable("user_symbol_favorites", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  symbolId: integer("symbol_id").notNull(),
+  notes: text("notes"), // Persönliche Notizen des Benutzers zu diesem Symbol
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Insert-Schema für Benutzer-Favoriten
+export const insertUserSymbolFavoriteSchema = createInsertSchema(userSymbolFavorites).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Typ-Definitionen für die Traumsymbol-Bibliothek
+export type Culture = typeof cultures.$inferSelect;
+export type InsertCulture = z.infer<typeof insertCultureSchema>;
+
+export type DreamSymbol = typeof dreamSymbols.$inferSelect;
+export type InsertDreamSymbol = z.infer<typeof insertDreamSymbolSchema>;
+
+export type CulturalSymbolInterpretation = typeof culturalSymbolInterpretations.$inferSelect;
+export type InsertCulturalSymbolInterpretation = z.infer<typeof insertCulturalInterpretationSchema>;
+
+export type SymbolComparison = typeof symbolComparisons.$inferSelect;
+export type InsertSymbolComparison = z.infer<typeof insertSymbolComparisonSchema>;
+
+export type UserSymbolFavorite = typeof userSymbolFavorites.$inferSelect;
+export type InsertUserSymbolFavorite = z.infer<typeof insertUserSymbolFavoriteSchema>;

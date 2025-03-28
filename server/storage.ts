@@ -14,7 +14,17 @@ import {
   DreamContentEntry,
   InsertDreamContentEntry,
   ContentComment,
-  InsertContentComment
+  InsertContentComment,
+  Culture,
+  InsertCulture,
+  DreamSymbol,
+  InsertDreamSymbol,
+  CulturalSymbolInterpretation,
+  InsertCulturalSymbolInterpretation,
+  SymbolComparison,
+  InsertSymbolComparison,
+  UserSymbolFavorite,
+  InsertUserSymbolFavorite
 } from "@shared/schema";
 import pg from 'pg';
 import session from "express-session";
@@ -74,6 +84,44 @@ export interface IStorage {
   getContentCommentsByContentId(contentId: number): Promise<ContentComment[]>;
   deleteContentComment(id: number): Promise<boolean>;
   
+  // Kulturelle Traumsymbol-Bibliothek
+  
+  // Kulturen
+  createCulture(culture: InsertCulture): Promise<Culture>;
+  getCulture(id: number): Promise<Culture | undefined>;
+  getAllCultures(): Promise<Culture[]>;
+  updateCulture(id: number, culture: Partial<InsertCulture>): Promise<Culture | undefined>;
+  deleteCulture(id: number): Promise<boolean>;
+  
+  // Traumsymbole
+  createDreamSymbol(symbol: InsertDreamSymbol): Promise<DreamSymbol>;
+  getDreamSymbol(id: number): Promise<DreamSymbol | undefined>;
+  getAllDreamSymbols(): Promise<DreamSymbol[]>;
+  getDreamSymbolsByCategory(category: string): Promise<DreamSymbol[]>;
+  searchDreamSymbols(query: string): Promise<DreamSymbol[]>;
+  updateDreamSymbol(id: number, symbol: Partial<InsertDreamSymbol>): Promise<DreamSymbol | undefined>;
+  deleteDreamSymbol(id: number): Promise<boolean>;
+  
+  // Kulturspezifische Interpretationen
+  createCulturalInterpretation(interpretation: InsertCulturalSymbolInterpretation): Promise<CulturalSymbolInterpretation>;
+  getCulturalInterpretationsBySymbolId(symbolId: number): Promise<CulturalSymbolInterpretation[]>;
+  getCulturalInterpretationsByCultureId(cultureId: number): Promise<CulturalSymbolInterpretation[]>;
+  getCulturalInterpretation(id: number): Promise<CulturalSymbolInterpretation | undefined>;
+  updateCulturalInterpretation(id: number, interpretation: Partial<InsertCulturalSymbolInterpretation>): Promise<CulturalSymbolInterpretation | undefined>;
+  deleteCulturalInterpretation(id: number): Promise<boolean>;
+  
+  // Symbol-Vergleiche
+  createSymbolComparison(comparison: InsertSymbolComparison): Promise<SymbolComparison>;
+  getSymbolComparison(id: number): Promise<SymbolComparison | undefined>;
+  getSymbolComparisonsBySymbolId(symbolId: number): Promise<SymbolComparison[]>;
+  updateSymbolComparison(id: number, comparison: Partial<InsertSymbolComparison>): Promise<SymbolComparison | undefined>;
+  deleteSymbolComparison(id: number): Promise<boolean>;
+  
+  // Benutzer-Favoriten
+  createUserSymbolFavorite(favorite: InsertUserSymbolFavorite): Promise<UserSymbolFavorite>;
+  getUserSymbolFavoritesByUserId(userId: number): Promise<UserSymbolFavorite[]>;
+  deleteUserSymbolFavorite(id: number): Promise<boolean>;
+  
   // Session store
   sessionStore: session.Store;
 }
@@ -87,6 +135,13 @@ export class MemStorage implements IStorage {
   private journalEntries: Map<number, JournalEntry>;
   private dreamContentEntries: Map<number, DreamContentEntry>;
   private contentComments: Map<number, ContentComment>;
+  // Traumsymbol-Bibliothek
+  private cultures: Map<number, Culture>;
+  private dreamSymbols: Map<number, DreamSymbol>;
+  private culturalInterpretations: Map<number, CulturalSymbolInterpretation>;
+  private symbolComparisons: Map<number, SymbolComparison>;
+  private userSymbolFavorites: Map<number, UserSymbolFavorite>;
+  // Laufende IDs
   private currentUserId: number;
   private currentDreamId: number;
   private currentAnalysisId: number;
@@ -95,6 +150,11 @@ export class MemStorage implements IStorage {
   private currentJournalEntryId: number;
   private currentDreamContentEntryId: number;
   private currentContentCommentId: number;
+  private currentCultureId: number;
+  private currentDreamSymbolId: number;
+  private currentCulturalInterpretationId: number;
+  private currentSymbolComparisonId: number;
+  private currentUserSymbolFavoriteId: number;
   public sessionStore: session.Store;
 
   constructor() {
@@ -106,6 +166,13 @@ export class MemStorage implements IStorage {
     this.journalEntries = new Map();
     this.dreamContentEntries = new Map();
     this.contentComments = new Map();
+    // Traumsymbol-Bibliothek Maps initialisieren
+    this.cultures = new Map();
+    this.dreamSymbols = new Map();
+    this.culturalInterpretations = new Map();
+    this.symbolComparisons = new Map();
+    this.userSymbolFavorites = new Map();
+    // IDs initialisieren
     this.currentUserId = 1;
     this.currentDreamId = 1;
     this.currentAnalysisId = 1;
@@ -114,6 +181,11 @@ export class MemStorage implements IStorage {
     this.currentJournalEntryId = 1;
     this.currentDreamContentEntryId = 1;
     this.currentContentCommentId = 1;
+    this.currentCultureId = 1;
+    this.currentDreamSymbolId = 1;
+    this.currentCulturalInterpretationId = 1;
+    this.currentSymbolComparisonId = 1;
+    this.currentUserSymbolFavoriteId = 1;
     
     // In-Memory Session Store erstellen
     const MemoryStore = require('memorystore')(session);
@@ -123,6 +195,163 @@ export class MemStorage implements IStorage {
     
     // Vordefinierte Achievements anlegen
     this.initializeDefaultAchievements();
+    
+    // Vordefinierte Kulturen und Traumsymbole anlegen
+    this.initializeDefaultCulturesAndSymbols();
+  }
+  
+  /**
+   * Initialisiert die Grunddaten für die Traumsymbol-Bibliothek
+   * Fügt einige Beispielkulturen und -symbole hinzu
+   */
+  private async initializeDefaultCulturesAndSymbols() {
+    // In MemStorage haben wir keine pool-Eigenschaft, daher prüfen wir direkt die Map
+    if (this.dreamSymbols.size > 0) {
+      return; // Symbole bereits vorhanden
+    }
+    
+    try {
+      // Kulturen erstellen
+      const westlicheKulturResult = await this.createCulture({
+        name: "Westlich",
+        description: "Traumdeutung aus westlicher, psychologischer Perspektive, basierend auf Theorien von Freud, Jung und modernen Psychologen.",
+        region: "Europa, Nordamerika",
+        historicalContext: "Moderne westliche Traumdeutung hat ihre Wurzeln in der Psychoanalyse des 19. und 20. Jahrhunderts."
+      });
+      
+      const ostasiatischeKulturResult = await this.createCulture({
+        name: "Ostasiatisch",
+        description: "Traumdeutung aus chinesischer und japanischer Tradition, stark beeinflusst von Taoismus, Buddhismus und lokalen spirituellen Praktiken.",
+        region: "China, Japan, Korea",
+        historicalContext: "Asiatische Traumdeutung geht Tausende von Jahren zurück und ist eng mit spirituellen Praktiken verbunden."
+      });
+      
+      const indigeneKulturResult = await this.createCulture({
+        name: "Indigene Traditionen",
+        description: "Traumdeutung aus der Perspektive indigener Völker, die Träume oft als Verbindung zur spirituellen Welt und zu Ahnen sehen.",
+        region: "Nordamerika, Südamerika, Australien",
+        historicalContext: "Indigene Kulturen betrachten Träume seit Jahrtausenden als heilige Botschaften und spirituelle Reisen."
+      });
+      
+      // Einige wichtige Traumsymbole erstellen
+      const wasserSymbolResult = await this.createDreamSymbol({
+        name: "Wasser",
+        generalMeaning: "Wasser repräsentiert oft Emotionen, das Unbewusste und Lebensenergie.",
+        category: "Natur",
+        tags: ["Fluss", "Meer", "See", "Emotion"],
+        popularity: 90
+      });
+      
+      const fallSymbolResult = await this.createDreamSymbol({
+        name: "Fallen",
+        generalMeaning: "Fallen symbolisiert oft Kontrollverlust, Unsicherheit oder Ängste.",
+        category: "Handlung",
+        tags: ["Angst", "Kontrollverlust", "Hilflosigkeit"],
+        popularity: 85
+      });
+      
+      const fliegenSymbolResult = await this.createDreamSymbol({
+        name: "Fliegen",
+        generalMeaning: "Fliegen steht häufig für Freiheit, Selbstverwirklichung oder Transzendenz.",
+        category: "Handlung",
+        tags: ["Freiheit", "Erfolg", "Überwindung"],
+        popularity: 80
+      });
+      
+      const schlangeSymbolResult = await this.createDreamSymbol({
+        name: "Schlange",
+        generalMeaning: "Schlangen haben vielfältige Bedeutungen von Transformation und Heilung bis hin zu verborgenen Ängsten und Sexualität.",
+        category: "Tiere",
+        tags: ["Transformation", "Gefahr", "Weisheit", "Heilung"],
+        popularity: 75
+      });
+      
+      const hausSymbolResult = await this.createDreamSymbol({
+        name: "Haus",
+        generalMeaning: "Ein Haus repräsentiert oft das Selbst, die Psyche oder persönlichen Lebensraum.",
+        category: "Objekte",
+        tags: ["Selbst", "Sicherheit", "Vergangenheit"],
+        popularity: 85
+      });
+      
+      const zaehneSymbolResult = await this.createDreamSymbol({
+        name: "Zähne verlieren",
+        generalMeaning: "Zahnverlust im Traum kann Ängste vor Kontrollverlust, Attraktivitätsverlust oder großen Veränderungen symbolisieren.",
+        category: "Körper",
+        tags: ["Angst", "Verlust", "Veränderung", "Körper"],
+        popularity: 70
+      });
+      
+      // Kulturelle Interpretationen hinzufügen
+      
+      // Wasser-Interpretationen
+      await this.createCulturalInterpretation({
+        symbolId: wasserSymbolResult.id,
+        cultureId: westlicheKulturResult.id,
+        interpretation: "In westlicher Psychologie symbolisiert Wasser das Unbewusste. Ruhiges Wasser kann emotionale Ausgeglichenheit bedeuten, während stürmisches Wasser auf innere Unruhe hinweisen kann.",
+        examples: "Träume vom Schwimmen im klaren Wasser können ein Zeichen für emotionales Wohlbefinden sein. Untergehen oder Ertrinken kann Überwältigung durch Gefühle symbolisieren.",
+        literaryReferences: "C.G. Jung sah Wasser als Symbol des kollektiven Unbewussten."
+      });
+      
+      await this.createCulturalInterpretation({
+        symbolId: wasserSymbolResult.id,
+        cultureId: ostasiatischeKulturResult.id,
+        interpretation: "In ostasiatischen Traditionen wird Wasser mit dem Prinzip des Fließens und der Anpassungsfähigkeit verbunden. Es steht für das Yin-Element und verkörpert passive, weibliche Energie.",
+        examples: "In chinesischer Traumdeutung kann klares, fließendes Wasser Wohlstand und Erfolg bedeuten, während schmutziges oder stehendes Wasser auf Probleme hinweist.",
+        literaryReferences: "Im I Ging (Buch der Wandlungen) verkörpert das Wasser das Prinzip der Anpassungsfähigkeit und des stetigen Fließens."
+      });
+      
+      await this.createCulturalInterpretation({
+        symbolId: wasserSymbolResult.id,
+        cultureId: indigeneKulturResult.id,
+        interpretation: "In vielen indigenen Traditionen wird Wasser als heilig und reinigend angesehen. Es kann die Verbindung zur spirituellen Welt symbolisieren oder eine Transformation andeuten.",
+        examples: "Bei einigen Stämmen Nordamerikas können Träume vom Überqueren eines Gewässers eine spirituelle Reise oder einen Übergangsritus symbolisieren."
+      });
+      
+      // Weitere Symbole mit kulturellen Interpretationen
+      
+      // Haus-Interpretationen
+      await this.createCulturalInterpretation({
+        symbolId: hausSymbolResult.id,
+        cultureId: westlicheKulturResult.id,
+        interpretation: "In westlicher Traumdeutung repräsentiert ein Haus oft die eigene Psyche. Verschiedene Räume können verschiedene Aspekte des Selbst darstellen.",
+        examples: "Der Dachboden kann für das Über-Ich stehen, der Keller für das Unbewusste oder verdrängte Erinnerungen.",
+        literaryReferences: "Freud und Jung interpretierten Häuser als Repräsentationen des Selbst mit verschiedenen Ebenen des Bewusstseins."
+      });
+      
+      // Schlange-Interpretationen
+      await this.createCulturalInterpretation({
+        symbolId: schlangeSymbolResult.id,
+        cultureId: westlicheKulturResult.id,
+        interpretation: "In westlicher Psychologie wird die Schlange oft mit verborgenen Ängsten, Sexualität oder Transformation assoziiert.",
+        examples: "Eine häutende Schlange kann Erneuerung symbolisieren, während eine beißende Schlange auf unterdrückte Ängste hindeuten kann.",
+        literaryReferences: "Freud sah in der Schlange ein phallisches Symbol; Jung betrachtete sie als Archetyp der Weisheit und Transformation."
+      });
+      
+      await this.createCulturalInterpretation({
+        symbolId: schlangeSymbolResult.id,
+        cultureId: ostasiatischeKulturResult.id,
+        interpretation: "In ostasiatischen Kulturen wird die Schlange oft mit Weisheit, Glück und Langlebigkeit assoziiert. Der Drache, eine mythologische Schlange, symbolisiert Macht und Glück.",
+        examples: "In chinesischer Traumdeutung kann eine weiße Schlange Glück und Erfolg bedeuten."
+      });
+      
+      // Symbol-Vergleiche erstellen
+      await this.createSymbolComparison({
+        symbolId: wasserSymbolResult.id,
+        title: "Wasser in verschiedenen Kulturen",
+        content: "Das Wassersymbol zeigt faszinierende kulturelle Unterschiede: Während westliche Interpretationen Wasser mit dem Unbewussten verbinden, betonen ostasiatische Traditionen das Fließen und den Kreislauf des Lebens. Indigene Kulturen sehen Wasser oft als heilig und als Verbindung zur spirituellen Welt. Gemeinsam ist allen Interpretationen die Verbindung zu Emotionen und Transformation. Diese unterschiedlichen Betrachtungen zeigen, wie kulturelle Hintergründe unsere Traumsymbolik prägen."
+      });
+      
+      await this.createSymbolComparison({
+        symbolId: schlangeSymbolResult.id,
+        title: "Die Schlange als universelles Symbol",
+        content: "Die Schlange ist eines der ältesten und universellsten Traumsymbole mit stark variierenden Bedeutungen: In westlichen Interpretationen oft mit Gefahr, verborgenen Ängsten oder Sexualität verbunden; in ostasiatischen Kulturen ein Symbol für Weisheit, Glück und Langlebigkeit; in indigenen Traditionen häufig ein spiritueller Bote oder Heilsymbol. Die starken Kontraste zeigen, wie kulturelle Erzählungen und Mythen unsere Traumdeutung prägen, während die transformative Natur der Schlange (Häutung) kulturübergreifend erkannt wird."
+      });
+      
+      console.log("Default cultures and dream symbols created");
+    } catch (error) {
+      console.error('Error creating default cultures and symbols:', error);
+    }
   }
   
   /**
@@ -628,6 +857,269 @@ export class MemStorage implements IStorage {
   async deleteContentComment(id: number): Promise<boolean> {
     return this.contentComments.delete(id);
   }
+
+  // Kulturelle Traumsymbol-Bibliothek Methoden
+  
+  // Kultur-Methoden
+  async createCulture(culture: InsertCulture): Promise<Culture> {
+    const id = this.currentCultureId++;
+    const createdAt = new Date();
+    const updatedAt = createdAt;
+    
+    const newCulture: Culture = {
+      id,
+      name: culture.name,
+      description: culture.description,
+      imageUrl: culture.imageUrl || null,
+      region: culture.region || null,
+      historicalContext: culture.historicalContext || null,
+      createdAt,
+      updatedAt
+    };
+    
+    this.cultures.set(id, newCulture);
+    return newCulture;
+  }
+  
+  async getCulture(id: number): Promise<Culture | undefined> {
+    return this.cultures.get(id);
+  }
+  
+  async getAllCultures(): Promise<Culture[]> {
+    return Array.from(this.cultures.values())
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+  
+  async updateCulture(id: number, cultureUpdate: Partial<InsertCulture>): Promise<Culture | undefined> {
+    const culture = this.cultures.get(id);
+    if (!culture) {
+      return undefined;
+    }
+    
+    const updatedCulture: Culture = {
+      ...culture,
+      ...cultureUpdate,
+      updatedAt: new Date()
+    };
+    
+    this.cultures.set(id, updatedCulture);
+    return updatedCulture;
+  }
+  
+  async deleteCulture(id: number): Promise<boolean> {
+    return this.cultures.delete(id);
+  }
+  
+  // Traumsymbol-Methoden
+  async createDreamSymbol(symbol: InsertDreamSymbol): Promise<DreamSymbol> {
+    const id = this.currentDreamSymbolId++;
+    const createdAt = new Date();
+    const updatedAt = createdAt;
+    
+    const newSymbol: DreamSymbol = {
+      id,
+      name: symbol.name,
+      generalMeaning: symbol.generalMeaning,
+      imageUrl: symbol.imageUrl || null,
+      category: symbol.category,
+      tags: symbol.tags || null,
+      popularity: symbol.popularity || 50,
+      createdAt,
+      updatedAt
+    };
+    
+    this.dreamSymbols.set(id, newSymbol);
+    return newSymbol;
+  }
+  
+  async getDreamSymbol(id: number): Promise<DreamSymbol | undefined> {
+    return this.dreamSymbols.get(id);
+  }
+  
+  async getAllDreamSymbols(): Promise<DreamSymbol[]> {
+    return Array.from(this.dreamSymbols.values())
+      .sort((a, b) => b.popularity - a.popularity);
+  }
+  
+  async getDreamSymbolsByCategory(category: string): Promise<DreamSymbol[]> {
+    return Array.from(this.dreamSymbols.values())
+      .filter(symbol => symbol.category === category)
+      .sort((a, b) => b.popularity - a.popularity);
+  }
+  
+  async searchDreamSymbols(query: string): Promise<DreamSymbol[]> {
+    const searchTermLower = query.toLowerCase();
+    return Array.from(this.dreamSymbols.values())
+      .filter(symbol => {
+        // Suche im Namen des Symbols
+        if (symbol.name.toLowerCase().includes(searchTermLower)) {
+          return true;
+        }
+        
+        // Suche in der Bedeutung
+        if (symbol.generalMeaning.toLowerCase().includes(searchTermLower)) {
+          return true;
+        }
+        
+        // Suche in Tags
+        if (symbol.tags && symbol.tags.some(tag => tag.toLowerCase().includes(searchTermLower))) {
+          return true;
+        }
+        
+        return false;
+      })
+      .sort((a, b) => b.popularity - a.popularity);
+  }
+  
+  async updateDreamSymbol(id: number, symbolUpdate: Partial<InsertDreamSymbol>): Promise<DreamSymbol | undefined> {
+    const symbol = this.dreamSymbols.get(id);
+    if (!symbol) {
+      return undefined;
+    }
+    
+    const updatedSymbol: DreamSymbol = {
+      ...symbol,
+      ...symbolUpdate,
+      updatedAt: new Date()
+    };
+    
+    this.dreamSymbols.set(id, updatedSymbol);
+    return updatedSymbol;
+  }
+  
+  async deleteDreamSymbol(id: number): Promise<boolean> {
+    return this.dreamSymbols.delete(id);
+  }
+  
+  // Kulturelle Interpretations-Methoden
+  async createCulturalInterpretation(interpretation: InsertCulturalSymbolInterpretation): Promise<CulturalSymbolInterpretation> {
+    const id = this.currentCulturalInterpretationId++;
+    const createdAt = new Date();
+    const updatedAt = createdAt;
+    
+    const newInterpretation: CulturalSymbolInterpretation = {
+      id,
+      symbolId: interpretation.symbolId,
+      cultureId: interpretation.cultureId,
+      interpretation: interpretation.interpretation,
+      examples: interpretation.examples || null,
+      literaryReferences: interpretation.literaryReferences || null,
+      additionalInfo: interpretation.additionalInfo || null,
+      createdAt,
+      updatedAt
+    };
+    
+    this.culturalInterpretations.set(id, newInterpretation);
+    return newInterpretation;
+  }
+  
+  async getCulturalInterpretation(id: number): Promise<CulturalSymbolInterpretation | undefined> {
+    return this.culturalInterpretations.get(id);
+  }
+  
+  async getCulturalInterpretationsBySymbolId(symbolId: number): Promise<CulturalSymbolInterpretation[]> {
+    return Array.from(this.culturalInterpretations.values())
+      .filter(interpretation => interpretation.symbolId === symbolId);
+  }
+  
+  async getCulturalInterpretationsByCultureId(cultureId: number): Promise<CulturalSymbolInterpretation[]> {
+    return Array.from(this.culturalInterpretations.values())
+      .filter(interpretation => interpretation.cultureId === cultureId);
+  }
+  
+  async updateCulturalInterpretation(id: number, interpretationUpdate: Partial<InsertCulturalSymbolInterpretation>): Promise<CulturalSymbolInterpretation | undefined> {
+    const interpretation = this.culturalInterpretations.get(id);
+    if (!interpretation) {
+      return undefined;
+    }
+    
+    const updatedInterpretation: CulturalSymbolInterpretation = {
+      ...interpretation,
+      ...interpretationUpdate,
+      updatedAt: new Date()
+    };
+    
+    this.culturalInterpretations.set(id, updatedInterpretation);
+    return updatedInterpretation;
+  }
+  
+  async deleteCulturalInterpretation(id: number): Promise<boolean> {
+    return this.culturalInterpretations.delete(id);
+  }
+  
+  // Symbol-Vergleiche Methoden
+  async createSymbolComparison(comparison: InsertSymbolComparison): Promise<SymbolComparison> {
+    const id = this.currentSymbolComparisonId++;
+    const createdAt = new Date();
+    const updatedAt = createdAt;
+    
+    const newComparison: SymbolComparison = {
+      id,
+      symbolId: comparison.symbolId,
+      title: comparison.title,
+      content: comparison.content,
+      createdAt,
+      updatedAt
+    };
+    
+    this.symbolComparisons.set(id, newComparison);
+    return newComparison;
+  }
+  
+  async getSymbolComparison(id: number): Promise<SymbolComparison | undefined> {
+    return this.symbolComparisons.get(id);
+  }
+  
+  async getSymbolComparisonsBySymbolId(symbolId: number): Promise<SymbolComparison[]> {
+    return Array.from(this.symbolComparisons.values())
+      .filter(comparison => comparison.symbolId === symbolId);
+  }
+  
+  async updateSymbolComparison(id: number, comparisonUpdate: Partial<InsertSymbolComparison>): Promise<SymbolComparison | undefined> {
+    const comparison = this.symbolComparisons.get(id);
+    if (!comparison) {
+      return undefined;
+    }
+    
+    const updatedComparison: SymbolComparison = {
+      ...comparison,
+      ...comparisonUpdate,
+      updatedAt: new Date()
+    };
+    
+    this.symbolComparisons.set(id, updatedComparison);
+    return updatedComparison;
+  }
+  
+  async deleteSymbolComparison(id: number): Promise<boolean> {
+    return this.symbolComparisons.delete(id);
+  }
+  
+  // Benutzer-Favoriten Methoden
+  async createUserSymbolFavorite(favorite: InsertUserSymbolFavorite): Promise<UserSymbolFavorite> {
+    const id = this.currentUserSymbolFavoriteId++;
+    const createdAt = new Date();
+    
+    const newFavorite: UserSymbolFavorite = {
+      id,
+      userId: favorite.userId,
+      symbolId: favorite.symbolId,
+      notes: favorite.notes || null,
+      createdAt
+    };
+    
+    this.userSymbolFavorites.set(id, newFavorite);
+    return newFavorite;
+  }
+  
+  async getUserSymbolFavoritesByUserId(userId: number): Promise<UserSymbolFavorite[]> {
+    return Array.from(this.userSymbolFavorites.values())
+      .filter(favorite => favorite.userId === userId);
+  }
+  
+  async deleteUserSymbolFavorite(id: number): Promise<boolean> {
+    return this.userSymbolFavorites.delete(id);
+  }
 }
 
 // PostgreSQL Speicherimplementierung
@@ -752,6 +1244,67 @@ export class DatabaseStorage implements IStorage {
         text TEXT NOT NULL,
         created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      -- Tabellen für die Traumsymbol-Bibliothek
+      
+      -- Kulturen
+      CREATE TABLE IF NOT EXISTS cultures (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) UNIQUE NOT NULL,
+        description TEXT NOT NULL,
+        image_url TEXT,
+        region VARCHAR(100),
+        historical_context TEXT,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      -- Traumsymbole
+      CREATE TABLE IF NOT EXISTS dream_symbols (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        general_meaning TEXT NOT NULL,
+        image_url TEXT,
+        category VARCHAR(50) NOT NULL,
+        tags TEXT[],
+        popularity INTEGER NOT NULL DEFAULT 50,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      -- Kulturspezifische Interpretationen
+      CREATE TABLE IF NOT EXISTS cultural_symbol_interpretations (
+        id SERIAL PRIMARY KEY,
+        symbol_id INTEGER REFERENCES dream_symbols(id) NOT NULL,
+        culture_id INTEGER REFERENCES cultures(id) NOT NULL,
+        interpretation TEXT NOT NULL,
+        examples TEXT,
+        literary_references TEXT,
+        additional_info TEXT,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(symbol_id, culture_id)
+      );
+      
+      -- Symbol-Vergleiche
+      CREATE TABLE IF NOT EXISTS symbol_comparisons (
+        id SERIAL PRIMARY KEY,
+        symbol_id INTEGER REFERENCES dream_symbols(id) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      -- Benutzer-Favoriten
+      CREATE TABLE IF NOT EXISTS user_symbol_favorites (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) NOT NULL,
+        symbol_id INTEGER REFERENCES dream_symbols(id) NOT NULL,
+        notes TEXT,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, symbol_id)
       );
     `);
   }
@@ -1447,6 +2000,498 @@ export class DatabaseStorage implements IStorage {
       [id]
     );
     return result.rows.length > 0;
+  }
+  
+  // Kulturelle Traumsymbol-Bibliothek Methoden
+  
+  // Kultur-Methoden
+  async createCulture(culture: InsertCulture): Promise<Culture> {
+    const result = await this.pool.query(
+      `INSERT INTO cultures 
+        (name, description, image_url, region, historical_context) 
+       VALUES ($1, $2, $3, $4, $5) 
+       RETURNING *`,
+      [
+        culture.name,
+        culture.description,
+        culture.imageUrl || null,
+        culture.region || null,
+        culture.historicalContext || null
+      ]
+    );
+    
+    return this.transformCultureDbToApi(result.rows[0]);
+  }
+  
+  async getCulture(id: number): Promise<Culture | undefined> {
+    const result = await this.pool.query(
+      'SELECT * FROM cultures WHERE id = $1',
+      [id]
+    );
+    return result.rows[0] ? this.transformCultureDbToApi(result.rows[0]) : undefined;
+  }
+  
+  async getAllCultures(): Promise<Culture[]> {
+    const result = await this.pool.query(
+      'SELECT * FROM cultures ORDER BY name'
+    );
+    return result.rows.map(culture => this.transformCultureDbToApi(culture));
+  }
+  
+  async updateCulture(id: number, cultureUpdate: Partial<InsertCulture>): Promise<Culture | undefined> {
+    // Build the SET part of the query dynamically
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramCounter = 1;
+    
+    if (cultureUpdate.name !== undefined) {
+      updates.push(`name = $${paramCounter++}`);
+      values.push(cultureUpdate.name);
+    }
+    
+    if (cultureUpdate.description !== undefined) {
+      updates.push(`description = $${paramCounter++}`);
+      values.push(cultureUpdate.description);
+    }
+    
+    if (cultureUpdate.imageUrl !== undefined) {
+      updates.push(`image_url = $${paramCounter++}`);
+      values.push(cultureUpdate.imageUrl);
+    }
+    
+    if (cultureUpdate.region !== undefined) {
+      updates.push(`region = $${paramCounter++}`);
+      values.push(cultureUpdate.region);
+    }
+    
+    if (cultureUpdate.historicalContext !== undefined) {
+      updates.push(`historical_context = $${paramCounter++}`);
+      values.push(cultureUpdate.historicalContext);
+    }
+    
+    // If there's nothing to update, return the original culture
+    if (updates.length === 0) {
+      return this.getCulture(id);
+    }
+    
+    // Add updated_at timestamp and id parameter
+    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(id);
+    
+    const result = await this.pool.query(
+      `UPDATE cultures SET ${updates.join(', ')} WHERE id = $${paramCounter} RETURNING *`,
+      values
+    );
+    
+    return result.rows[0] ? this.transformCultureDbToApi(result.rows[0]) : undefined;
+  }
+  
+  async deleteCulture(id: number): Promise<boolean> {
+    const result = await this.pool.query(
+      'DELETE FROM cultures WHERE id = $1 RETURNING id',
+      [id]
+    );
+    return result.rows.length > 0;
+  }
+  
+  // Traumsymbol-Methoden
+  async createDreamSymbol(symbol: InsertDreamSymbol): Promise<DreamSymbol> {
+    const result = await this.pool.query(
+      `INSERT INTO dream_symbols 
+        (name, general_meaning, image_url, category, tags, popularity) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
+       RETURNING *`,
+      [
+        symbol.name,
+        symbol.generalMeaning,
+        symbol.imageUrl || null,
+        symbol.category,
+        symbol.tags || null,
+        symbol.popularity || 50
+      ]
+    );
+    
+    return this.transformDreamSymbolDbToApi(result.rows[0]);
+  }
+  
+  async getDreamSymbol(id: number): Promise<DreamSymbol | undefined> {
+    const result = await this.pool.query(
+      'SELECT * FROM dream_symbols WHERE id = $1',
+      [id]
+    );
+    return result.rows[0] ? this.transformDreamSymbolDbToApi(result.rows[0]) : undefined;
+  }
+  
+  async getAllDreamSymbols(): Promise<DreamSymbol[]> {
+    const result = await this.pool.query(
+      'SELECT * FROM dream_symbols ORDER BY popularity DESC'
+    );
+    return result.rows.map(symbol => this.transformDreamSymbolDbToApi(symbol));
+  }
+  
+  async getDreamSymbolsByCategory(category: string): Promise<DreamSymbol[]> {
+    const result = await this.pool.query(
+      'SELECT * FROM dream_symbols WHERE category = $1 ORDER BY popularity DESC',
+      [category]
+    );
+    return result.rows.map(symbol => this.transformDreamSymbolDbToApi(symbol));
+  }
+  
+  async searchDreamSymbols(query: string): Promise<DreamSymbol[]> {
+    const searchTerm = `%${query.toLowerCase()}%`;
+    
+    // Suche in Name, Bedeutung und Tags
+    const result = await this.pool.query(
+      `SELECT * FROM dream_symbols 
+       WHERE LOWER(name) LIKE $1 
+          OR LOWER(general_meaning) LIKE $1 
+          OR EXISTS (SELECT 1 FROM unnest(tags) tag WHERE LOWER(tag) LIKE $1)
+       ORDER BY popularity DESC`,
+      [searchTerm]
+    );
+    
+    return result.rows.map(symbol => this.transformDreamSymbolDbToApi(symbol));
+  }
+  
+  async updateDreamSymbol(id: number, symbolUpdate: Partial<InsertDreamSymbol>): Promise<DreamSymbol | undefined> {
+    // Build the SET part of the query dynamically
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramCounter = 1;
+    
+    if (symbolUpdate.name !== undefined) {
+      updates.push(`name = $${paramCounter++}`);
+      values.push(symbolUpdate.name);
+    }
+    
+    if (symbolUpdate.generalMeaning !== undefined) {
+      updates.push(`general_meaning = $${paramCounter++}`);
+      values.push(symbolUpdate.generalMeaning);
+    }
+    
+    if (symbolUpdate.imageUrl !== undefined) {
+      updates.push(`image_url = $${paramCounter++}`);
+      values.push(symbolUpdate.imageUrl);
+    }
+    
+    if (symbolUpdate.category !== undefined) {
+      updates.push(`category = $${paramCounter++}`);
+      values.push(symbolUpdate.category);
+    }
+    
+    if (symbolUpdate.tags !== undefined) {
+      updates.push(`tags = $${paramCounter++}`);
+      values.push(symbolUpdate.tags);
+    }
+    
+    if (symbolUpdate.popularity !== undefined) {
+      updates.push(`popularity = $${paramCounter++}`);
+      values.push(symbolUpdate.popularity);
+    }
+    
+    // If there's nothing to update, return the original symbol
+    if (updates.length === 0) {
+      return this.getDreamSymbol(id);
+    }
+    
+    // Add updated_at timestamp and id parameter
+    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(id);
+    
+    const result = await this.pool.query(
+      `UPDATE dream_symbols SET ${updates.join(', ')} WHERE id = $${paramCounter} RETURNING *`,
+      values
+    );
+    
+    return result.rows[0] ? this.transformDreamSymbolDbToApi(result.rows[0]) : undefined;
+  }
+  
+  async deleteDreamSymbol(id: number): Promise<boolean> {
+    const result = await this.pool.query(
+      'DELETE FROM dream_symbols WHERE id = $1 RETURNING id',
+      [id]
+    );
+    return result.rows.length > 0;
+  }
+  
+  // Kulturelle Interpretations-Methoden
+  async createCulturalInterpretation(interpretation: InsertCulturalSymbolInterpretation): Promise<CulturalSymbolInterpretation> {
+    const result = await this.pool.query(
+      `INSERT INTO cultural_symbol_interpretations 
+        (symbol_id, culture_id, interpretation, examples, literary_references, additional_info) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
+       RETURNING *`,
+      [
+        interpretation.symbolId,
+        interpretation.cultureId,
+        interpretation.interpretation,
+        interpretation.examples || null,
+        interpretation.literaryReferences || null,
+        interpretation.additionalInfo || null
+      ]
+    );
+    
+    return this.transformCulturalInterpretationDbToApi(result.rows[0]);
+  }
+  
+  async getCulturalInterpretation(id: number): Promise<CulturalSymbolInterpretation | undefined> {
+    const result = await this.pool.query(
+      'SELECT * FROM cultural_symbol_interpretations WHERE id = $1',
+      [id]
+    );
+    return result.rows[0] ? this.transformCulturalInterpretationDbToApi(result.rows[0]) : undefined;
+  }
+  
+  async getCulturalInterpretationsBySymbolId(symbolId: number): Promise<CulturalSymbolInterpretation[]> {
+    const result = await this.pool.query(
+      'SELECT * FROM cultural_symbol_interpretations WHERE symbol_id = $1',
+      [symbolId]
+    );
+    return result.rows.map(interpretation => this.transformCulturalInterpretationDbToApi(interpretation));
+  }
+  
+  async getCulturalInterpretationsByCultureId(cultureId: number): Promise<CulturalSymbolInterpretation[]> {
+    const result = await this.pool.query(
+      'SELECT * FROM cultural_symbol_interpretations WHERE culture_id = $1',
+      [cultureId]
+    );
+    return result.rows.map(interpretation => this.transformCulturalInterpretationDbToApi(interpretation));
+  }
+  
+  async updateCulturalInterpretation(id: number, interpretationUpdate: Partial<InsertCulturalSymbolInterpretation>): Promise<CulturalSymbolInterpretation | undefined> {
+    // Build the SET part of the query dynamically
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramCounter = 1;
+    
+    if (interpretationUpdate.symbolId !== undefined) {
+      updates.push(`symbol_id = $${paramCounter++}`);
+      values.push(interpretationUpdate.symbolId);
+    }
+    
+    if (interpretationUpdate.cultureId !== undefined) {
+      updates.push(`culture_id = $${paramCounter++}`);
+      values.push(interpretationUpdate.cultureId);
+    }
+    
+    if (interpretationUpdate.interpretation !== undefined) {
+      updates.push(`interpretation = $${paramCounter++}`);
+      values.push(interpretationUpdate.interpretation);
+    }
+    
+    if (interpretationUpdate.examples !== undefined) {
+      updates.push(`examples = $${paramCounter++}`);
+      values.push(interpretationUpdate.examples);
+    }
+    
+    if (interpretationUpdate.literaryReferences !== undefined) {
+      updates.push(`literary_references = $${paramCounter++}`);
+      values.push(interpretationUpdate.literaryReferences);
+    }
+    
+    if (interpretationUpdate.additionalInfo !== undefined) {
+      updates.push(`additional_info = $${paramCounter++}`);
+      values.push(interpretationUpdate.additionalInfo);
+    }
+    
+    // If there's nothing to update, return the original interpretation
+    if (updates.length === 0) {
+      return this.getCulturalInterpretation(id);
+    }
+    
+    // Add updated_at timestamp and id parameter
+    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(id);
+    
+    const result = await this.pool.query(
+      `UPDATE cultural_symbol_interpretations SET ${updates.join(', ')} WHERE id = $${paramCounter} RETURNING *`,
+      values
+    );
+    
+    return result.rows[0] ? this.transformCulturalInterpretationDbToApi(result.rows[0]) : undefined;
+  }
+  
+  async deleteCulturalInterpretation(id: number): Promise<boolean> {
+    const result = await this.pool.query(
+      'DELETE FROM cultural_symbol_interpretations WHERE id = $1 RETURNING id',
+      [id]
+    );
+    return result.rows.length > 0;
+  }
+  
+  // Symbol-Vergleiche Methoden
+  async createSymbolComparison(comparison: InsertSymbolComparison): Promise<SymbolComparison> {
+    const result = await this.pool.query(
+      `INSERT INTO symbol_comparisons 
+        (symbol_id, title, content) 
+       VALUES ($1, $2, $3) 
+       RETURNING *`,
+      [
+        comparison.symbolId,
+        comparison.title,
+        comparison.content
+      ]
+    );
+    
+    return this.transformSymbolComparisonDbToApi(result.rows[0]);
+  }
+  
+  async getSymbolComparison(id: number): Promise<SymbolComparison | undefined> {
+    const result = await this.pool.query(
+      'SELECT * FROM symbol_comparisons WHERE id = $1',
+      [id]
+    );
+    return result.rows[0] ? this.transformSymbolComparisonDbToApi(result.rows[0]) : undefined;
+  }
+  
+  async getSymbolComparisonsBySymbolId(symbolId: number): Promise<SymbolComparison[]> {
+    const result = await this.pool.query(
+      'SELECT * FROM symbol_comparisons WHERE symbol_id = $1',
+      [symbolId]
+    );
+    return result.rows.map(comparison => this.transformSymbolComparisonDbToApi(comparison));
+  }
+  
+  async updateSymbolComparison(id: number, comparisonUpdate: Partial<InsertSymbolComparison>): Promise<SymbolComparison | undefined> {
+    // Build the SET part of the query dynamically
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramCounter = 1;
+    
+    if (comparisonUpdate.symbolId !== undefined) {
+      updates.push(`symbol_id = $${paramCounter++}`);
+      values.push(comparisonUpdate.symbolId);
+    }
+    
+    if (comparisonUpdate.title !== undefined) {
+      updates.push(`title = $${paramCounter++}`);
+      values.push(comparisonUpdate.title);
+    }
+    
+    if (comparisonUpdate.content !== undefined) {
+      updates.push(`content = $${paramCounter++}`);
+      values.push(comparisonUpdate.content);
+    }
+    
+    // If there's nothing to update, return the original comparison
+    if (updates.length === 0) {
+      return this.getSymbolComparison(id);
+    }
+    
+    // Add updated_at timestamp and id parameter
+    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(id);
+    
+    const result = await this.pool.query(
+      `UPDATE symbol_comparisons SET ${updates.join(', ')} WHERE id = $${paramCounter} RETURNING *`,
+      values
+    );
+    
+    return result.rows[0] ? this.transformSymbolComparisonDbToApi(result.rows[0]) : undefined;
+  }
+  
+  async deleteSymbolComparison(id: number): Promise<boolean> {
+    const result = await this.pool.query(
+      'DELETE FROM symbol_comparisons WHERE id = $1 RETURNING id',
+      [id]
+    );
+    return result.rows.length > 0;
+  }
+  
+  // Benutzer-Favoriten Methoden
+  async createUserSymbolFavorite(favorite: InsertUserSymbolFavorite): Promise<UserSymbolFavorite> {
+    const result = await this.pool.query(
+      `INSERT INTO user_symbol_favorites 
+        (user_id, symbol_id, notes) 
+       VALUES ($1, $2, $3) 
+       RETURNING *`,
+      [
+        favorite.userId,
+        favorite.symbolId,
+        favorite.notes || null
+      ]
+    );
+    
+    return this.transformUserSymbolFavoriteDbToApi(result.rows[0]);
+  }
+  
+  async getUserSymbolFavoritesByUserId(userId: number): Promise<UserSymbolFavorite[]> {
+    const result = await this.pool.query(
+      'SELECT * FROM user_symbol_favorites WHERE user_id = $1',
+      [userId]
+    );
+    return result.rows.map(favorite => this.transformUserSymbolFavoriteDbToApi(favorite));
+  }
+  
+  async deleteUserSymbolFavorite(id: number): Promise<boolean> {
+    const result = await this.pool.query(
+      'DELETE FROM user_symbol_favorites WHERE id = $1 RETURNING id',
+      [id]
+    );
+    return result.rows.length > 0;
+  }
+  
+  // Hilfsfunktionen für die Transformation von DB-Einträgen zu API-Objekten
+  private transformCultureDbToApi(culture: any): Culture {
+    return {
+      id: culture.id,
+      name: culture.name,
+      description: culture.description,
+      imageUrl: culture.image_url,
+      region: culture.region,
+      historicalContext: culture.historical_context,
+      createdAt: culture.created_at,
+      updatedAt: culture.updated_at
+    };
+  }
+  
+  private transformDreamSymbolDbToApi(symbol: any): DreamSymbol {
+    return {
+      id: symbol.id,
+      name: symbol.name,
+      generalMeaning: symbol.general_meaning,
+      imageUrl: symbol.image_url,
+      category: symbol.category,
+      tags: symbol.tags,
+      popularity: symbol.popularity,
+      createdAt: symbol.created_at,
+      updatedAt: symbol.updated_at
+    };
+  }
+  
+  private transformCulturalInterpretationDbToApi(interpretation: any): CulturalSymbolInterpretation {
+    return {
+      id: interpretation.id,
+      symbolId: interpretation.symbol_id,
+      cultureId: interpretation.culture_id,
+      interpretation: interpretation.interpretation,
+      examples: interpretation.examples,
+      literaryReferences: interpretation.literary_references,
+      additionalInfo: interpretation.additional_info,
+      createdAt: interpretation.created_at,
+      updatedAt: interpretation.updated_at
+    };
+  }
+  
+  private transformSymbolComparisonDbToApi(comparison: any): SymbolComparison {
+    return {
+      id: comparison.id,
+      symbolId: comparison.symbol_id,
+      title: comparison.title,
+      content: comparison.content,
+      createdAt: comparison.created_at,
+      updatedAt: comparison.updated_at
+    };
+  }
+  
+  private transformUserSymbolFavoriteDbToApi(favorite: any): UserSymbolFavorite {
+    return {
+      id: favorite.id,
+      userId: favorite.user_id,
+      symbolId: favorite.symbol_id,
+      notes: favorite.notes,
+      createdAt: favorite.created_at
+    };
   }
   
   // Helper functions to transform database snake_case to API camelCase
