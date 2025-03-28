@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popove
 import { Badge } from "../components/ui/badge";
 import { cn } from "../lib/utils";
 import DreamWritingPrompts from "./DreamWritingPrompts";
-import { MicIcon, StopIcon } from "lucide-react";
+import { MicIcon, Square as StopIcon } from "lucide-react";
 import { useVoiceRecording } from "../hooks/use-voice-recording";
 // Placeholder component -  Replace with actual implementation
 const TagsInput = ({ tags, onChange, placeholder, maxTags }) => {
