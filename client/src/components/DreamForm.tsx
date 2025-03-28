@@ -454,29 +454,40 @@ export default function DreamForm() {
               </div>
             </div>
 
-            <div className="flex justify-end space-x-3 mt-8">
-              <Button 
-                type="button" 
-                variant="outline"
-                disabled={isSubmitting}
-                onClick={() => setLocation("/")}
-              >
-                Abbrechen
-              </Button>
-              <Button 
-                type="submit"
-                className="bg-dream-primary hover:bg-dream-dark text-white"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
-                    Wird gespeichert...
-                  </>
-                ) : (
-                  'Traum speichern & analysieren'
-                )}
-              </Button>
+            {/* Hervorgehobener Speichern-Button */}
+            <div className="flex flex-col space-y-4 mt-12">
+              <div className="flex justify-center">
+                <Button 
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="bg-gradient-to-r from-dream-primary to-dream-dark hover:from-dream-dark hover:to-dream-primary text-white text-lg py-6 px-8 rounded-xl shadow-lg transform transition-all duration-300 hover:scale-105 w-full max-w-md flex items-center justify-center gap-3"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="mr-2 h-5 w-5 animate-spin rounded-full border-3 border-current border-t-transparent"></div>
+                      <span className="font-medium">Wird gespeichert...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="font-medium">Traum speichern & analysieren</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+              <div className="flex justify-center">
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  disabled={isSubmitting}
+                  onClick={() => setLocation("/")}
+                  className="text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Abbrechen
+                </Button>
+              </div>
             </div>
           </form>
         </Form>
