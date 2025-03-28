@@ -204,13 +204,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }))
         : [];
 
-      // Analyze the dream with OpenAI in the background, including previous dreams for context
-      analyzeDream(parseResult.data.content, previousDreams)
-        .then(analysis => {
-          storage.saveDreamAnalysis(newDream.id, analysis)
-            .catch(err => console.error('Error saving dream analysis:', err));
-        })
-        .catch(err => console.error('Error analyzing dream:', err));
+      // Analyze the dream with OpenAI including previous dreams for context
+      try {
+        console.log(`Starting analysis for dream ID: ${newDream.id}`);
+        const analysis = await analyzeDream(parseResult.data.content, previousDreams);
+        console.log(`Analysis completed for dream ID: ${newDream.id}, saving to database...`);
+        
+        const updatedDream = await storage.saveDreamAnalysis(newDream.id, analysis);
+        console.log(`Analysis saved for dream ID: ${newDream.id}`);
+        
+        // Update the newDream object with the analysis for immediate response
+        newDream.analysis = updatedDream.analysis;
+      } catch (err) {
+        console.error('Error analyzing dream:', err);
+      }
 
       res.status(201).json(newDream);
     } catch (error) {
@@ -284,12 +291,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }))
           : [];
 
-        analyzeDream(req.body.content, previousDreams)
-          .then(analysis => {
-            storage.saveDreamAnalysis(id, analysis)
-              .catch(err => console.error('Error updating dream analysis:', err));
-          })
-          .catch(err => console.error('Error analyzing updated dream:', err));
+        try {
+          console.log(`Starting analysis for updated dream ID: ${id}`);
+          const analysis = await analyzeDream(req.body.content, previousDreams);
+          console.log(`Analysis completed for updated dream ID: ${id}, saving to database...`);
+          
+          const dreamWithAnalysis = await storage.saveDreamAnalysis(id, analysis);
+          console.log(`Analysis saved for updated dream ID: ${id}`);
+          
+          // Update the updatedDream object with the analysis for immediate response
+          updatedDream.analysis = dreamWithAnalysis.analysis;
+        } catch (err) {
+          console.error('Error analyzing updated dream:', err);
+        }
       }
 
       res.json(updatedDream);

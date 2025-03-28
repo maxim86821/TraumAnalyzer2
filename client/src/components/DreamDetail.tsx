@@ -63,8 +63,26 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
     idType: typeof dream?.id
   });
 
-  // Parse the analysis JSON if it exists
-  const analysis = dream.analysis ? JSON.parse(dream.analysis) : null;
+  // Parse the analysis JSON if it exists, mit verstärkter Fehlerbehandlung
+  let analysis = null;
+  try {
+    if (dream.analysis) {
+      console.log("Raw analysis data type:", typeof dream.analysis);
+      if (typeof dream.analysis === 'string') {
+        analysis = JSON.parse(dream.analysis);
+        console.log("Parsed analysis successfully:", !!analysis); 
+      } else if (typeof dream.analysis === 'object') {
+        // Bereits ein Objekt, kein Parsing notwendig
+        analysis = dream.analysis;
+        console.log("Analysis is already an object, no parsing needed");
+      }
+    } else {
+      console.log("No analysis data available");
+    }
+  } catch (error) {
+    console.error("Error parsing dream analysis:", error);
+    console.log("Problematic raw analysis data:", dream.analysis);
+  }
 
   // Format date in German with safe fallback
   const formattedDate = dream.date 
