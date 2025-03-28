@@ -9,6 +9,7 @@ import DreamView from "@/pages/DreamView";
 import DreamPatterns from "@/pages/DreamPatterns";
 import AchievementsPage from "@/pages/AchievementsPage";
 import CalendarView from "@/pages/CalendarView";
+import JournalPage from "@/pages/JournalPage";
 import AuthPage from "@/pages/auth-page";
 import Layout from "@/components/Layout";
 import { AuthProvider } from "./hooks/use-auth";
@@ -39,6 +40,7 @@ function Router() {
           <CalendarView />
         </Layout>
       )} />
+      <ProtectedRoute path="/journal" component={JournalPage} />
       <Route path="/auth" component={AuthPage} />
       {/* Fallback to 404 */}
       <Route component={NotFound} />

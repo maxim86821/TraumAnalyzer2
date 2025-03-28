@@ -3,7 +3,12 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { analyzeDream, analyzePatterns, generateDreamImage } from "./openai";
 import { saveBase64Image, deleteImage } from "./utils";
-import { insertDreamSchema, insertAchievementSchema, insertUserAchievementSchema } from "@shared/schema";
+import { 
+  insertDreamSchema, 
+  insertAchievementSchema, 
+  insertUserAchievementSchema, 
+  insertJournalEntrySchema
+} from "@shared/schema";
 import { setupAuth, authenticateJWT } from "./auth";
 import express from "express";
 import multer from "multer";
@@ -727,6 +732,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return allTags.size;
   }
 
+  // =======================================================
+  // Journal API Routes
+  // =======================================================
+  
+  // Get all journal entries for a user
+  app.get('/api/journal', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const entries = await storage.getJournalEntriesByUserId(req.user.id);
+      res.json(entries);
+    } catch (error) {
+      console.error('Error fetching journal entries:', error);
+      res.status(500).json({ message: 'Fehler beim Laden der Journaleinträge' });
+    }
+  });
+  
+  // Get a specific journal entry
+  app.get('/api/journal/:id', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Ungültige Eintrags-ID' });
+      }
+      
+      const entry = await storage.getJournalEntry(id);
+      if (!entry) {
+        return res.status(404).json({ message: 'Eintrag nicht gefunden' });
+      }
+      
+      // Check if user is the owner of the entry
+      if (entry.userId !== req.user?.id) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Anzeigen dieses Eintrags' });
+      }
+      
+      res.json(entry);
+    } catch (error) {
+      console.error('Error fetching journal entry:', error);
+      res.status(500).json({ message: 'Fehler beim Laden des Journaleintrags' });
+    }
+  });
+  
+  // Create a new journal entry
+  app.post('/api/journal', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      // Validate the request body
+      const parseResult = insertJournalEntrySchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: 'Ungültige Journaldaten', 
+          errors: parseResult.error.errors 
+        });
+      }
+      
+      // Set the user ID from the authenticated user
+      parseResult.data.userId = req.user.id;
+      
+      // Process tags if they're included
+      if (req.body.tags && Array.isArray(req.body.tags)) {
+        parseResult.data.tags = req.body.tags;
+      }
+      
+      // Create the journal entry
+      const newEntry = await storage.createJournalEntry(parseResult.data);
+      res.status(201).json(newEntry);
+    } catch (error) {
+      console.error('Error creating journal entry:', error);
+      res.status(500).json({ message: 'Fehler beim Erstellen des Journaleintrags' });
+    }
+  });
+  
+  // Update a journal entry
+  app.patch('/api/journal/:id', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Ungültige Eintrags-ID' });
+      }
+      
+      // Get the existing entry
+      const existingEntry = await storage.getJournalEntry(id);
+      if (!existingEntry) {
+        return res.status(404).json({ message: 'Eintrag nicht gefunden' });
+      }
+      
+      // Check if user is the owner of the entry
+      if (existingEntry.userId !== req.user?.id) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Ändern dieses Eintrags' });
+      }
+      
+      // Process tags if they're included
+      if ('tags' in req.body) {
+        // Ensure tags is always an array, even if empty
+        req.body.tags = Array.isArray(req.body.tags) ? req.body.tags : [];
+      }
+      
+      // Update the journal entry
+      const updatedEntry = await storage.updateJournalEntry(id, req.body);
+      if (!updatedEntry) {
+        return res.status(404).json({ message: 'Eintrag nicht gefunden' });
+      }
+      
+      res.json(updatedEntry);
+    } catch (error) {
+      console.error('Error updating journal entry:', error);
+      res.status(500).json({ message: 'Fehler beim Aktualisieren des Journaleintrags' });
+    }
+  });
+  
+  // Delete a journal entry
+  app.delete('/api/journal/:id', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Ungültige Eintrags-ID' });
+      }
+      
+      // Get the entry
+      const entry = await storage.getJournalEntry(id);
+      if (!entry) {
+        return res.status(404).json({ message: 'Eintrag nicht gefunden' });
+      }
+      
+      // Check if user is the owner of the entry
+      if (entry.userId !== req.user?.id) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Löschen dieses Eintrags' });
+      }
+      
+      // Delete the entry
+      const success = await storage.deleteJournalEntry(id);
+      if (!success) {
+        return res.status(404).json({ message: 'Eintrag nicht gefunden' });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting journal entry:', error);
+      res.status(500).json({ message: 'Fehler beim Löschen des Journaleintrags' });
+    }
+  });
+  
   const httpServer = createServer(app);
   return httpServer;
 }
