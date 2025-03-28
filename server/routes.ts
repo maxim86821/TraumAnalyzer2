@@ -82,14 +82,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all dreams for the user
       const dreams = await storage.getDreamsByUserId(req.user.id);
       
-      if (dreams.length < 3) {
+      // Get all journal entries for the user
+      const journalEntries = await storage.getJournalEntriesByUserId(req.user.id);
+      
+      // Zähle die Gesamtzahl der Einträge (Träume + freigegebene Journaleinträge)
+      const includedJournalEntries = journalEntries.filter(entry => entry.includeInAnalysis === true);
+      const totalEntries = dreams.length + includedJournalEntries.length;
+      
+      if (totalEntries < 3) {
         return res.status(400).json({ 
-          message: 'Nicht genügend Träume',
-          details: 'Mindestens 3 Träume werden für eine Musteranalyse benötigt.'
+          message: 'Nicht genügend Einträge',
+          details: 'Mindestens 3 Einträge (Träume und/oder Journaleinträge) werden für eine Musteranalyse benötigt.'
         });
       }
 
-      // Apply limit if specified
+      // Apply limit if specified (nur auf Träume angewendet)
       const dreamsToAnalyze = limit > 0 ? dreams.slice(0, limit) : dreams;
       
       // Prepare dreams for analysis
@@ -105,8 +112,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         moodNotes: dream.moodNotes || undefined
       }));
       
-      // Perform pattern analysis
-      const patterns = await analyzePatterns(dreamsForAnalysis, timeRange, req.user.id);
+      // Prepare journal entries for analysis
+      const journalForAnalysis = includedJournalEntries.map(entry => {
+        // Konvertiere null zu undefined für das mood-Feld
+        const mood = entry.mood === null ? undefined : entry.mood;
+        
+        return {
+          id: entry.id,
+          content: entry.content,
+          title: entry.title,
+          date: entry.date || entry.createdAt,
+          tags: entry.tags || [],
+          mood, 
+          includeInAnalysis: true
+        };
+      });
+      
+      // Perform pattern analysis with both dreams and journal entries
+      const patterns = await analyzePatterns(dreamsForAnalysis, journalForAnalysis, timeRange, req.user.id);
       
       res.json(patterns);
     } catch (error) {

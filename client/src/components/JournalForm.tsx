@@ -3,7 +3,7 @@ import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
-import { XIcon, PlusIcon, TagIcon, BookOpenIcon, CalendarIcon, Upload, Sparkles } from "lucide-react";
+import { XIcon, PlusIcon, TagIcon, BookOpenIcon, CalendarIcon, Upload, Sparkles, Palette, Wind } from "lucide-react";
 import { useToast } from "../hooks/use-toast";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -11,6 +11,7 @@ import { apiRequest } from "../lib/queryClient";
 import { queryClient } from "../lib/queryClient";
 import { JournalEntry } from "@shared/schema";
 import { useAuth } from "../hooks/use-auth";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
 
 interface JournalFormProps {
   existingEntry?: JournalEntry;
@@ -38,6 +39,10 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [includeInAnalysis, setIncludeInAnalysis] = useState(false);
   const [imagePrompt, setImagePrompt] = useState("");
+  const [showImageDialog, setShowImageDialog] = useState(false);
+  const [colorThought, setColorThought] = useState("");
+  const [spontaneousThought, setSpontaneousThought] = useState("");
+  const [generatedDescription, setGeneratedDescription] = useState("");
 
   // Add a new tag
   const addTag = () => {
@@ -87,8 +92,8 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
     setUploadedImage(file);
   };
   
-  // Generate mood image
-  const generateMoodImage = async () => {
+  // Öffnet den Dialog für die Bildgenerierung
+  const openImageGenerationDialog = () => {
     if (!content || content.trim().length < 10) {
       toast({
         title: "Hinweis",
@@ -97,33 +102,99 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
       return;
     }
     
+    // Setze Standardwerte zurück
+    setColorThought("");
+    setSpontaneousThought("");
+    setGeneratedDescription("");
+    
+    // Öffne den Dialog
+    setShowImageDialog(true);
+  };
+  
+  // Schließt den Dialog
+  const closeImageDialog = () => {
+    setShowImageDialog(false);
+  };
+  
+  // Generate mood image
+  const generateMoodImage = async () => {
+    if (!colorThought || !spontaneousThought) {
+      toast({
+        title: "Hinweis",
+        description: "Bitte beantworte beide Fragen, um ein aussagekräftiges Stimmungsbild zu generieren.",
+      });
+      return;
+    }
+    
     setIsGeneratingImage(true);
     
     try {
+      // Erstelle einen Prompt basierend auf den Eingaben und dem Journalinhalt
+      const promptText = `
+        Journal: ${content.substring(0, 200)}...
+        Aktuelle Stimmung: ${mood ? mood + "/10" : "Keine Angabe"}
+        Farbe: ${colorThought}
+        Spontaner Gedanke: ${spontaneousThought}
+        Tags: ${tags.join(", ")}
+      `;
+      
+      setImagePrompt(promptText);
+      
       // Here we would normally call our API to generate an image
       // For now, let's simulate the generation with a placeholder
       
       // Mock image generation - in real implementation, call API
       setTimeout(() => {
         // This would be the response from our AI image generation
-        const exampleColors = ["#86A7FC", "#7A9EF5", "#3468C0", "#91C8E4", "#749BC2", "#4682A9", 
-                             "#BCA37F", "#DEBACE", "#FFBFBF", "#FFE17B", "#EBB02D", "#ABC270"];
-        const randomColor = exampleColors[Math.floor(Math.random() * exampleColors.length)];
+        // Using color from the user input to influence the generated image
+        const colorName = colorThought.toLowerCase();
+        let baseColor = "#86A7FC"; // Default blau
+        
+        if (colorName.includes("rot") || colorName.includes("orange") || colorName.includes("feuer")) {
+          baseColor = "#FF7F50";
+        } else if (colorName.includes("grün") || colorName.includes("wald")) {
+          baseColor = "#4C9A2A";
+        } else if (colorName.includes("blau") || colorName.includes("himmel") || colorName.includes("wasser")) {
+          baseColor = "#1E90FF";
+        } else if (colorName.includes("gelb") || colorName.includes("sonne")) {
+          baseColor = "#FFD700";
+        } else if (colorName.includes("violett") || colorName.includes("lila") || colorName.includes("purpur")) {
+          baseColor = "#8A2BE2";
+        } else if (colorName.includes("rosa") || colorName.includes("pink")) {
+          baseColor = "#FF69B4";
+        } else if (colorName.includes("braun") || colorName.includes("erde")) {
+          baseColor = "#8B4513";
+        } else if (colorName.includes("grau") || colorName.includes("nebel")) {
+          baseColor = "#778899";
+        }
+        
+        // Generiere eine künstlerische Beschreibung
+        const moodDescriptions = [
+          `Ein Naturgemälde in sanften ${colorThought}-Tönen, das die Essenz von "${spontaneousThought}" einfängt. Die fließenden Formen erinnern an Wasserbewegungen, während das Licht Hoffnung und Klarheit symbolisiert.`,
+          `Eine abstrakte Komposition in ${colorThought}, inspiriert vom Gedanken "${spontaneousThought}". Die Natur spiegelt sich in organischen Formen wider, die Ruhe und innere Stärke vermitteln.`,
+          `Ein atmosphärisches Kunstwerk, das ${colorThought} mit natürlichen Elementen verbindet. Der Gedanke "${spontaneousThought}" manifestiert sich in den sanften Übergängen zwischen Licht und Schatten.`
+        ];
+        
+        const randomDescription = moodDescriptions[Math.floor(Math.random() * moodDescriptions.length)];
+        setGeneratedDescription(randomDescription);
         
         // Creating a data URL for a simple SVG with random swirls or patterns
         const svgContent = `
         <svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
-          <rect width="100%" height="100%" fill="${randomColor}" opacity="0.2" />
-          <path d="M50,250 C150,50 250,350 350,150" stroke="${randomColor}" stroke-width="20" fill="none" opacity="0.7" />
-          <path d="M50,150 C150,350 250,50 350,250" stroke="${randomColor}" stroke-width="15" fill="none" opacity="0.5" />
-          <circle cx="200" cy="200" r="50" fill="${randomColor}" opacity="0.3" />
-          <circle cx="150" cy="150" r="20" fill="${randomColor}" opacity="0.4" />
-          <circle cx="250" cy="250" r="30" fill="${randomColor}" opacity="0.4" />
+          <rect width="100%" height="100%" fill="${baseColor}" opacity="0.2" />
+          <path d="M50,250 C150,50 250,350 350,150" stroke="${baseColor}" stroke-width="20" fill="none" opacity="0.7" />
+          <path d="M50,150 C150,350 250,50 350,250" stroke="${baseColor}" stroke-width="15" fill="none" opacity="0.5" />
+          <circle cx="200" cy="200" r="50" fill="${baseColor}" opacity="0.3" />
+          <circle cx="150" cy="150" r="20" fill="${baseColor}" opacity="0.4" />
+          <circle cx="250" cy="250" r="30" fill="${baseColor}" opacity="0.4" />
         </svg>`;
         
         const dataUrl = `data:image/svg+xml;base64,${btoa(svgContent)}`;
         setImagePreview(dataUrl);
         setIsGeneratingImage(false);
+        
+        // Schließe den Dialog nach erfolgreicher Generierung
+        closeImageDialog();
         
         toast({
           title: "Erfolg",
@@ -380,12 +451,11 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
                     type="button"
                     variant="secondary"
                     size="sm"
-                    onClick={generateMoodImage}
-                    disabled={isGeneratingImage}
+                    onClick={openImageGenerationDialog}
                     className="gap-2"
                   >
                     <Sparkles className="h-4 w-4" />
-                    {isGeneratingImage ? "Wird generiert..." : "Generieren"}
+                    Stimmungsbild erstellen
                   </Button>
 
                   <div className="relative">
@@ -437,11 +507,19 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
                         onClick={() => {
                           setImagePreview(null);
                           setUploadedImage(null);
+                          setGeneratedDescription("");
                         }}
                       >
                         <XIcon className="h-4 w-4" />
                       </Button>
                     </div>
+                    
+                    {/* Zeige die Bildbeschreibung an, wenn eine generiert wurde */}
+                    {generatedDescription && (
+                      <div className="mt-2 p-3 bg-gray-50 rounded-md text-sm italic text-gray-600">
+                        {generatedDescription}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -507,6 +585,82 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
           </Button>
         </div>
       </form>
+      
+      {/* Dialog für die Bildgenerierung */}
+      <Dialog open={showImageDialog} onOpenChange={setShowImageDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Stimmungsbild erstellen</DialogTitle>
+            <DialogDescription>
+              Beantworten Sie diese kurzen Fragen, um ein einzigartiges Stimmungsbild zu generieren.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="color-thought" className="text-sm font-medium flex items-center">
+                <Palette className="h-4 w-4 mr-2 text-blue-500" />
+                An welche Farbe denken Sie gerade?
+              </label>
+              <Input
+                id="color-thought"
+                placeholder="z.B. Blau, Smaragdgrün, Sonnenuntergang-Orange..."
+                value={colorThought}
+                onChange={(e) => setColorThought(e.target.value)}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="spontaneous-thought" className="text-sm font-medium flex items-center">
+                <Wind className="h-4 w-4 mr-2 text-blue-500" />
+                Was beschäftigt Sie in diesem Moment?
+              </label>
+              <Textarea
+                id="spontaneous-thought"
+                placeholder="Ein spontaner Gedanke, eine Empfindung oder ein Wunsch..."
+                value={spontaneousThought}
+                onChange={(e) => setSpontaneousThought(e.target.value)}
+                className="resize-none"
+                rows={3}
+              />
+            </div>
+
+            {imagePreview && generatedDescription && (
+              <div className="mt-2 p-3 bg-gray-50 rounded-md text-sm italic text-gray-600">
+                {generatedDescription}
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter className="flex justify-between sm:justify-between">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={closeImageDialog}
+            >
+              Abbrechen
+            </Button>
+            <Button 
+              type="button"
+              onClick={generateMoodImage}
+              disabled={isGeneratingImage || !colorThought || !spontaneousThought}
+              className="gap-2"
+            >
+              {isGeneratingImage ? (
+                <>
+                  <span className="animate-spin">⏳</span>
+                  Wird generiert...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  Bild generieren
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
