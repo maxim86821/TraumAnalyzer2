@@ -16,6 +16,7 @@ import { Calendar } from "../components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
 import { Badge } from "../components/ui/badge";
 import { cn } from "../lib/utils";
+import DreamWritingPrompts from "./DreamWritingPrompts";
 
 export default function DreamForm() {
   const [_, setLocation] = useLocation();
@@ -197,7 +198,16 @@ export default function DreamForm() {
               name="content"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Trauminhalt</FormLabel>
+                  <div className="flex justify-between items-center">
+                    <FormLabel>Trauminhalt</FormLabel>
+                    <DreamWritingPrompts 
+                      onSelectPrompt={(prompt) => {
+                        const currentValue = field.value || "";
+                        field.onChange(currentValue ? `${currentValue}\n\n${prompt}` : prompt);
+                      }}
+                      preferredThemes={tags.length > 0 ? tags : undefined}
+                    />
+                  </div>
                   <FormControl>
                     <Textarea 
                       placeholder="Beschreibe deinen Traum so detailliert wie möglich..." 
@@ -207,6 +217,7 @@ export default function DreamForm() {
                   </FormControl>
                   <FormDescription>
                     Gib so viele Details wie möglich an, damit die KI-Analyse genauer sein kann.
+                    Nutze die Schreibprompts für Inspiration.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

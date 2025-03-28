@@ -345,6 +345,122 @@ export async function analyzeDream(dreamContent: string, previousDreams?: Array<
 }
 
 /**
+ * Generate personalized dream writing prompts based on user's previous dreams and preferences
+ * @param userId The user ID to generate prompts for
+ * @param previousDreams Previous dreams of the user for context
+ * @param preferredThemes Optional array of themes the user is interested in
+ * @returns Array of personalized writing prompts
+ */
+export async function generateDreamWritingPrompts(
+  userId: number,
+  previousDreams?: Array<{ 
+    content: string; 
+    date: Date; 
+    analysis?: string | null;
+    tags?: string[] | null;
+  }>,
+  preferredThemes?: string[]
+): Promise<string[]> {
+  try {
+    // Default themes if none are provided
+    const themes = preferredThemes || ["general", "emotional", "symbolic", "recurring"];
+    
+    // Create context from previous dreams if available
+    let dreamsContext = "";
+    if (previousDreams && previousDreams.length > 0) {
+      dreamsContext = `\n\nHier sind die letzten ${previousDreams.length} Träume des Benutzers:\n`;
+      
+      previousDreams.forEach((dream, index) => {
+        const formattedDate = dream.date.toISOString().split('T')[0];
+        dreamsContext += `\nTraum vom ${formattedDate}:\n${dream.content.substring(0, 150)}${dream.content.length > 150 ? '...' : ''}`;
+        
+        // Add tags if available
+        if (dream.tags && dream.tags.length > 0) {
+          dreamsContext += `\nTags: ${dream.tags.join(', ')}`;
+        }
+        
+        // Add analysis themes if available
+        if (dream.analysis) {
+          try {
+            const parsedAnalysis = JSON.parse(dream.analysis);
+            if (parsedAnalysis.themes) {
+              dreamsContext += `\nHauptthemen: ${parsedAnalysis.themes.join(', ')}`;
+            }
+          } catch (e) {
+            // Ignore parsing errors
+          }
+        }
+      });
+    }
+    
+    // Generate personalized prompts using GPT-4
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: `Du bist ein erfahrener Traumexperte und Schreibcoach, der personalisierte Schreibprompts für Traumtagebücher erstellt.
+          
+          Erstelle 5 verschiedene, inspirierende und hilfreiche Schreibprompts für ein Traumtagebuch. Diese Prompts sollen dem Benutzer helfen, seine Träume detaillierter und reflektierender aufzuschreiben.
+          
+          Die Prompts sollten:
+          1. Persönlich und auf die bisherigen Träume des Benutzers zugeschnitten sein, falls vorhanden
+          2. Unterschiedliche Aspekte der Traumanalyse abdecken (Emotionen, Symbole, Narrative, etc.)
+          3. Tiefergehende Reflexion anregen
+          4. In der zweiten Person formuliert sein ("Du" oder "Dein")
+          5. Eine Länge von 1-2 Sätzen haben
+          6. Deutsch als Sprache verwenden
+          
+          Format: Gib die Prompts als JSON-Array zurück, mit genau 5 Strings.`
+        },
+        {
+          role: "user",
+          content: `Erstelle bitte 5 personalisierte Schreibprompts für mein Traumtagebuch.${dreamsContext}
+          
+          Ich interessiere mich besonders für Themen wie: ${themes.join(', ')}.`
+        }
+      ],
+      response_format: { type: "json_object" }
+    });
+    
+    // Parse the response
+    const content = response.choices[0].message.content || "{}";
+    
+    try {
+      const result = JSON.parse(content);
+      
+      // Extract prompts from the response
+      if (Array.isArray(result.prompts) && result.prompts.length > 0) {
+        return result.prompts.slice(0, 5); // Ensure we have at most 5 prompts
+      } else {
+        // Fallback to default prompts
+        return [
+          "Beschreibe die intensivsten Emotionen in deinem Traum und wie sie mit deinem aktuellen Leben zusammenhängen könnten.",
+          "Welche Symbole oder wiederkehrenden Elemente sind dir in deinem Traum aufgefallen?",
+          "Wenn dein Traum eine Botschaft für dich hätte, was würde sie sein?",
+          "Beschreibe die Umgebung deines Traums im Detail und wie sie dich fühlen ließ.",
+          "Gibt es Verbindungen zwischen diesem Traum und früheren Träumen, die du hattest?"
+        ];
+      }
+    } catch (parseError) {
+      console.error("Error parsing OpenAI response for dream prompts:", parseError);
+      
+      // Fallback prompts
+      return [
+        "Beschreibe die intensivsten Emotionen in deinem Traum und wie sie mit deinem aktuellen Leben zusammenhängen könnten.",
+        "Welche Symbole oder wiederkehrenden Elemente sind dir in deinem Traum aufgefallen?",
+        "Wenn dein Traum eine Botschaft für dich hätte, was würde sie sein?",
+        "Beschreibe die Umgebung deines Traums im Detail und wie sie dich fühlen ließ.",
+        "Gibt es Verbindungen zwischen diesem Traum und früheren Träumen, die du hattest?"
+      ];
+    }
+  } catch (error) {
+    console.error("Error generating dream writing prompts:", error);
+    throw new Error("Failed to generate dream writing prompts: " + (error as Error).message);
+  }
+}
+
+/**
  * Analyze an image using OpenAI vision
  * @param base64Image The base64-encoded image
  * @returns Text analysis of the image
