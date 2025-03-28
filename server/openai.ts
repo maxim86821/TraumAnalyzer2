@@ -98,6 +98,17 @@ export async function generateDreamImage(
  */
 export async function analyzeDream(dreamContent: string, previousDreams?: Array<{ content: string; date: Date; analysis?: string | null }>): Promise<AnalysisResponse> {
   try {
+    if (!dreamContent || dreamContent.trim().length < 10) {
+      // Fallback für leere oder zu kurze Trauminhalte
+      return {
+        themes: ["Undefinierter Traum"],
+        emotions: [{ name: "Neutral", intensity: 0.5 }],
+        symbols: [{ symbol: "Leerer Raum", meaning: "Stille oder Unklarheit im Traum" }],
+        interpretation: "Der Trauminhalt ist zu kurz oder unklar für eine vollständige Analyse. Versuche, mehr Details über deinen Traum hinzuzufügen, um eine tiefere Interpretation zu erhalten.",
+        keywords: ["undefiniert"]
+      };
+    }
+    
     // Erstelle einen Kontext aus früheren Träumen, falls vorhanden
     let previousDreamsContext = "";
     if (previousDreams && previousDreams.length > 0) {
@@ -183,18 +194,40 @@ export async function analyzeDream(dreamContent: string, previousDreams?: Array<
     });
 
     // Parse and validate the response
+    console.log("OpenAI response received, parsing...");
     const content = response.choices[0].message.content || "{}";
-    const result = JSON.parse(content);
     
-    // Perform basic validation of the response structure
-    if (!result.themes || !Array.isArray(result.themes) ||
-        !result.emotions || !Array.isArray(result.emotions) ||
-        !result.symbols || !Array.isArray(result.symbols) ||
-        !result.interpretation) {
-      throw new Error("Invalid response format from OpenAI");
+    try {
+      const result = JSON.parse(content);
+      
+      // Perform basic validation of the response structure with fallbacks
+      const validatedResult: AnalysisResponse = {
+        themes: Array.isArray(result.themes) ? result.themes : ["Unklares Thema"],
+        emotions: Array.isArray(result.emotions) ? result.emotions : [{ name: "Neutral", intensity: 0.5 }],
+        symbols: Array.isArray(result.symbols) ? result.symbols : [{ symbol: "Unklar", meaning: "Konnte nicht erkannt werden" }],
+        interpretation: result.interpretation || "Keine Interpretation verfügbar.",
+        keywords: Array.isArray(result.keywords) ? result.keywords : ["unbekannt"],
+        keywordReferences: result.keywordReferences,
+        quote: result.quote,
+        motivationalInsight: result.motivationalInsight,
+        weeklyInsight: result.weeklyInsight
+      };
+      
+      console.log("Validation complete, returning analysis");
+      return validatedResult;
+    } catch (parseError) {
+      console.error("Error parsing OpenAI response:", parseError);
+      console.log("OpenAI raw response content:", content.substring(0, 200) + "...");
+      
+      // Fallback für JSON-Parsing-Fehler
+      return {
+        themes: ["Analyse-Fehler"],
+        emotions: [{ name: "Neutral", intensity: 0.5 }],
+        symbols: [{ symbol: "Technischer Fehler", meaning: "Die AI-Analyse konnte nicht verarbeitet werden" }],
+        interpretation: "Es gab einen technischen Fehler bei der Analyse deines Traums. Bitte versuche es später noch einmal.",
+        keywords: ["fehler"]
+      };
     }
-    
-    return result as AnalysisResponse;
   } catch (error) {
     console.error("Error analyzing dream:", error);
     throw new Error("Failed to analyze dream: " + (error as Error).message);
