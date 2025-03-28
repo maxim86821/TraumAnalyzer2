@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "../hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Award, LogOut, User, Calendar, BookOpen } from "lucide-react";
+import { Award, LogOut, User, Calendar, BookOpen, BookMarked } from "lucide-react";
 
 interface SidebarProps {
   className?: string;
@@ -53,6 +53,13 @@ export default function Sidebar({ className = "", onClose }: SidebarProps) {
       path: "/journal",
       icon: (
         <BookOpen className="h-5 w-5 mr-3" />
+      )
+    },
+    {
+      name: "Symbol-Bibliothek",
+      path: "/symbols",
+      icon: (
+        <BookMarked className="h-5 w-5 mr-3" />
       )
     },
     {

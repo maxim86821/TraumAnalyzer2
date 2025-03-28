@@ -215,7 +215,7 @@ const DreamSymbolLibrary: React.FC = () => {
   // Verwendete Kategorien extrahieren (für Filter)
   const getUniqueCategories = () => {
     const categories = symbols?.map(symbol => symbol.category) || [];
-    return [...new Set(categories)];
+    return Array.from(new Set(categories));
   };
 
   // Symbol mit der angegebenen ID finden

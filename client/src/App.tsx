@@ -34,15 +34,15 @@ function Router() {
           <DreamView />
         </Layout>
       )} />
-      <ProtectedRoute path="/patterns" component={DreamPatterns} />
-      <ProtectedRoute path="/achievements" component={AchievementsPage} />
+      <ProtectedRoute path="/patterns" component={() => <DreamPatterns />} />
+      <ProtectedRoute path="/achievements" component={() => <AchievementsPage />} />
       <ProtectedRoute path="/calendar" component={() => (
         <Layout>
           <CalendarView />
         </Layout>
       )} />
-      <ProtectedRoute path="/journal" component={JournalPage} />
-      <ProtectedRoute path="/symbols" component={SymbolLibraryPage} />
+      <ProtectedRoute path="/journal" component={() => <JournalPage />} />
+      <ProtectedRoute path="/symbols" component={() => <SymbolLibraryPage />} />
       <Route path="/auth" component={AuthPage} />
       {/* Fallback to 404 */}
       <Route component={NotFound} />

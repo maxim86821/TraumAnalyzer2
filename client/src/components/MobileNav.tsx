@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { BookOpen } from "lucide-react";
+import { BookOpen, BookMarked } from "lucide-react";
 
 export default function MobileNav() {
   const [location] = useLocation();
@@ -29,6 +29,13 @@ export default function MobileNav() {
       path: "/journal",
       icon: (
         <BookOpen className="h-6 w-6" />
+      )
+    },
+    {
+      name: "Symbole",
+      path: "/symbols",
+      icon: (
+        <BookMarked className="h-6 w-6" />
       )
     }
   ];
