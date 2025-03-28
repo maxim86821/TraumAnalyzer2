@@ -74,3 +74,29 @@ export async function deleteImage(imagePath: string): Promise<void> {
     throw error;
   }
 }
+
+/**
+ * Saves an uploaded file to the uploads directory
+ * @param buffer Buffer containing the file data
+ * @param mimeType File MIME type
+ * @returns Path to the saved file
+ */
+export async function saveUploadedFile(buffer: Buffer, mimeType: string): Promise<string> {
+  try {
+    await ensureUploadDir();
+    
+    // Generate a unique filename
+    const fileExtension = mimeType.split('/')[1] || 'jpg';
+    const filename = `${randomUUID()}.${fileExtension}`;
+    const filePath = path.join(UPLOAD_DIR, filename);
+    
+    // Save the buffer to disk
+    await fs.writeFile(filePath, buffer);
+    
+    // Return the relative path to the file for storage in the database
+    return `/uploads/${filename}`;
+  } catch (error) {
+    console.error('Failed to save uploaded file:', error);
+    throw error;
+  }
+}

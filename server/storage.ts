@@ -472,6 +472,8 @@ export class MemStorage implements IStorage {
       mood: entry.mood || null,
       tags: entry.tags || null,
       isPrivate: entry.isPrivate || true,
+      imageUrl: entry.imageUrl || null,
+      includeInAnalysis: entry.includeInAnalysis || false,
       date,
       createdAt,
       updatedAt: createdAt,
@@ -715,6 +717,8 @@ export class DatabaseStorage implements IStorage {
         mood INTEGER,
         tags TEXT[],
         is_private BOOLEAN NOT NULL DEFAULT TRUE,
+        image_url TEXT,
+        include_in_analysis BOOLEAN NOT NULL DEFAULT FALSE,
         date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
         created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1148,8 +1152,8 @@ export class DatabaseStorage implements IStorage {
   async createJournalEntry(entry: InsertJournalEntry): Promise<JournalEntry> {
     const result = await this.pool.query(
       `INSERT INTO journal_entries 
-        (user_id, title, content, mood, tags, is_private, date, related_dream_ids) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+        (user_id, title, content, mood, tags, is_private, image_url, include_in_analysis, date, related_dream_ids) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
        RETURNING *`,
       [
         entry.userId,
@@ -1158,6 +1162,8 @@ export class DatabaseStorage implements IStorage {
         entry.mood || null,
         entry.tags || null,
         entry.isPrivate || true,
+        entry.imageUrl || null,
+        entry.includeInAnalysis || false,
         entry.date || new Date(),
         entry.relatedDreamIds || null
       ]
@@ -1211,6 +1217,16 @@ export class DatabaseStorage implements IStorage {
     if (entryUpdate.isPrivate !== undefined) {
       updates.push(`is_private = $${paramCounter++}`);
       values.push(entryUpdate.isPrivate);
+    }
+    
+    if (entryUpdate.imageUrl !== undefined) {
+      updates.push(`image_url = $${paramCounter++}`);
+      values.push(entryUpdate.imageUrl);
+    }
+    
+    if (entryUpdate.includeInAnalysis !== undefined) {
+      updates.push(`include_in_analysis = $${paramCounter++}`);
+      values.push(entryUpdate.includeInAnalysis);
     }
     
     if (entryUpdate.date !== undefined) {
@@ -1484,6 +1500,8 @@ export class DatabaseStorage implements IStorage {
       mood: journalEntry.mood,
       tags: journalEntry.tags,
       isPrivate: journalEntry.is_private,
+      imageUrl: journalEntry.image_url,
+      includeInAnalysis: journalEntry.include_in_analysis,
       date: new Date(journalEntry.date),
       createdAt: new Date(journalEntry.created_at),
       updatedAt: new Date(journalEntry.updated_at),

@@ -298,6 +298,8 @@ export const journalEntries = pgTable("journal_entries", {
   mood: integer("mood"), // Stimmung (1-10)
   tags: text("tags").array(),
   isPrivate: boolean("is_private").notNull().default(true),
+  imageUrl: text("image_url"), // URL zum optionalen Stimmungsbild
+  includeInAnalysis: boolean("include_in_analysis").notNull().default(false), // Ob der Eintrag in die Traumanalyse einfließen soll
   date: timestamp("date").notNull().defaultNow(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -315,6 +317,8 @@ export const insertJournalEntrySchema = createInsertSchema(journalEntries).omit(
   mood: z.number().min(1).max(10).optional(),
   tags: z.array(z.string()).optional(),
   isPrivate: z.boolean().default(true),
+  imageUrl: z.string().optional(),
+  includeInAnalysis: z.boolean().default(false),
   date: z.string().or(z.date()),
   relatedDreamIds: z.array(z.number()).optional(),
 });

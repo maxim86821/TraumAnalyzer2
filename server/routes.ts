@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { analyzeDream, analyzePatterns, generateDreamImage } from "./openai";
-import { saveBase64Image, deleteImage } from "./utils";
+import { saveBase64Image, deleteImage, saveUploadedFile } from "./utils";
 import { 
   insertDreamSchema, 
   insertAchievementSchema, 
@@ -880,5 +880,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   const httpServer = createServer(app);
+  // File upload route for journal and other images
+  app.post('/api/upload', authenticateJWT, upload.single('image'), async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: 'Kein Bild hochgeladen' });
+      }
+
+      // Check if user is authenticated
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+
+      // Save the uploaded file
+      const imageUrl = await saveUploadedFile(req.file.buffer, req.file.mimetype);
+
+      res.status(201).json({ 
+        imageUrl,
+        message: 'Bild erfolgreich hochgeladen' 
+      });
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      res.status(500).json({ message: 'Fehler beim Hochladen des Bildes' });
+    }
+  });
+
   return httpServer;
 }
