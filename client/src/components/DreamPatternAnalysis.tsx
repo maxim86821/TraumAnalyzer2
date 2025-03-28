@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { BarChart, LineChart, PieChart } from "lucide-react";
+import { BarChart, LineChart, PieChart, Sparkles, ImageIcon } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -34,6 +34,9 @@ export default function DreamPatternAnalysis() {
   const [isLoading, setIsLoading] = useState(false);
   const [timeRange, setTimeRange] = useState("30 Tage");
   const [analysis, setAnalysis] = useState<DeepPatternResponse | null>(null);
+  const [isGeneratingMoodImage, setIsGeneratingMoodImage] = useState(false);
+  const [moodImageUrl, setMoodImageUrl] = useState<string | null>(null);
+  const [moodImageDescription, setMoodImageDescription] = useState<string>("");
   const { toast } = useToast();
 
   // Musteranalyse anfordern
@@ -93,6 +96,99 @@ export default function DreamPatternAnalysis() {
     if (trend === "rising") return "↗";
     if (trend === "falling") return "↘";
     return "→";
+  };
+  
+  // Positives Stimmungsbild generieren
+  const generatePositiveMoodImage = async () => {
+    if (!analysis) return;
+    
+    setIsGeneratingMoodImage(true);
+    
+    try {
+      // In einer tatsächlichen Implementierung würden wir hier die API aufrufen
+      // Beispiel: Auswahl der positiven Aspekte aus der Analyse
+      const positiveThemes = analysis.dominantThemes
+        .filter(theme => theme.emotionalTone.includes("positiv"))
+        .map(theme => theme.theme);
+      
+      const positiveEmotions = analysis.emotionalPatterns
+        .filter(emotion => 
+          emotion.trend === "rising" || 
+          emotion.emotion.toLowerCase().includes("freude") ||
+          emotion.emotion.toLowerCase().includes("glück") ||
+          emotion.emotion.toLowerCase().includes("hoffnung")
+        )
+        .map(emotion => emotion.emotion);
+      
+      // Simulierte Bildgenerierung (würde durch API-Aufruf ersetzt)
+      setTimeout(() => {
+        // Erzeuge eine zufällige Farbe für das SVG
+        const colors = [
+          "#B5EAD7", // Pastellgrün
+          "#C7CEEA", // Pastellblau
+          "#FFDAC1", // Pastellorange
+          "#FFB7B2", // Pastellrot
+          "#E2F0CB", // Pastellgelb
+        ];
+        const randomColor = colors[Math.floor(Math.random() * colors.length)];
+        
+        // Erstelle ein einfaches SVG
+        const svgContent = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+          <rect width="100%" height="100%" fill="${randomColor}" opacity="0.2" />
+          <path d="M50,300 C150,100 250,500 350,200 C450,300 550,100 650,300 C750,400 850,200 950,300" 
+                stroke="${randomColor}" stroke-width="40" fill="none" opacity="0.5" />
+          <circle cx="400" cy="300" r="100" fill="${randomColor}" opacity="0.3" />
+          <circle cx="250" cy="250" r="50" fill="${randomColor}" opacity="0.4" />
+          <circle cx="550" cy="350" r="70" fill="${randomColor}" opacity="0.4" />
+        </svg>`;
+        
+        const dataUrl = `data:image/svg+xml;base64,${btoa(svgContent)}`;
+        setMoodImageUrl(dataUrl);
+        
+        // Erzeuge eine kunstvoll formulierte Beschreibung basierend auf positiven Aspekten
+        const descriptionStart = [
+          "Diese harmonische Komposition spiegelt ",
+          "Dieses ausdrucksstarke Bild verkörpert ",
+          "Die sanften Farbabstufungen reflektieren ",
+          "Diese künstlerische Darstellung zeigt "
+        ];
+        
+        const descriptionMiddle = [
+          `die aufstrebenden Emotionen von ${positiveEmotions.join(" und ")}`,
+          `die positiven Themen ${positiveThemes.join(" und ")}`,
+          `eine Reise durch ${positiveThemes[0] || "positive Gedankenwelten"}`
+        ];
+        
+        const descriptionEnd = [
+          ", umhüllt von einem Gefühl der Leichtigkeit und des inneren Friedens.",
+          ", eingebettet in eine Atmosphäre der Hoffnung und des Aufbruchs.",
+          ", die dich daran erinnert, dass Wachstum und Veränderung natürliche Teile des Lebens sind.",
+          ", die das Potenzial für persönliche Entwicklung und Selbsterkenntnis symbolisiert."
+        ];
+        
+        const randomStart = descriptionStart[Math.floor(Math.random() * descriptionStart.length)];
+        const randomMiddle = descriptionMiddle[Math.floor(Math.random() * descriptionMiddle.length)];
+        const randomEnd = descriptionEnd[Math.floor(Math.random() * descriptionEnd.length)];
+        
+        setMoodImageDescription(randomStart + randomMiddle + randomEnd);
+        setIsGeneratingMoodImage(false);
+        
+        toast({
+          title: "Stimmungsbild erstellt",
+          description: "Dein positives Stimmungsbild wurde erfolgreich generiert.",
+        });
+      }, 2000);
+      
+    } catch (error) {
+      console.error("Error generating mood image:", error);
+      toast({
+        title: "Fehler",
+        description: "Fehler bei der Generierung des Stimmungsbildes",
+        variant: "destructive",
+      });
+      setIsGeneratingMoodImage(false);
+    }
   };
 
   if (isLoading) {
@@ -169,12 +265,18 @@ export default function DreamPatternAnalysis() {
 
       {/* Hauptinhalt */}
       <Tabs defaultValue="uebersicht" className="w-full">
-        <TabsList className="grid grid-cols-5 mb-6">
+        <TabsList className="grid grid-cols-6 mb-6">
           <TabsTrigger value="uebersicht">Übersicht</TabsTrigger>
           <TabsTrigger value="symbole">Symbole</TabsTrigger>
           <TabsTrigger value="themen">Themen</TabsTrigger>
           <TabsTrigger value="emotionen">Emotionen</TabsTrigger>
           <TabsTrigger value="einsichten">Einsichten</TabsTrigger>
+          <TabsTrigger value="stimmungsbild">
+            <div className="flex items-center">
+              <ImageIcon className="h-4 w-4 mr-1" />
+              Stimmungsbild
+            </div>
+          </TabsTrigger>
         </TabsList>
 
         {/* Übersichts-Tab */}
@@ -600,6 +702,94 @@ export default function DreamPatternAnalysis() {
                 </div>
               ))}
             </div>
+          </Card>
+        </TabsContent>
+
+        {/* Stimmungsbild-Tab */}
+        <TabsContent value="stimmungsbild" className="space-y-6">
+          <Card className="p-6">
+            <h3 className="text-xl font-bold text-dream-dark mb-4">Positives Stimmungsbild</h3>
+            
+            <p className="text-gray-700 mb-6">
+              Entdecke die positiven Aspekte deiner Traumanalyse in einem inspirierenden Bild. 
+              Dieses Stimmungsbild hebt die aufbauenden Themen und Emotionen hervor und unterstützt dich 
+              dabei, die positiven Aspekte deiner Erfahrungen zu visualisieren.
+            </p>
+            
+            {!moodImageUrl ? (
+              <div className="flex flex-col items-center justify-center p-8 text-center">
+                <Button 
+                  onClick={generatePositiveMoodImage}
+                  disabled={isGeneratingMoodImage}
+                  className="bg-dream-primary hover:bg-dream-dark text-white mb-4 gap-2"
+                >
+                  {isGeneratingMoodImage ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Generiere Stimmungsbild...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      Positives Stimmungsbild generieren
+                    </>
+                  )}
+                </Button>
+                <p className="text-sm text-gray-500">
+                  Das Bild wird basierend auf den positiven Aspekten deiner Traumanalyse erstellt.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden shadow-lg">
+                  <img 
+                    src={moodImageUrl} 
+                    alt="Positives Stimmungsbild" 
+                    className="object-cover w-full h-full"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="absolute bottom-4 right-4 bg-white/80 hover:bg-white"
+                    onClick={generatePositiveMoodImage}
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Neu generieren
+                  </Button>
+                </div>
+                
+                {moodImageDescription && (
+                  <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                    <h4 className="text-lg font-semibold text-dream-primary mb-2">
+                      Dein künstlerischer Ausdruck
+                    </h4>
+                    <p className="text-gray-700 italic">
+                      {moodImageDescription}
+                    </p>
+                  </div>
+                )}
+                
+                <div className="bg-dream-primary/10 p-6 rounded-lg">
+                  <h4 className="text-lg font-semibold text-dream-primary mb-2">
+                    Wie du dieses Bild nutzen kannst
+                  </h4>
+                  <ul className="space-y-2">
+                    <li className="flex items-start">
+                      <span className="text-dream-primary mr-2">•</span>
+                      <span className="text-gray-700">Verwende es als Hintergrundbild auf deinem Gerät, um dich an die positiven Aspekte zu erinnern.</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-dream-primary mr-2">•</span>
+                      <span className="text-gray-700">Speichere es in deinem Journal als visuelle Erinnerung an deine Stimmung und Gefühle.</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-dream-primary mr-2">•</span>
+                      <span className="text-gray-700">Betrachte es als Inspirationsquelle für Momente, in denen du Motivation brauchst.</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            )}
           </Card>
         </TabsContent>
       </Tabs>

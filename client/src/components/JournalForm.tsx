@@ -37,6 +37,7 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
   const [imagePreview, setImagePreview] = useState<string | null>(existingEntry?.imageUrl || null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [includeInAnalysis, setIncludeInAnalysis] = useState(false);
+  const [imagePrompt, setImagePrompt] = useState("");
 
   // Add a new tag
   const addTag = () => {
