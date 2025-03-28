@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { analyzeDream } from "./openai";
+import { analyzeDream, analyzePatterns } from "./openai";
 import { saveBase64Image, deleteImage } from "./utils";
 import { insertDreamSchema } from "@shared/schema";
 import { setupAuth, authenticateJWT } from "./auth";
@@ -44,6 +44,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching dreams:', error);
       res.status(500).json({ message: 'Fehler beim Laden der Träume' });
+    }
+  });
+
+  // Get pattern analysis for dreams
+  app.get('/api/dreams/patterns/analyze', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+
+      // Get time range from query parameters
+      const timeRange = req.query.timeRange as string || "30 Tage";
+      const limit = parseInt(req.query.limit as string) || 0;
+      
+      // Get all dreams for the user
+      const dreams = await storage.getDreamsByUserId(req.user.id);
+      
+      if (dreams.length < 3) {
+        return res.status(400).json({ 
+          message: 'Nicht genügend Träume',
+          details: 'Mindestens 3 Träume werden für eine Musteranalyse benötigt.'
+        });
+      }
+
+      // Apply limit if specified
+      const dreamsToAnalyze = limit > 0 ? dreams.slice(0, limit) : dreams;
+      
+      // Prepare dreams for analysis
+      const dreamsForAnalysis = dreamsToAnalyze.map(dream => ({
+        id: dream.id,
+        content: dream.content,
+        title: dream.title,
+        date: dream.date || dream.createdAt,
+        analysis: dream.analysis,
+        tags: dream.tags || [],
+        moodBeforeSleep: dream.moodBeforeSleep || undefined,
+        moodAfterWakeup: dream.moodAfterWakeup || undefined,
+        moodNotes: dream.moodNotes || undefined
+      }));
+      
+      // Perform pattern analysis
+      const patterns = await analyzePatterns(dreamsForAnalysis, timeRange, req.user.id);
+      
+      res.json(patterns);
+    } catch (error) {
+      console.error('Error analyzing patterns:', error);
+      res.status(500).json({ 
+        message: 'Fehler bei der Musteranalyse',
+        details: (error as Error).message
+      });
     }
   });
 

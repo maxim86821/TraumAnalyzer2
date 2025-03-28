@@ -6,6 +6,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import NewDream from "@/pages/NewDream";
 import DreamView from "@/pages/DreamView";
+import DreamPatterns from "@/pages/DreamPatterns";
 import AuthPage from "@/pages/auth-page";
 import Layout from "@/components/Layout";
 import { AuthProvider } from "./hooks/use-auth";
@@ -29,6 +30,7 @@ function Router() {
           <DreamView />
         </Layout>
       )} />
+      <ProtectedRoute path="/patterns" component={DreamPatterns} />
       <Route path="/auth" component={AuthPage} />
       {/* Fallback to 404 */}
       <Route component={NotFound} />

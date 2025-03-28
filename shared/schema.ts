@@ -110,3 +110,66 @@ export interface AnalysisResponse {
   motivationalInsight?: string; // Motivierender oder interessanter Gedanke
   weeklyInsight?: WeeklyInsight; // Wöchentliche Einsicht (nur vorhanden, wenn genug Daten verfügbar sind)
 }
+
+// Tiefere Musteranalyse basierend auf mehreren Träumen
+export interface PatternSymbol {
+  symbol: string;
+  frequency: number; // Wie oft das Symbol auftaucht (in %)
+  description: string; // Beschreibung des wiederkehrenden Symbols
+  possibleMeaning: string; // Mögliche psychologische Bedeutung
+  contexts: string[]; // Zusammenhänge, in denen das Symbol erschien
+}
+
+export interface PatternTheme {
+  theme: string;
+  frequency: number; // Wie oft das Thema auftaucht (in %)
+  description: string; // Beschreibung des Themas
+  relatedSymbols: string[]; // Verbundene Symbole
+  emotionalTone: string; // Emotionale Ausrichtung
+}
+
+export interface PatternEmotion {
+  emotion: string;
+  averageIntensity: number; // Durchschnittliche Intensität (0-1)
+  frequency: number; // Wie oft die Emotion auftritt (in %)
+  trend: "rising" | "falling" | "stable"; // Entwicklungstrend
+  associatedThemes: string[]; // Themen, mit denen diese Emotion häufig verbunden ist
+}
+
+export interface LifeAreaInsight {
+  area: string; // z.B. "Arbeit", "Beziehungen", "Persönliches Wachstum"
+  relatedSymbols: string[]; // Symbole, die mit diesem Lebensbereich in Verbindung stehen
+  challenges: string[]; // Identifizierte Herausforderungen
+  strengths: string[]; // Identifizierte Stärken
+  suggestions: string[]; // Empfehlungen
+}
+
+export interface DeepPatternResponse {
+  overview: {
+    summary: string; // Allgemeine Zusammenfassung
+    timespan: string; // z.B. "Letzte 30 Tage"
+    dreamCount: number; // Anzahl der analysierten Träume
+    dominantMood: string; // Vorherrschende Stimmung
+  };
+  recurringSymbols: PatternSymbol[]; // Wiederkehrende Symbole sortiert nach Häufigkeit
+  dominantThemes: PatternTheme[]; // Hauptthemen
+  emotionalPatterns: PatternEmotion[]; // Emotionale Muster
+  lifeAreaInsights: LifeAreaInsight[]; // Einsichten nach Lebensbereichen
+  personalGrowth: {
+    potentialAreas: string[]; // Bereiche mit Wachstumspotential
+    suggestions: string[]; // Vorschläge für persönliches Wachstum
+  };
+  wordFrequency: { word: string; count: number }[]; // Häufigkeit wichtiger Wörter
+  timeline: {
+    periods: {
+      timeframe: string; // z.B. "5.-10. März"
+      dominantThemes: string[];
+      dominantEmotions: string[];
+      summary: string;
+    }[]
+  };
+  recommendations: {
+    general: string[]; // Allgemeine Empfehlungen
+    actionable: string[]; // Konkrete Handlungsvorschläge
+  };
+}

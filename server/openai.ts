@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { AnalysisResponse } from "@shared/schema";
+import { AnalysisResponse, DeepPatternResponse } from "@shared/schema";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -151,5 +151,179 @@ export async function analyzeImage(base64Image: string): Promise<string> {
   } catch (error) {
     console.error("Error analyzing image:", error);
     throw new Error("Failed to analyze image: " + (error as Error).message);
+  }
+}
+
+/**
+ * Führt eine tiefe Musteranalyse über mehrere Träume hinweg durch
+ * @param dreams Array von Traum-Objekten mit Inhalt, Datum und vorhandenen Analysen
+ * @param timeRange Zeitraum der Analyse (z.B. "30 Tage", "3 Monate")
+ * @param userId ID des Benutzers, dessen Träume analysiert werden
+ * @returns Detaillierte Musteranalyse
+ */
+export async function analyzePatterns(
+  dreams: Array<{
+    id: number;
+    content: string;
+    title: string;
+    date: Date;
+    analysis?: string | null;
+    tags?: string[];
+    moodBeforeSleep?: number;
+    moodAfterWakeup?: number;
+    moodNotes?: string;
+  }>,
+  timeRange: string = "30 Tage",
+  userId: number
+): Promise<DeepPatternResponse> {
+  try {
+    if (!dreams || dreams.length < 3) {
+      throw new Error("Mindestens 3 Träume werden für eine Musteranalyse benötigt");
+    }
+
+    // Träume nach Datum sortieren (neueste zuerst)
+    const sortedDreams = [...dreams].sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+
+    // Vorbereiten der Trauminformationen für die Analyse
+    const dreamSummaries = sortedDreams.map(dream => {
+      let analysis = null;
+      if (dream.analysis) {
+        try {
+          analysis = JSON.parse(dream.analysis);
+        } catch (e) {
+          // Ignoriere fehlerhafte JSON-Analysen
+        }
+      }
+
+      return {
+        title: dream.title,
+        date: dream.date.toISOString().split('T')[0],
+        content: dream.content.substring(0, 300) + (dream.content.length > 300 ? '...' : ''),
+        themes: analysis?.themes || [],
+        emotions: analysis?.emotions || [],
+        symbols: analysis?.symbols || [],
+        tags: dream.tags || [],
+        moodBeforeSleep: dream.moodBeforeSleep,
+        moodAfterWakeup: dream.moodAfterWakeup,
+        moodNotes: dream.moodNotes
+      };
+    });
+    
+    // Zeitraumsdefinition
+    const oldestDreamDate = new Date(sortedDreams[sortedDreams.length - 1].date).toISOString().split('T')[0];
+    const newestDreamDate = new Date(sortedDreams[0].date).toISOString().split('T')[0];
+
+    // GPT-4-Anfrage für die Musteranalyse
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: `Du bist ein fortgeschrittener Traumanalyst und Psychologe mit Expertise in der Erkennung von Mustern in Träumen über Zeit.
+          
+          Analysiere die folgenden Traumaufzeichnungen eines Benutzers über ${timeRange} (von ${oldestDreamDate} bis ${newestDreamDate}) und identifiziere tiefere Muster, Themen, Symbole und emotionale Trends.
+          
+          Deine Analyse sollte detailliert, tiefgründig und hilfreich sein und zur persönlichen Reflexion und zum Wachstum anregen.
+          
+          Deine Antwort muss exakt im folgenden JSON-Format zurückgegeben werden:
+          
+          {
+            "overview": {
+              "summary": "Umfassende Zusammenfassung der Traumanalyse",
+              "timespan": "${timeRange}",
+              "dreamCount": ${dreams.length},
+              "dominantMood": "Vorherrschende Stimmung basierend auf Stimmungswerten und Trauminhalt"
+            },
+            "recurringSymbols": [
+              {
+                "symbol": "Symbolname",
+                "frequency": 60, // Prozentsatz (wie oft das Symbol auftaucht)
+                "description": "Beschreibung des wiederkehrenden Symbols",
+                "possibleMeaning": "Mögliche psychologische Bedeutung im Kontext der Träume des Benutzers",
+                "contexts": ["Kontext 1", "Kontext 2"] // In welchen Zusammenhängen das Symbol erschien
+              },
+              // Weitere Symbole...
+            ],
+            "dominantThemes": [
+              {
+                "theme": "Themenname",
+                "frequency": 70, // Prozentsatz 
+                "description": "Beschreibung des Themas",
+                "relatedSymbols": ["Symbol 1", "Symbol 2"],
+                "emotionalTone": "Emotional positive/negativ/gemischt"
+              },
+              // Weitere Themen...
+            ],
+            "emotionalPatterns": [
+              {
+                "emotion": "Emotionsname",
+                "averageIntensity": 0.7, // Durchschnittliche Intensität (0-1)
+                "frequency": 50, // Prozentsatz
+                "trend": "rising", // "rising", "falling" oder "stable"
+                "associatedThemes": ["Thema 1", "Thema 2"]
+              },
+              // Weitere Emotionen...
+            ],
+            "lifeAreaInsights": [
+              {
+                "area": "Beziehungen", // z.B. Beziehungen, Arbeit, etc.
+                "relatedSymbols": ["Symbol 1", "Symbol 2"],
+                "challenges": ["Herausforderung 1", "Herausforderung 2"],
+                "strengths": ["Stärke 1", "Stärke 2"],
+                "suggestions": ["Vorschlag 1", "Vorschlag 2"]
+              },
+              // Weitere Lebensbereiche...
+            ],
+            "personalGrowth": {
+              "potentialAreas": ["Bereich 1", "Bereich 2"],
+              "suggestions": ["Vorschlag 1", "Vorschlag 2"]
+            },
+            "wordFrequency": [
+              {"word": "Wort1", "count": 15},
+              {"word": "Wort2", "count": 12},
+              // Weitere Wörter...
+            ],
+            "timeline": {
+              "periods": [
+                {
+                  "timeframe": "Erster Zeitabschnitt",
+                  "dominantThemes": ["Thema 1", "Thema 2"],
+                  "dominantEmotions": ["Emotion 1", "Emotion 2"],
+                  "summary": "Zusammenfassung des Zeitabschnitts"
+                },
+                // Weitere Zeitabschnitte...
+              ]
+            },
+            "recommendations": {
+              "general": ["Allgemeine Empfehlung 1", "Allgemeine Empfehlung 2"],
+              "actionable": ["Konkrete Handlung 1", "Konkrete Handlung 2"]
+            }
+          }`
+        },
+        {
+          role: "user",
+          content: JSON.stringify(dreamSummaries)
+        }
+      ],
+      response_format: { type: "json_object" },
+      max_tokens: 4096
+    });
+
+    // Parse and validate the response
+    const content = response.choices[0].message.content || "{}";
+    const result = JSON.parse(content);
+    
+    // Basic validation
+    if (!result.overview || !result.recurringSymbols || !result.dominantThemes || 
+        !result.emotionalPatterns || !result.recommendations) {
+      throw new Error("Ungültiges Antwortformat von OpenAI");
+    }
+    
+    return result as DeepPatternResponse;
+  } catch (error) {
+    console.error("Error analyzing dream patterns:", error);
+    throw new Error("Fehler bei der Musteranalyse: " + (error as Error).message);
   }
 }
