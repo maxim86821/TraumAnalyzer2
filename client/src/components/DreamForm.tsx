@@ -258,7 +258,7 @@ export default function DreamForm() {
               )}
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
                 <FormLabel className="block mb-2">Tags hinzufügen (optional)</FormLabel>
                 <div className="flex gap-2 mb-2">
@@ -298,6 +298,109 @@ export default function DreamForm() {
                     </div>
                   )}
                 </div>
+              </div>
+              
+              <div className="border-t border-gray-100 pt-6">
+                <h3 className="font-medium text-lg mb-4">Stimmungstracking</h3>
+                
+                <div className="grid md:grid-cols-2 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="moodBeforeSleep"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Stimmung vor dem Schlafen (1-10)</FormLabel>
+                        <FormControl>
+                          <div className="space-y-2">
+                            <Input 
+                              type="number" 
+                              min="1" 
+                              max="10"
+                              placeholder="1-10"
+                              {...field}
+                              onChange={(e) => {
+                                const value = parseInt(e.target.value);
+                                if (!isNaN(value) && value >= 1 && value <= 10) {
+                                  field.onChange(value);
+                                } else if (e.target.value === "") {
+                                  field.onChange(undefined);
+                                }
+                              }}
+                            />
+                            <div className="flex justify-between text-xs text-gray-500 px-1">
+                              <span>Negativ (1)</span>
+                              <span>Neutral (5)</span>
+                              <span>Positiv (10)</span>
+                            </div>
+                          </div>
+                        </FormControl>
+                        <FormDescription>
+                          Wie hast du dich vor dem Einschlafen gefühlt?
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="moodAfterWakeup"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Stimmung nach dem Aufwachen (1-10)</FormLabel>
+                        <FormControl>
+                          <div className="space-y-2">
+                            <Input 
+                              type="number" 
+                              min="1" 
+                              max="10"
+                              placeholder="1-10"
+                              {...field}
+                              onChange={(e) => {
+                                const value = parseInt(e.target.value);
+                                if (!isNaN(value) && value >= 1 && value <= 10) {
+                                  field.onChange(value);
+                                } else if (e.target.value === "") {
+                                  field.onChange(undefined);
+                                }
+                              }}
+                            />
+                            <div className="flex justify-between text-xs text-gray-500 px-1">
+                              <span>Negativ (1)</span>
+                              <span>Neutral (5)</span>
+                              <span>Positiv (10)</span>
+                            </div>
+                          </div>
+                        </FormControl>
+                        <FormDescription>
+                          Wie hast du dich nach dem Aufwachen gefühlt?
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <FormField
+                  control={form.control}
+                  name="moodNotes"
+                  render={({ field }) => (
+                    <FormItem className="mt-4">
+                      <FormLabel>Stimmungsnotizen (optional)</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Notizen zu deiner Stimmung oder Faktoren, die sie beeinflusst haben könnten..." 
+                          className="min-h-[80px]"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Z.B. Stress, besondere Ereignisse, Medikation, etc.
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             </div>
 

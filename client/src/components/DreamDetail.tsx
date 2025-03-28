@@ -25,6 +25,9 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>(dream.tags || []);
+  const [moodBeforeSleep, setMoodBeforeSleep] = useState<number | undefined>(dream.moodBeforeSleep || undefined);
+  const [moodAfterWakeup, setMoodAfterWakeup] = useState<number | undefined>(dream.moodAfterWakeup || undefined);
+  const [moodNotes, setMoodNotes] = useState<string | undefined>(dream.moodNotes || undefined);
 
   // Parse the analysis JSON if it exists
   const analysis = dream.analysis ? JSON.parse(dream.analysis) : null;
@@ -77,7 +80,10 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
       const updateData: any = {
         title,
         content,
-        tags
+        tags,
+        moodBeforeSleep,
+        moodAfterWakeup,
+        moodNotes
       };
       
       // Include image if it was changed
@@ -117,6 +123,9 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
     setTagInput("");
     setImagePreview(null);
     setImageFile(null);
+    setMoodBeforeSleep(dream.moodBeforeSleep || undefined);
+    setMoodAfterWakeup(dream.moodAfterWakeup || undefined);
+    setMoodNotes(dream.moodNotes || undefined);
     setEditing(false);
   };
 
@@ -168,6 +177,132 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
               </div>
             )}
           </div>
+          
+          {/* Mood tracking display/edit */}
+          {((dream.moodBeforeSleep || dream.moodAfterWakeup) || editing) && (
+            <div className="mt-6 bg-gray-50 rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">Stimmungstracking</h3>
+              
+              {editing ? (
+                // Edit mode
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">Stimmung vor dem Schlafen (1-10)</h4>
+                      <div className="flex items-center gap-2">
+                        <Input 
+                          type="number" 
+                          min="1" 
+                          max="10"
+                          placeholder="1-10"
+                          value={moodBeforeSleep || ""}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value);
+                            if (!isNaN(value) && value >= 1 && value <= 10) {
+                              setMoodBeforeSleep(value);
+                            } else if (e.target.value === "") {
+                              setMoodBeforeSleep(undefined);
+                            }
+                          }}
+                          className="max-w-[100px]"
+                        />
+                        {moodBeforeSleep && (
+                          <div className="flex-grow bg-gray-200 rounded-full h-3">
+                            <div 
+                              className="bg-indigo-400 h-3 rounded-full" 
+                              style={{ width: `${(moodBeforeSleep / 10) * 100}%` }}
+                            ></div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">Stimmung nach dem Aufwachen (1-10)</h4>
+                      <div className="flex items-center gap-2">
+                        <Input 
+                          type="number" 
+                          min="1" 
+                          max="10"
+                          placeholder="1-10"
+                          value={moodAfterWakeup || ""}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value);
+                            if (!isNaN(value) && value >= 1 && value <= 10) {
+                              setMoodAfterWakeup(value);
+                            } else if (e.target.value === "") {
+                              setMoodAfterWakeup(undefined);
+                            }
+                          }}
+                          className="max-w-[100px]"
+                        />
+                        {moodAfterWakeup && (
+                          <div className="flex-grow bg-gray-200 rounded-full h-3">
+                            <div 
+                              className="bg-teal-400 h-3 rounded-full" 
+                              style={{ width: `${(moodAfterWakeup / 10) * 100}%` }}
+                            ></div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Stimmungsnotizen (optional)</h4>
+                    <Textarea 
+                      placeholder="Notizen zu deiner Stimmung oder Faktoren, die sie beeinflusst haben könnten..." 
+                      value={moodNotes || ""}
+                      onChange={(e) => setMoodNotes(e.target.value)}
+                      className="min-h-[80px]"
+                    />
+                  </div>
+                </div>
+              ) : (
+                // View mode
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {dream.moodBeforeSleep && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">Stimmung vor dem Schlafen</h4>
+                        <div className="flex items-center">
+                          <div className="flex-grow bg-gray-200 rounded-full h-3">
+                            <div 
+                              className="bg-indigo-400 h-3 rounded-full" 
+                              style={{ width: `${(dream.moodBeforeSleep / 10) * 100}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-sm font-medium ml-2">{dream.moodBeforeSleep}/10</span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {dream.moodAfterWakeup && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">Stimmung nach dem Aufwachen</h4>
+                        <div className="flex items-center">
+                          <div className="flex-grow bg-gray-200 rounded-full h-3">
+                            <div 
+                              className="bg-teal-400 h-3 rounded-full" 
+                              style={{ width: `${(dream.moodAfterWakeup / 10) * 100}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-sm font-medium ml-2">{dream.moodAfterWakeup}/10</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {dream.moodNotes && (
+                    <div className="mt-3">
+                      <h4 className="text-sm font-medium text-gray-700 mb-1">Notizen</h4>
+                      <p className="text-sm text-gray-600 italic">{dream.moodNotes}</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
           
           <div className="mt-6">
             <div className="flex justify-between items-center mb-3">
@@ -355,13 +490,111 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
                 </ul>
               </div>
               
+              {/* Keywords section */}
+              {analysis.keywords && analysis.keywords.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Schlüsselwörter</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {analysis.keywords.map((keyword: string, index: number) => (
+                      <span 
+                        key={index} 
+                        className="inline-block bg-dream-dark/10 text-dream-dark text-sm px-3 py-1 rounded-full font-medium"
+                      >
+                        {keyword}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Cultural references for keywords */}
+              {analysis.keywordReferences && analysis.keywordReferences.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Kulturelle Referenzen</h4>
+                  <div className="space-y-4">
+                    {analysis.keywordReferences.map((ref: any, index: number) => (
+                      <div key={index} className="border-l-2 border-dream-primary pl-3">
+                        <div className="font-medium text-dream-primary">{ref.word}</div>
+                        <div className="text-sm text-gray-700 mb-1">{ref.meaning}</div>
+                        <div className="space-y-1">
+                          {ref.culturalReferences.map((culture: any, cIndex: number) => (
+                            <div key={cIndex} className="text-xs">
+                              <span className="font-medium text-gray-600">{culture.culture}:</span>{" "}
+                              <span className="text-gray-600">{culture.interpretation}</span>
+                            </div>
+                          ))}
+                        </div>
+                        {ref.url && (
+                          <a 
+                            href={ref.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="text-xs text-dream-accent hover:underline mt-1 inline-block"
+                          >
+                            Mehr erfahren →
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               {/* Interpretation */}
-              <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+              <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 mb-6">
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Zusammenfassende Deutung</h4>
                 <p className="text-sm text-gray-600">
                   {analysis.interpretation}
                 </p>
               </div>
+              
+              {/* Quote */}
+              {analysis.quote && (
+                <div className="mb-6">
+                  <blockquote className="text-sm italic text-gray-600 border-l-4 border-dream-accent pl-3 py-2">
+                    "{analysis.quote.text}"
+                    <footer className="text-xs text-gray-500 mt-1">— {analysis.quote.source}</footer>
+                  </blockquote>
+                </div>
+              )}
+              
+              {/* Motivational Insight */}
+              {analysis.motivationalInsight && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Motivierender Gedanke</h4>
+                  <p className="text-sm italic text-gray-600">{analysis.motivationalInsight}</p>
+                </div>
+              )}
+              
+              {/* Weekly Insight if available */}
+              {analysis.weeklyInsight && (
+                <div className="bg-dream-light/50 p-4 rounded-lg border border-dream-primary/20 mt-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Wöchentliche Einsicht</h4>
+                  <p className="text-sm text-gray-600 mb-2">{analysis.weeklyInsight.summary}</p>
+                  
+                  {analysis.weeklyInsight.patterns.length > 0 && (
+                    <div className="mb-2">
+                      <h5 className="text-xs font-medium text-gray-700 mb-1">Erkannte Muster:</h5>
+                      <ul className="list-disc list-inside text-xs text-gray-600 space-y-1">
+                        {analysis.weeklyInsight.patterns.map((pattern: string, index: number) => (
+                          <li key={index}>{pattern}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {analysis.weeklyInsight.recommendations.length > 0 && (
+                    <div>
+                      <h5 className="text-xs font-medium text-gray-700 mb-1">Empfehlungen:</h5>
+                      <ul className="list-disc list-inside text-xs text-gray-600 space-y-1">
+                        {analysis.weeklyInsight.recommendations.map((rec: string, index: number) => (
+                          <li key={index}>{rec}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           ) : (
             <div className="flex flex-col items-center justify-center h-64">

@@ -30,6 +30,9 @@ export const dreams = pgTable("dreams", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   analysis: text("analysis"),
   tags: text("tags").array(),
+  moodBeforeSleep: integer("mood_before_sleep"), // Stimmung vor dem Schlafen (1-10)
+  moodAfterWakeup: integer("mood_after_wakeup"), // Stimmung nach dem Aufwachen (1-10)
+  moodNotes: text("mood_notes"), // Notizen zur Stimmung
 });
 
 export const dreamAnalysis = pgTable("dream_analysis", {
@@ -55,6 +58,10 @@ export const insertDreamSchema = createInsertSchema(dreams).omit({
   date: z.string().or(z.date()),
   // Tags are optional
   tags: z.array(z.string()).optional(),
+  // Mood values are optional but must be between 1-10 if provided
+  moodBeforeSleep: z.number().min(1).max(10).optional(),
+  moodAfterWakeup: z.number().min(1).max(10).optional(),
+  moodNotes: z.string().optional(),
 });
 
 // Dream analysis schema
@@ -73,9 +80,33 @@ export type DreamAnalysis = typeof dreamAnalysis.$inferSelect;
 export type InsertDreamAnalysis = z.infer<typeof insertDreamAnalysisSchema>;
 
 // Analysis response from AI
+export interface MoodData {
+  beforeSleep?: number; // Stimmung vor dem Schlafen, 1-10
+  afterWakeup?: number; // Stimmung nach dem Aufwachen, 1-10
+  notes?: string; // Optionale Notizen zur Stimmung
+}
+
+export interface KeywordReference {
+  word: string;
+  meaning: string;
+  culturalReferences: { culture: string; interpretation: string }[];
+  url?: string; // Optionale URL für weitere Informationen
+}
+
+export interface WeeklyInsight {
+  summary: string; // Zusammenfassung der Träume der letzten Woche
+  patterns: string[]; // Identifizierte Muster
+  recommendations: string[]; // Empfehlungen basierend auf den Mustern
+}
+
 export interface AnalysisResponse {
   themes: string[];
   emotions: { name: string; intensity: number }[];
   symbols: { symbol: string; meaning: string }[];
   interpretation: string;
+  keywords: string[]; // Wichtige Schlüsselwörter im Traum
+  keywordReferences?: KeywordReference[]; // Referenzen zu den Schlüsselwörtern
+  quote?: { text: string; source: string }; // Passendes Zitat
+  motivationalInsight?: string; // Motivierender oder interessanter Gedanke
+  weeklyInsight?: WeeklyInsight; // Wöchentliche Einsicht (nur vorhanden, wenn genug Daten verfügbar sind)
 }

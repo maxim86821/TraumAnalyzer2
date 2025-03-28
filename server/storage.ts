@@ -67,7 +67,10 @@ export class MemStorage implements IStorage {
       date: new Date(dream.date),
       createdAt,
       analysis: null,
-      tags: dream.tags || null
+      tags: dream.tags || null,
+      moodBeforeSleep: dream.moodBeforeSleep || null,
+      moodAfterWakeup: dream.moodAfterWakeup || null,
+      moodNotes: dream.moodNotes || null
     };
     
     this.dreams.set(id, newDream);

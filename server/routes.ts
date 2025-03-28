@@ -106,8 +106,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create the dream
       const newDream = await storage.createDream(parseResult.data);
 
-      // Analyze the dream with OpenAI in the background
-      analyzeDream(parseResult.data.content)
+      // Get previous dreams if user is authenticated
+      const previousDreams = req.user ? 
+        (await storage.getDreamsByUserId(req.user.id))
+          .filter(dream => dream.id !== newDream.id)
+          .slice(0, 5) // Use the 5 most recent dreams
+          .map(dream => ({
+            content: dream.content,
+            date: dream.createdAt,
+            analysis: dream.analysis
+          }))
+        : [];
+
+      // Analyze the dream with OpenAI in the background, including previous dreams for context
+      analyzeDream(parseResult.data.content, previousDreams)
         .then(analysis => {
           storage.saveDreamAnalysis(newDream.id, analysis)
             .catch(err => console.error('Error saving dream analysis:', err));
@@ -174,7 +186,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // If the content was updated, re-analyze the dream
       if (req.body.content) {
-        analyzeDream(req.body.content)
+        // Get previous dreams if user is authenticated
+        const previousDreams = req.user ? 
+          (await storage.getDreamsByUserId(req.user.id))
+            .filter(dream => dream.id !== id)
+            .slice(0, 5) // Use the 5 most recent dreams
+            .map(dream => ({
+              content: dream.content,
+              date: dream.createdAt,
+              analysis: dream.analysis
+            }))
+          : [];
+
+        analyzeDream(req.body.content, previousDreams)
           .then(analysis => {
             storage.saveDreamAnalysis(id, analysis)
               .catch(err => console.error('Error updating dream analysis:', err));
