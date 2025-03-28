@@ -23,44 +23,52 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
-  const [moodBeforeSleep, setMoodBeforeSleep] = useState<number | undefined>(undefined);
-  const [moodAfterWakeup, setMoodAfterWakeup] = useState<number | undefined>(undefined);
-  const [moodNotes, setMoodNotes] = useState<string | undefined>(undefined);
+  const [newTag, setNewTag] = useState("");
+  const [moodBeforeSleep, setMoodBeforeSleep] = useState<number | null>(null);
+  const [moodAfterWakeup, setMoodAfterWakeup] = useState<number | null>(null);
+  const [moodNotes, setMoodNotes] = useState("");
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const [dreamId, setDreamId] = useState<number>(0);
-  
-  // Ein normalisiertes Dream-Objekt mit garantiert numerischer ID erstellen
+  const [newImage, setNewImage] = useState<string | null>(null);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [analyzingDream, setAnalyzingDream] = useState(false);
+
   useEffect(() => {
-    if (dream && dream.id !== undefined && dream.id !== null) {
-      const numericId = typeof dream.id === 'number' ? dream.id : Number(dream.id);
-      
-      if (!isNaN(numericId) && numericId > 0) {
-        setDreamId(numericId);
-        console.log("Dream ID updated to:", numericId, "Type:", typeof numericId);
-        
-        // Aktualisiere alle anderen Zustandsvariablen
-        setTitle(dream.title || "");
-        setContent(dream.content || "");
-        setTags(dream.tags || []);
-        setMoodBeforeSleep(dream.moodBeforeSleep || undefined);
-        setMoodAfterWakeup(dream.moodAfterWakeup || undefined);
-        setMoodNotes(dream.moodNotes || undefined);
-        setEditing(false);
-        setImagePreview(null);
-        setImageFile(null);
-      } else {
-        console.error("Invalid dream ID received:", dream.id);
-      }
+    if (dream) {
+      setTitle(dream.title);
+      setContent(dream.content || "");
+      setTags(dream.tags || []);
+      setMoodBeforeSleep(dream.moodBeforeSleep || null);
+      setMoodAfterWakeup(dream.moodAfterWakeup || null);
+      setMoodNotes(dream.moodNotes || "");
     }
-  }, [dream?.id]);
-  
-  console.log("DreamDetail Component - Dream Props:", { 
+  }, [dream]);
+
+  // Debugging the dream object
+  const dreamId = dream?.id;
+  console.log("Dream ID details:", {
     id: dream?.id, 
     parsedId: dreamId, 
     dreamTitle: dream?.title,
     idType: typeof dream?.id
+  });
+
+  // Vollständigen Trauminhalt und Analyse-Daten für Debugging anzeigen
+  console.log("COMPLETE DREAM OBJECT:", dream);
+  
+  // Detaillierte Analyse des Dream-Objekts für Debugging
+  console.log("Dream object details:", {
+    id: dream.id,
+    content: dream.content ? dream.content.substring(0, 30) + "..." : "No content",
+    analysisPresent: !!dream.analysis,
+    analysisType: typeof dream.analysis,
+    rawAnalysis: dream.analysis ? 
+      (typeof dream.analysis === 'string' ? 
+        dream.analysis.substring(0, 30) + "..." : 
+        "Analysis is an object") 
+      : "No analysis"
   });
 
   // Parse the analysis JSON if it exists, mit verstärkter Fehlerbehandlung
@@ -68,9 +76,24 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
   try {
     if (dream.analysis) {
       console.log("Raw analysis data type:", typeof dream.analysis);
+      console.log("Raw analysis data:", dream.analysis);
+      
       if (typeof dream.analysis === 'string') {
-        analysis = JSON.parse(dream.analysis);
-        console.log("Parsed analysis successfully:", !!analysis); 
+        // Versuche alle möglichen Formate zu unterstützen
+        if (dream.analysis.trim() === "") {
+          console.log("Analysis string is empty");
+        } else {
+          try {
+            analysis = JSON.parse(dream.analysis);
+            console.log("Parsed analysis successfully:", !!analysis);
+          } catch (parseError) {
+            console.error("JSON parse error:", parseError);
+            // Möglicherweise ist der String bereits formatiert
+            console.log("Could not parse as JSON, trying alternate formats");
+            // Versuche, den String direkt als Objekt zu verwenden
+            analysis = { directText: dream.analysis };
+          }
+        }
       } else if (typeof dream.analysis === 'object') {
         // Bereits ein Objekt, kein Parsing notwendig
         analysis = dream.analysis;
@@ -83,6 +106,9 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
     console.error("Error parsing dream analysis:", error);
     console.log("Problematic raw analysis data:", dream.analysis);
   }
+  
+  // Debug the final analysis object
+  console.log("Final analysis object:", analysis);
 
   // Format date in German with safe fallback
   const formattedDate = dream.date 
@@ -104,41 +130,67 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
     }
   };
 
-  // Add a tag
+  // Cancel image upload
+  const cancelImageUpload = () => {
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
+  // Add a new tag
   const addTag = () => {
-    const trimmedTag = tagInput.trim();
-    if (trimmedTag && !tags.includes(trimmedTag)) {
-      setTags([...tags, trimmedTag]);
-      setTagInput("");
+    if (newTag.trim() !== "" && !tags.includes(newTag.trim())) {
+      setTags([...tags, newTag.trim()]);
+      setNewTag("");
     }
   };
-  
+
   // Remove a tag
   const removeTag = (tagToRemove: string) => {
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
-  
-  // Handle tag input keydown events
-  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" || e.key === ",") {
+
+  // Handle tag input key press
+  const handleTagKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
       e.preventDefault();
       addTag();
     }
   };
 
-  // Handle save changes
-  const handleSave = async () => {
+  // Start editing the dream
+  const startEditing = () => {
+    setEditing(true);
+  };
+
+  // Cancel editing
+  const cancelEditing = () => {
+    setEditing(false);
+    setTitle(dream.title);
+    setContent(dream.content || "");
+    setTags(dream.tags || []);
+    setMoodBeforeSleep(dream.moodBeforeSleep || null);
+    setMoodAfterWakeup(dream.moodAfterWakeup || null);
+    setMoodNotes(dream.moodNotes || "");
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
+  // Save the dream changes
+  const saveDream = async () => {
+    if (!title.trim() || !content.trim()) {
+      toast({
+        title: "Fehler",
+        description: "Titel und Trauminhalt sind erforderlich",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUpdating(true);
+
     try {
-      setIsUpdating(true);
-      
-      // Überprüfen, ob dreamId gültig ist
-      if (!dreamId || dreamId <= 0) {
-        throw new Error("Ungültige Traum-ID. Der Traum kann nicht aktualisiert werden.");
-      }
-      
-      console.log("Updating dream with ID:", dreamId);
-      
-      const updateData: any = {
+      // First update the dream text and metadata
+      const updateData = {
         title,
         content,
         tags,
@@ -146,97 +198,78 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
         moodAfterWakeup,
         moodNotes
       };
-      
-      // Include image if it was changed
-      if (imagePreview && imageFile) {
-        updateData.imageBase64 = imagePreview;
+
+      await apiRequest("PATCH", `/api/dreams/${dream.id}`, updateData);
+
+      // Then upload image if there is one
+      if (imageFile) {
+        const formData = new FormData();
+        formData.append('image', imageFile);
+
+        const response = await fetch(`/api/dreams/${dream.id}/image`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to upload image');
+        }
       }
-      
-      // Update the dream
-      const response = await apiRequest('PATCH', `/api/dreams/${dreamId}`, updateData);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Fehler beim Aktualisieren des Traums");
-      }
-      
-      // Invalidate the cache to refresh data
-      queryClient.invalidateQueries({ queryKey: ['/api/dreams', dreamId] });
-      queryClient.invalidateQueries({ queryKey: ['/api/dreams'] });
-      
-      setEditing(false);
+
+      // Refresh the dream data
+      queryClient.invalidateQueries([`/api/dreams/${dream.id}`]);
+      queryClient.invalidateQueries(["/api/dreams"]);
+
       toast({
-        title: "Traum aktualisiert",
-        description: "Dein Traum wurde erfolgreich aktualisiert.",
+        title: "Erfolg",
+        description: "Traum wurde aktualisiert",
       });
+
+      setEditing(false);
+      setIsUpdating(false);
     } catch (error) {
-      console.error('Error updating dream:', error);
       toast({
         title: "Fehler",
-        description: "Der Traum konnte nicht aktualisiert werden: " + (error as Error).message,
+        description: "Fehler beim Aktualisieren des Traums",
         variant: "destructive",
       });
-    } finally {
       setIsUpdating(false);
     }
   };
 
-  // Cancel editing
-  const handleCancel = () => {
-    setTitle(dream.title);
-    setContent(dream.content);
-    setTags(dream.tags || []);
-    setTagInput("");
-    setImagePreview(null);
-    setImageFile(null);
-    setMoodBeforeSleep(dream.moodBeforeSleep || undefined);
-    setMoodAfterWakeup(dream.moodAfterWakeup || undefined);
-    setMoodNotes(dream.moodNotes || undefined);
-    setEditing(false);
-  };
-  
-  // Generate AI image for the dream
-  const handleGenerateImage = async () => {
+  // Generate an image for the dream
+  const generateDreamImage = async () => {
+    setIsGeneratingImage(true);
     try {
-      setIsGeneratingImage(true);
-      toast({
-        title: "Bild wird generiert",
-        description: "Das KI-Bild wird basierend auf deinem Traum erstellt. Dies kann einen Moment dauern...",
+      const response = await fetch(`/api/dreams/${dream.id}/generate-image`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
-      
-      // Überprüfen, ob dreamId gültig ist
-      if (!dreamId || dreamId <= 0) {
-        throw new Error("Ungültige Traum-ID. Bitte speichern Sie den Traum zuerst.");
-      }
-      
-      console.log("Generating image for dream ID:", dreamId);
-      const response = await apiRequest('POST', `/api/dreams/${dreamId}/generate-image`);
-      
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Fehler bei der Bildgenerierung");
+        throw new Error('Failed to generate image');
       }
-      
+
       const data = await response.json();
-      
-      if (data.success) {
-        // Invalidate the cache to refresh data
-        queryClient.invalidateQueries({ queryKey: ['/api/dreams', dreamId] });
-        queryClient.invalidateQueries({ queryKey: ['/api/dreams'] });
-        
-        toast({
-          title: "Bild generiert!",
-          description: "Dein Traumbild wurde erfolgreich erstellt.",
-          variant: "default",
-        });
-      } else {
-        throw new Error(data.details || "Fehler bei der Bildgenerierung");
-      }
+      console.log("Generated image response:", data);
+      setNewImage(data.imageUrl);
+      setIsImageModalOpen(true);
+
+      // Refresh the dream data to get updated image
+      queryClient.invalidateQueries([`/api/dreams/${dream.id}`]);
+      queryClient.invalidateQueries(["/api/dreams"]);
+
+      toast({
+        title: "Erfolg",
+        description: "Traumbildgenerierung abgeschlossen",
+      });
     } catch (error) {
-      console.error('Error generating dream image:', error);
+      console.error("Error generating dream image:", error);
       toast({
         title: "Fehler",
-        description: "Das Bild konnte nicht generiert werden. " + (error as Error).message,
+        description: "Fehler bei der Bildgenerierung",
         variant: "destructive",
       });
     } finally {
@@ -244,325 +277,431 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
     }
   };
 
-  if (!dream) return null;
+  // Close the image modal
+  const closeImageModal = () => {
+    setIsImageModalOpen(false);
+    setNewImage(null);
+  };
+
+  // Open the delete confirmation modal
+  const openDeleteModal = () => {
+    setIsDeleteModalOpen(true);
+  };
+
+  // Close the delete confirmation modal
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+  };
+
+  // Delete the dream
+  const deleteDream = async () => {
+    setIsDeleting(true);
+    try {
+      await apiRequest("DELETE", `/api/dreams/${dream.id}`);
+      
+      queryClient.invalidateQueries(["/api/dreams"]);
+      
+      toast({
+        title: "Erfolg",
+        description: "Traum wurde gelöscht",
+      });
+      
+      // Navigate back to dreams list (this would be handled by the parent component)
+      // Here we just close the modal
+      closeDeleteModal();
+    } catch (error) {
+      toast({
+        title: "Fehler",
+        description: "Fehler beim Löschen des Traums",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Trigger AI analysis of the dream
+  const analyzeDream = async () => {
+    setAnalyzingDream(true);
+    try {
+      const response = await apiRequest("POST", `/api/dreams/${dream.id}/analyze`, {});
+      
+      // Refresh the dream data to get the analysis
+      queryClient.invalidateQueries([`/api/dreams/${dream.id}`]);
+      
+      toast({
+        title: "Erfolg",
+        description: "Traumanalyse abgeschlossen",
+      });
+    } catch (error) {
+      toast({
+        title: "Fehler",
+        description: "Fehler bei der Traumanalyse",
+        variant: "destructive",
+      });
+    } finally {
+      setAnalyzingDream(false);
+    }
+  };
+
+  // Render mood indicator
+  const renderMoodIndicator = (mood: number | null, label: string) => {
+    if (mood === null) return null;
+    
+    const moodColors = [
+      "bg-red-500", // 1: Sehr schlecht
+      "bg-red-400", // 2
+      "bg-orange-400", // 3
+      "bg-orange-300", // 4
+      "bg-yellow-300", // 5: Neutral
+      "bg-yellow-200", // 6
+      "bg-green-200", // 7
+      "bg-green-300", // 8
+      "bg-green-400", // 9
+      "bg-green-500", // 10: Sehr gut
+    ];
+    
+    return (
+      <div className="flex items-center space-x-2">
+        <span className="text-sm text-gray-600">{label}:</span>
+        <div className={`w-5 h-5 rounded-full ${moodColors[mood-1]}`}></div>
+        <span className="text-sm font-medium">{mood}/10</span>
+      </div>
+    );
+  };
 
   return (
-    <section className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
-      <div className="flex flex-col lg:flex-row">
-        {/* Left side: Dream content */}
-        <div className="lg:w-2/3 p-6">
-          <div className="flex justify-between items-start mb-6">
-            {editing ? (
-              <Input 
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="text-2xl font-serif font-bold text-gray-800"
-              />
-            ) : (
-              <h2 className="text-2xl font-serif font-bold text-gray-800">{dream.title}</h2>
-            )}
-            <div className="text-sm text-gray-500 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              {formattedDate}
-            </div>
-          </div>
-          
-          <div className="mt-4 relative">
-            {(imagePreview || dream.imageUrl) ? (
-              <img 
-                src={imagePreview || dream.imageUrl || ''} 
-                alt="Traumvisualisierung" 
-                className="w-full h-56 object-cover rounded-lg"
-              />
-            ) : (
-              <div className="w-full h-56 flex items-center justify-center bg-gray-100 rounded-lg">
-                <span className="text-gray-500 text-sm">Kein Bild verfügbar</span>
+    <section className="bg-white rounded-lg shadow-sm overflow-hidden">
+      {/* Dream header with date and actions */}
+      <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+        <div className="flex flex-col">
+          <h2 className="text-2xl font-bold text-gray-800">{dream.title}</h2>
+          <div className="text-sm text-gray-500 flex items-center mt-1">
+            <span>{formattedDate}</span>
+            {(dream.moodBeforeSleep || dream.moodAfterWakeup) && (
+              <div className="ml-4 flex space-x-4">
+                {renderMoodIndicator(dream.moodBeforeSleep, "Vor dem Schlafen")}
+                {renderMoodIndicator(dream.moodAfterWakeup, "Nach dem Aufwachen")}
               </div>
             )}
-            
-            {/* Controls for editing and generating images */}
-            <div className="absolute bottom-4 right-4 flex gap-2">
-              {editing && (
-                <label className="bg-white p-2 rounded-full shadow-md hover:bg-gray-50 transition-colors cursor-pointer">
-                  <CameraIcon className="h-5 w-5 text-gray-600" />
-                  <input 
-                    type="file" 
-                    className="hidden" 
-                    accept="image/*"
-                    onChange={handleImageChange}
-                  />
-                </label>
-              )}
+          </div>
+        </div>
+        
+        <div className="flex space-x-2">
+          {!editing && (
+            <>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={startEditing}
+                className="flex items-center gap-1"
+              >
+                <PencilIcon className="h-4 w-4" />
+                <span className="hidden sm:inline">Bearbeiten</span>
+              </Button>
               
-              {!editing && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="bg-white/80 backdrop-blur-sm hover:bg-white/90 text-dream-primary border-dream-primary"
-                  onClick={handleGenerateImage}
-                  disabled={isGeneratingImage}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={generateDreamImage}
+                disabled={isGeneratingImage}
+                className="flex items-center gap-1"
+              >
+                {isGeneratingImage ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="hidden sm:inline">Generiere...</span>
+                  </>
+                ) : (
+                  <>
+                    <CameraIcon className="h-4 w-4" />
+                    <span className="hidden sm:inline">Bild generieren</span>
+                  </>
+                )}
+              </Button>
+              
+              {!dream.analysis && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={analyzeDream}
+                  disabled={analyzingDream}
+                  className="flex items-center gap-1"
                 >
-                  {isGeneratingImage ? (
+                  {analyzingDream ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                      Generiere...
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span className="hidden sm:inline">Analysiere...</span>
                     </>
                   ) : (
                     <>
-                      <Sparkles className="h-4 w-4 mr-1" />
-                      Bild generieren
+                      <Sparkles className="h-4 w-4" />
+                      <span className="hidden sm:inline">Analysieren</span>
                     </>
                   )}
                 </Button>
               )}
-            </div>
-          </div>
-          
-          {/* Mood tracking display/edit */}
-          {((dream.moodBeforeSleep || dream.moodAfterWakeup) || editing) && (
-            <div className="mt-6 bg-gray-50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">Stimmungstracking</h3>
               
-              {editing ? (
-                // Edit mode
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">Stimmung vor dem Schlafen (1-10)</h4>
-                      <div className="flex items-center gap-2">
-                        <Input 
-                          type="number" 
-                          min="1" 
-                          max="10"
-                          placeholder="1-10"
-                          value={moodBeforeSleep || ""}
-                          onChange={(e) => {
-                            const value = parseInt(e.target.value);
-                            if (!isNaN(value) && value >= 1 && value <= 10) {
-                              setMoodBeforeSleep(value);
-                            } else if (e.target.value === "") {
-                              setMoodBeforeSleep(undefined);
-                            }
-                          }}
-                          className="max-w-[100px]"
-                        />
-                        {moodBeforeSleep && (
-                          <div className="flex-grow bg-gray-200 rounded-full h-3">
-                            <div 
-                              className="bg-indigo-400 h-3 rounded-full" 
-                              style={{ width: `${(moodBeforeSleep / 10) * 100}%` }}
-                            ></div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">Stimmung nach dem Aufwachen (1-10)</h4>
-                      <div className="flex items-center gap-2">
-                        <Input 
-                          type="number" 
-                          min="1" 
-                          max="10"
-                          placeholder="1-10"
-                          value={moodAfterWakeup || ""}
-                          onChange={(e) => {
-                            const value = parseInt(e.target.value);
-                            if (!isNaN(value) && value >= 1 && value <= 10) {
-                              setMoodAfterWakeup(value);
-                            } else if (e.target.value === "") {
-                              setMoodAfterWakeup(undefined);
-                            }
-                          }}
-                          className="max-w-[100px]"
-                        />
-                        {moodAfterWakeup && (
-                          <div className="flex-grow bg-gray-200 rounded-full h-3">
-                            <div 
-                              className="bg-teal-400 h-3 rounded-full" 
-                              style={{ width: `${(moodAfterWakeup / 10) * 100}%` }}
-                            ></div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Stimmungsnotizen (optional)</h4>
-                    <Textarea 
-                      placeholder="Notizen zu deiner Stimmung oder Faktoren, die sie beeinflusst haben könnten..." 
-                      value={moodNotes || ""}
-                      onChange={(e) => setMoodNotes(e.target.value)}
-                      className="min-h-[80px]"
-                    />
-                  </div>
-                </div>
-              ) : (
-                // View mode
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {dream.moodBeforeSleep && (
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">Stimmung vor dem Schlafen</h4>
-                        <div className="flex items-center">
-                          <div className="flex-grow bg-gray-200 rounded-full h-3">
-                            <div 
-                              className="bg-indigo-400 h-3 rounded-full" 
-                              style={{ width: `${(dream.moodBeforeSleep / 10) * 100}%` }}
-                            ></div>
-                          </div>
-                          <span className="text-sm font-medium ml-2">{dream.moodBeforeSleep}/10</span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {dream.moodAfterWakeup && (
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">Stimmung nach dem Aufwachen</h4>
-                        <div className="flex items-center">
-                          <div className="flex-grow bg-gray-200 rounded-full h-3">
-                            <div 
-                              className="bg-teal-400 h-3 rounded-full" 
-                              style={{ width: `${(dream.moodAfterWakeup / 10) * 100}%` }}
-                            ></div>
-                          </div>
-                          <span className="text-sm font-medium ml-2">{dream.moodAfterWakeup}/10</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {dream.moodNotes && (
-                    <div className="mt-3">
-                      <h4 className="text-sm font-medium text-gray-700 mb-1">Notizen</h4>
-                      <p className="text-sm text-gray-600 italic">{dream.moodNotes}</p>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                onClick={openDeleteModal}
+                className="flex items-center gap-1"
+              >
+                <XIcon className="h-4 w-4" />
+                <span className="hidden sm:inline">Löschen</span>
+              </Button>
+            </>
           )}
           
-          <div className="mt-6">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="text-lg font-semibold text-gray-800">Trauminhalt</h3>
-              {!editing ? (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => setEditing(true)}
-                  className="text-dream-primary hover:text-dream-dark focus:outline-none text-sm font-medium flex items-center"
-                >
-                  <PencilIcon className="h-4 w-4 mr-1" />
-                  Bearbeiten
-                </Button>
-              ) : (
-                <div className="flex gap-2">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={handleCancel}
-                    disabled={isUpdating}
-                    className="text-gray-500 hover:text-gray-700 focus:outline-none text-sm font-medium flex items-center"
-                  >
-                    <XIcon className="h-4 w-4 mr-1" />
-                    Abbrechen
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={handleSave}
-                    disabled={isUpdating}
-                    className="text-green-600 hover:text-green-700 focus:outline-none text-sm font-medium flex items-center"
-                  >
-                    <CheckIcon className="h-4 w-4 mr-1" />
-                    Speichern
-                  </Button>
-                </div>
-              )}
-            </div>
-            
-            {/* Tags section */}
-            <div className="mb-4">
-              <div className="flex justify-between items-center mb-2">
-                <h4 className="text-sm font-medium text-gray-700">Tags</h4>
-                {dream.tags && dream.tags.length > 0 && !editing && (
-                  <span className="text-xs text-gray-500">{dream.tags.length} Tag{dream.tags.length !== 1 ? 's' : ''}</span>
+          {editing && (
+            <>
+              <Button 
+                variant="default"
+                size="sm" 
+                onClick={saveDream}
+                disabled={isUpdating}
+                className="flex items-center gap-1"
+              >
+                {isUpdating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Speichern...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckIcon className="h-4 w-4" />
+                    <span>Speichern</span>
+                  </>
                 )}
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={cancelEditing}
+                disabled={isUpdating}
+                className="flex items-center gap-1"
+              >
+                <XIcon className="h-4 w-4" />
+                <span>Abbrechen</span>
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+      
+      {/* Dream content and metadata */}
+      <div className="flex flex-col lg:flex-row">
+        <div className="lg:w-2/3 p-6">
+          {editing ? (
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+                  Titel
+                </label>
+                <Input 
+                  id="title"
+                  value={title} 
+                  onChange={(e) => setTitle(e.target.value)} 
+                  placeholder="Traumtitel" 
+                  className="w-full"
+                />
               </div>
               
-              {editing ? (
-                <div className="mb-4">
-                  <div className="flex gap-2 mb-2">
-                    <Input
-                      placeholder="Tag hinzufügen (Enter drücken)"
-                      value={tagInput}
-                      onChange={(e) => setTagInput(e.target.value)}
-                      onKeyDown={handleTagInputKeyDown}
-                      className="flex-grow"
+              <div>
+                <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1">
+                  Trauminhalt
+                </label>
+                <Textarea 
+                  id="content"
+                  value={content} 
+                  onChange={(e) => setContent(e.target.value)} 
+                  placeholder="Beschreibe deinen Traum detailliert..." 
+                  rows={8}
+                  className="w-full"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-1">
+                  Tags
+                </label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {tags.map((tag, index) => (
+                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                      {tag}
+                      <XIcon 
+                        className="h-3 w-3 cursor-pointer hover:text-red-500" 
+                        onClick={() => removeTag(tag)} 
+                      />
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex">
+                  <Input 
+                    id="tags"
+                    value={newTag} 
+                    onChange={(e) => setNewTag(e.target.value)} 
+                    onKeyPress={handleTagKeyPress}
+                    placeholder="Neuen Tag hinzufügen..." 
+                    className="w-full"
+                  />
+                  <Button 
+                    type="button" 
+                    onClick={addTag} 
+                    disabled={!newTag.trim()}
+                    className="ml-2 flex items-center"
+                    variant="outline"
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                    <span className="ml-1">Tag</span>
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="moodBeforeSleep" className="block text-sm font-medium text-gray-700 mb-1">
+                    Stimmung vor dem Schlafen (1-10)
+                  </label>
+                  <Input 
+                    id="moodBeforeSleep"
+                    type="number" 
+                    min="1" 
+                    max="10" 
+                    value={moodBeforeSleep || ''} 
+                    onChange={(e) => setMoodBeforeSleep(e.target.value ? parseInt(e.target.value) : null)} 
+                    placeholder="1-10" 
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="moodAfterWakeup" className="block text-sm font-medium text-gray-700 mb-1">
+                    Stimmung nach dem Aufwachen (1-10)
+                  </label>
+                  <Input 
+                    id="moodAfterWakeup"
+                    type="number" 
+                    min="1" 
+                    max="10" 
+                    value={moodAfterWakeup || ''} 
+                    onChange={(e) => setMoodAfterWakeup(e.target.value ? parseInt(e.target.value) : null)} 
+                    placeholder="1-10" 
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label htmlFor="moodNotes" className="block text-sm font-medium text-gray-700 mb-1">
+                  Stimmungsnotizen
+                </label>
+                <Textarea 
+                  id="moodNotes"
+                  value={moodNotes} 
+                  onChange={(e) => setMoodNotes(e.target.value)} 
+                  placeholder="Zusätzliche Notizen zur Stimmung..." 
+                  rows={3}
+                  className="w-full"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="dreamImage" className="block text-sm font-medium text-gray-700 mb-1">
+                  Traumbild (optional)
+                </label>
+                {imagePreview ? (
+                  <div className="relative">
+                    <img 
+                      src={imagePreview} 
+                      alt="Preview" 
+                      className="max-h-60 rounded-md object-contain" 
                     />
                     <Button 
-                      variant="outline" 
+                      variant="destructive" 
                       size="sm" 
-                      onClick={addTag}
-                      className="px-3 text-dream-primary border-dream-primary"
+                      onClick={cancelImageUpload}
+                      className="absolute top-2 right-2"
                     >
-                      <PlusIcon className="h-4 w-4" />
+                      <XIcon className="h-4 w-4" />
                     </Button>
                   </div>
-                  
-                  <div className="flex flex-wrap gap-2">
-                    {tags.map((tag, idx) => (
-                      <Badge key={idx} variant="secondary" className="px-3 py-1 group">
-                        <span className="flex items-center gap-1">
-                          <TagIcon className="h-3 w-3" />
-                          {tag}
-                          <XIcon 
-                            className="h-3 w-3 ml-1 cursor-pointer opacity-70 hover:opacity-100" 
-                            onClick={() => removeTag(tag)}
+                ) : (
+                  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                    <div className="space-y-1 text-center">
+                      <CameraIcon className="mx-auto h-12 w-12 text-gray-400" />
+                      <div className="flex text-sm text-gray-600">
+                        <label
+                          htmlFor="dreamImage"
+                          className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none"
+                        >
+                          <span>Bild hochladen</span>
+                          <input
+                            id="dreamImage"
+                            name="dreamImage"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageChange}
+                            className="sr-only"
                           />
-                        </span>
+                        </label>
+                        <p className="pl-1">oder hierher ziehen</p>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        PNG, JPG, GIF bis zu 10MB
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div>
+              {/* Dream content */}
+              <div className="prose prose-md max-w-none">
+                <p className="whitespace-pre-line text-gray-800">{dream.content}</p>
+              </div>
+              
+              {/* Tags */}
+              {dream.tags && dream.tags.length > 0 && (
+                <div className="mt-4">
+                  <div className="flex items-center text-sm text-gray-600 mb-2">
+                    <TagIcon className="h-4 w-4 mr-1" />
+                    <span>Tags:</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {dream.tags.map((tag, index) => (
+                      <Badge key={index} variant="secondary">
+                        {tag}
                       </Badge>
                     ))}
                   </div>
                 </div>
-              ) : (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {dream.tags && dream.tags.map((tag, idx) => (
-                    <Badge key={idx} variant="secondary" className="px-3 py-1">
-                      <span className="flex items-center gap-1">
-                        <TagIcon className="h-3 w-3" />
-                        {tag}
-                      </span>
-                    </Badge>
-                  ))}
-                  {(!dream.tags || dream.tags.length === 0) && (
-                    <span className="text-sm text-gray-500 italic">Keine Tags</span>
-                  )}
+              )}
+              
+              {/* Mood notes */}
+              {dream.moodNotes && (
+                <div className="mt-4 bg-gray-50 p-4 rounded-md">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Stimmungsnotizen:</h4>
+                  <p className="text-sm text-gray-600">{dream.moodNotes}</p>
+                </div>
+              )}
+              
+              {/* Dream image */}
+              {dream.imageUrl && (
+                <div className="mt-6">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Traumbild:</h4>
+                  <img 
+                    src={dream.imageUrl} 
+                    alt="Traumbild" 
+                    className="rounded-lg shadow-sm max-h-96 max-w-full object-contain" 
+                  />
                 </div>
               )}
             </div>
-            
-            <div className="prose max-w-none">
-              {editing ? (
-                <Textarea 
-                  value={content || ""}
-                  onChange={(e) => setContent(e.target.value)}
-                  className="min-h-[200px]"
-                />
-              ) : (
-                content ? content.split('\n').map((paragraph, index) => (
-                  <p key={index}>{paragraph}</p>
-                )) : <p>Kein Inhalt vorhanden</p>
-              )}
-            </div>
-          </div>
+          )}
         </div>
         
-        {/* Right side: AI Analysis */}
         <div className="lg:w-1/3 bg-dream-light p-6 border-l border-gray-200">
           <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-dream-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -572,172 +711,183 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
           </h3>
           
           {analysis ? (
-            <>
-              {/* Themes section */}
-              <div className="mb-6">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Hauptthemen</h4>
-                <div className="flex flex-wrap gap-2">
-                  {analysis.themes.map((theme: string, index: number) => {
-                    // Different background colors for variety
-                    const colorClasses = [
-                      "bg-dream-primary/10 text-dream-primary",
-                      "bg-blue-50 text-blue-600",
-                      "bg-yellow-50 text-yellow-600",
-                      "bg-green-50 text-green-600",
-                      "bg-purple-50 text-purple-600"
-                    ];
-                    const colorClass = colorClasses[index % colorClasses.length];
-                    
-                    return (
-                      <span 
-                        key={index} 
-                        className={`inline-block ${colorClass} text-sm px-3 py-1 rounded-full font-medium ai-analysis-tag hover:scale-105 transition-all`}
-                      >
-                        {theme}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-              
-              {/* Emotions section */}
-              <div className="mb-6">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Emotionale Landschaft</h4>
-                <div className="flex flex-col space-y-2">
-                  {analysis.emotions.map((emotion: { name: string, intensity: number }, index: number) => (
-                    <div key={index} className="flex items-center">
-                      <span className="text-sm text-gray-700 w-24">{emotion.name}:</span>
-                      <div className="flex-grow bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-dream-accent h-2 rounded-full" 
-                          style={{ width: `${emotion.intensity * 100}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-xs text-gray-500 ml-2">{Math.round(emotion.intensity * 100)}%</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Symbols section */}
-              <div className="mb-6">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Symbolische Bedeutungen</h4>
-                <ul className="text-sm text-gray-700 space-y-2">
-                  {analysis.symbols.map((symbol: { symbol: string, meaning: string }, index: number) => (
-                    <li key={index} className="flex flex-col">
-                      <span className="text-dream-primary font-medium">{symbol.symbol}:</span>
-                      <span className="ml-1">{symbol.meaning}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              
-              {/* Keywords section */}
-              {analysis.keywords && analysis.keywords.length > 0 && (
-                <div className="mb-6">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Schlüsselwörter</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {analysis.keywords.map((keyword: string, index: number) => (
-                      <span 
-                        key={index} 
-                        className="inline-block bg-dream-dark/10 text-dream-dark text-sm px-3 py-1 rounded-full font-medium"
-                      >
-                        {keyword}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {/* Cultural references for keywords */}
-              {analysis.keywordReferences && analysis.keywordReferences.length > 0 && (
-                <div className="mb-6">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Kulturelle Referenzen</h4>
-                  <div className="space-y-4">
-                    {analysis.keywordReferences.map((ref: any, index: number) => (
-                      <div key={index} className="border-l-2 border-dream-primary pl-3">
-                        <div className="font-medium text-dream-primary">{ref.word}</div>
-                        <div className="text-sm text-gray-700 mb-1">{ref.meaning}</div>
-                        <div className="space-y-1">
-                          {ref.culturalReferences.map((culture: any, cIndex: number) => (
-                            <div key={cIndex} className="text-xs">
-                              <span className="font-medium text-gray-600">{culture.culture}:</span>{" "}
-                              <span className="text-gray-600">{culture.interpretation}</span>
-                            </div>
-                          ))}
-                        </div>
-                        {ref.url && (
-                          <a 
-                            href={ref.url} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="text-xs text-dream-accent hover:underline mt-1 inline-block"
-                          >
-                            Mehr erfahren →
-                          </a>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {/* Interpretation */}
-              <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 mb-6">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Zusammenfassende Deutung</h4>
-                <p className="text-sm text-gray-600">
-                  {analysis.interpretation}
+            'directText' in analysis ? (
+              // Fallback für direktText (wenn analyse nicht korrekt geparst wurde)
+              <div className="prose prose-sm">
+                <p className="text-gray-600">
+                  {analysis.directText || "Keine Details zur Analyse verfügbar."}
                 </p>
               </div>
-              
-              {/* Quote */}
-              {analysis.quote && (
+            ) : (
+              <>
+                {/* Themes section */}
                 <div className="mb-6">
-                  <blockquote className="text-sm italic text-gray-600 border-l-4 border-dream-accent pl-3 py-2">
-                    "{analysis.quote.text}"
-                    <footer className="text-xs text-gray-500 mt-1">— {analysis.quote.source}</footer>
-                  </blockquote>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Hauptthemen</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {analysis.themes && analysis.themes.map((theme: string, index: number) => {
+                      // Different background colors for variety
+                      const colorClasses = [
+                        "bg-dream-primary/10 text-dream-primary",
+                        "bg-blue-50 text-blue-600",
+                        "bg-yellow-50 text-yellow-600",
+                        "bg-green-50 text-green-600",
+                        "bg-purple-50 text-purple-600"
+                      ];
+                      const colorClass = colorClasses[index % colorClasses.length];
+                      
+                      return (
+                        <span 
+                          key={index} 
+                          className={`inline-block ${colorClass} text-sm px-3 py-1 rounded-full font-medium ai-analysis-tag hover:scale-105 transition-all`}
+                        >
+                          {theme}
+                        </span>
+                      );
+                    })}
+                  </div>
                 </div>
-              )}
-              
-              {/* Motivational Insight */}
-              {analysis.motivationalInsight && (
+                
+                {/* Emotions section */}
                 <div className="mb-6">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Motivierender Gedanke</h4>
-                  <p className="text-sm italic text-gray-600">{analysis.motivationalInsight}</p>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Emotionale Landschaft</h4>
+                  <div className="flex flex-col space-y-2">
+                    {analysis.emotions && analysis.emotions.map((emotion: { name: string, intensity: number }, index: number) => (
+                      <div key={index} className="flex items-center">
+                        <span className="text-sm text-gray-700 w-24">{emotion.name}:</span>
+                        <div className="flex-grow bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-dream-accent h-2 rounded-full" 
+                            style={{ width: `${emotion.intensity * 100}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-xs text-gray-500 ml-2">{Math.round(emotion.intensity * 100)}%</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              )}
-              
-              {/* Weekly Insight if available */}
-              {analysis.weeklyInsight && (
-                <div className="bg-dream-light/50 p-4 rounded-lg border border-dream-primary/20 mt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Wöchentliche Einsicht</h4>
-                  <p className="text-sm text-gray-600 mb-2">{analysis.weeklyInsight.summary}</p>
-                  
-                  {analysis.weeklyInsight.patterns.length > 0 && (
-                    <div className="mb-2">
-                      <h5 className="text-xs font-medium text-gray-700 mb-1">Erkannte Muster:</h5>
-                      <ul className="list-disc list-inside text-xs text-gray-600 space-y-1">
-                        {analysis.weeklyInsight.patterns.map((pattern: string, index: number) => (
-                          <li key={index}>{pattern}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  
-                  {analysis.weeklyInsight.recommendations.length > 0 && (
-                    <div>
-                      <h5 className="text-xs font-medium text-gray-700 mb-1">Empfehlungen:</h5>
-                      <ul className="list-disc list-inside text-xs text-gray-600 space-y-1">
-                        {analysis.weeklyInsight.recommendations.map((rec: string, index: number) => (
-                          <li key={index}>{rec}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                
+                {/* Symbols section */}
+                <div className="mb-6">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Symbolische Bedeutungen</h4>
+                  <ul className="text-sm text-gray-700 space-y-2">
+                    {analysis.symbols && analysis.symbols.map((symbol: { symbol: string, meaning: string }, index: number) => (
+                      <li key={index} className="flex flex-col">
+                        <span className="text-dream-primary font-medium">{symbol.symbol}:</span>
+                        <span className="ml-1">{symbol.meaning}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-              )}
-            </>
+                
+                {/* Keywords section */}
+                {analysis.keywords && Array.isArray(analysis.keywords) && analysis.keywords.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Schlüsselwörter</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {analysis.keywords.map((keyword: string, index: number) => (
+                        <span 
+                          key={index} 
+                          className="inline-block bg-dream-dark/10 text-dream-dark text-sm px-3 py-1 rounded-full font-medium"
+                        >
+                          {keyword}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Cultural references for keywords */}
+                {analysis.keywordReferences && Array.isArray(analysis.keywordReferences) && analysis.keywordReferences.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Kulturelle Referenzen</h4>
+                    <div className="space-y-4">
+                      {analysis.keywordReferences.map((ref: any, index: number) => (
+                        <div key={index} className="border-l-2 border-dream-primary pl-3">
+                          <div className="font-medium text-dream-primary">{ref.word}</div>
+                          <div className="text-sm text-gray-700 mb-1">{ref.meaning}</div>
+                          <div className="space-y-1">
+                            {ref.culturalReferences && Array.isArray(ref.culturalReferences) && ref.culturalReferences.map((culture: any, cIndex: number) => (
+                              <div key={cIndex} className="text-xs">
+                                <span className="font-medium text-gray-600">{culture.culture}:</span>{" "}
+                                <span className="text-gray-600">{culture.interpretation}</span>
+                              </div>
+                            ))}
+                          </div>
+                          {ref.url && (
+                            <a 
+                              href={ref.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="text-xs text-dream-accent hover:underline mt-1 inline-block"
+                            >
+                              Mehr erfahren →
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Interpretation */}
+                {analysis.interpretation && (
+                  <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 mb-6">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Zusammenfassende Deutung</h4>
+                    <p className="text-sm text-gray-600">
+                      {analysis.interpretation}
+                    </p>
+                  </div>
+                )}
+                
+                {/* Quote */}
+                {analysis.quote && typeof analysis.quote === 'object' && analysis.quote.text && (
+                  <div className="mb-6">
+                    <blockquote className="text-sm italic text-gray-600 border-l-4 border-dream-accent pl-3 py-2">
+                      "{analysis.quote.text}"
+                      <footer className="text-xs text-gray-500 mt-1">— {analysis.quote.source || 'Unbekannt'}</footer>
+                    </blockquote>
+                  </div>
+                )}
+                
+                {/* Motivational Insight */}
+                {analysis.motivationalInsight && (
+                  <div className="mb-6">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Motivierender Gedanke</h4>
+                    <p className="text-sm italic text-gray-600">{analysis.motivationalInsight}</p>
+                  </div>
+                )}
+                
+                {/* Weekly Insight if available */}
+                {analysis.weeklyInsight && typeof analysis.weeklyInsight === 'object' && (
+                  <div className="bg-dream-light/50 p-4 rounded-lg border border-dream-primary/20 mt-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Wöchentliche Einsicht</h4>
+                    <p className="text-sm text-gray-600 mb-2">{analysis.weeklyInsight.summary}</p>
+                    
+                    {analysis.weeklyInsight.patterns && Array.isArray(analysis.weeklyInsight.patterns) && analysis.weeklyInsight.patterns.length > 0 && (
+                      <div className="mb-2">
+                        <h5 className="text-xs font-medium text-gray-700 mb-1">Erkannte Muster:</h5>
+                        <ul className="list-disc list-inside text-xs text-gray-600 space-y-1">
+                          {analysis.weeklyInsight.patterns.map((pattern: string, index: number) => (
+                            <li key={index}>{pattern}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    {analysis.weeklyInsight.recommendations && Array.isArray(analysis.weeklyInsight.recommendations) && analysis.weeklyInsight.recommendations.length > 0 && (
+                      <div>
+                        <h5 className="text-xs font-medium text-gray-700 mb-1">Empfehlungen:</h5>
+                        <ul className="list-disc list-inside text-xs text-gray-600 space-y-1">
+                          {analysis.weeklyInsight.recommendations.map((rec: string, index: number) => (
+                            <li key={index}>{rec}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )
           ) : (
             <div className="flex flex-col items-center justify-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-dream-primary"></div>

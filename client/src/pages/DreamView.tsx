@@ -29,10 +29,23 @@ export default function DreamView() {
   const dreamId = id ? parseInt(id) : 0;
   console.log("DreamView Component - Traum-ID:", id, "Parsed ID:", dreamId);
   
-  // Fetch the dream by ID
+  // Fetch the dream by ID with explicit details to ensure correct data retrieval
   const { data: fetchedDream, isLoading, error } = useQuery<Dream>({
     queryKey: ['/api/dreams', dreamId],
-    enabled: dreamId > 0 // Nur abfragen, wenn eine gültige ID vorhanden ist
+    enabled: dreamId > 0, // Nur abfragen, wenn eine gültige ID vorhanden ist
+    // Stelle sicher, dass die Daten frisch abgerufen werden
+    staleTime: 0,
+    gcTime: 5 * 60 * 1000, // 5 Minuten Cache (renamed from cacheTime in React Query v5)
+    // Debugging Information
+    select: (data) => {
+      console.log("Raw dream data from server:", {
+        id: data?.id,
+        content: data?.content ? data.content.substring(0, 20) + "..." : "No content",
+        analysis: data?.analysis ? "Analysis present" : "No analysis",
+        analysisType: data?.analysis ? typeof data.analysis : "undefined"
+      });
+      return data;
+    }
   });
   
   // Sicherer Umgang mit Dream-Objekten und den IDs
