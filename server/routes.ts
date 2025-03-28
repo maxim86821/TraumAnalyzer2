@@ -9,6 +9,7 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import { fileURLToPath } from "url";
+import session from "express-session";
 
 // Get the directory name in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -23,6 +24,21 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Session setup
+  const sessionSecret = process.env.SESSION_SECRET || 'supersecretkey';
+  
+  app.use(session({
+    secret: sessionSecret,
+    resave: false,
+    saveUninitialized: false,
+    store: storage.sessionStore,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    }
+  }));
+  
   // Setup Auth
   setupAuth(app);
   
