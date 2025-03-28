@@ -9,6 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Search, Filter, Image, Clock, Tag } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { toast } from '@/components/ui/use-toast'; // Assuming a toast component exists
+import { apiRequest } from '@/lib/api'; // Assuming an apiRequest function exists
+
 
 // Gallery view types
 type ViewMode = 'grid' | 'masonry' | 'carousel';
@@ -19,14 +22,27 @@ type FilterCriteria = {
   timeRange?: string;
 };
 
+interface ShareSettings {
+  isPublic: boolean;
+  allowComments: boolean;
+  allowInterpretations: boolean;
+  anonymousShare: boolean;
+}
+
 export default function DreamGalleryPage() {
   const { user } = useAuth();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [sortBy, setSortBy] = useState<SortOption>('recent');
   const [filters, setFilters] = useState<FilterCriteria>({});
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]); // Added tag state
-  const [availableTags, setAvailableTags] = useState<string[]>([]); // Added available tags state
+  const [selectedTags, setSelectedTags] = useState<string[]>([]); 
+  const [availableTags, setAvailableTags] = useState<string[]>([]); 
+  const [shareSettings, setShareSettings] = useState<ShareSettings>({
+    isPublic: false,
+    allowComments: true,
+    allowInterpretations: true,
+    anonymousShare: false
+  });
 
   // Fetch dreams
   const { data: dreams, isLoading, error } = useQuery({
@@ -36,7 +52,7 @@ export default function DreamGalleryPage() {
 
   // Apply filters and sorting to dream data
   const dreamsArray = Array.isArray(dreams) ? dreams : [];
-  const filteredDreams = filterDreams(dreamsArray, filters, selectedTags); // Updated filterDreams call
+  const filteredDreams = filterDreams(dreamsArray, filters, selectedTags); 
   const sortedDreams = sortDreams(filteredDreams, sortBy);
 
   // Handle search input change with debounce
@@ -80,6 +96,25 @@ export default function DreamGalleryPage() {
   // Handle time range filter change
   const handleTimeRangeChange = (timeRange: string) => {
     setFilters(prev => ({ ...prev, timeRange }));
+  };
+
+  const handleShareDream = async (dreamId: number) => {
+    try {
+      await apiRequest('POST', `/api/community/dreams`, {
+        dreamId,
+        ...shareSettings
+      });
+      toast({
+        title: 'Erfolg',
+        description: 'Traum wurde erfolgreich geteilt',
+      });
+    } catch (error) {
+      toast({
+        title: 'Fehler',
+        description: 'Fehler beim Teilen des Traums',
+        variant: 'destructive'
+      });
+    }
   };
 
   // Loading state
@@ -208,6 +243,7 @@ export default function DreamGalleryPage() {
                 dream={dream} 
                 index={index}
                 viewMode={viewMode}
+                onShare={() => handleShareDream(dream.id)} // Added onShare prop
               />
             ))}
           </div>
@@ -222,6 +258,7 @@ export default function DreamGalleryPage() {
                   dream={dream} 
                   index={index}
                   viewMode={viewMode}
+                  onShare={() => handleShareDream(dream.id)} // Added onShare prop
                 />
               </div>
             ))}
@@ -237,6 +274,7 @@ export default function DreamGalleryPage() {
                   dream={dream} 
                   index={index}
                   viewMode={viewMode}
+                  onShare={() => handleShareDream(dream.id)} // Added onShare prop
                 />
               </div>
             ))}
@@ -248,7 +286,7 @@ export default function DreamGalleryPage() {
 }
 
 // Dream visualization card component
-function DreamVisualizationCard({ dream, index, viewMode }: { dream: any, index: number, viewMode: ViewMode }) {
+function DreamVisualizationCard({ dream, index, viewMode, onShare }: { dream: any, index: number, viewMode: ViewMode, onShare: () => void }) {
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: (i: number) => ({
@@ -307,6 +345,7 @@ function DreamVisualizationCard({ dream, index, viewMode }: { dream: any, index:
               </div>
             )}
           </div>
+          <Button onClick={onShare} className="mt-2">Share</Button> {/* Added share button */}
         </Card>
       </Link>
     </motion.div>
@@ -330,7 +369,7 @@ function filterDreams(dreams: any[], criteria: FilterCriteria, selectedTags: str
     }
 
     // Apply tag filter
-    if (selectedTags && selectedTags.length > 0) { // Use selectedTags instead of criteria.tags
+    if (selectedTags && selectedTags.length > 0) { 
       if (!dream.tags || !selectedTags.every(tag => dream.tags.includes(tag))) {
         return false;
       }

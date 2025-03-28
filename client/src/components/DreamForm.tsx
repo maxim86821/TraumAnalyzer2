@@ -17,6 +17,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popove
 import { Badge } from "../components/ui/badge";
 import { cn } from "../lib/utils";
 import DreamWritingPrompts from "./DreamWritingPrompts";
+import { MicIcon, StopIcon } from "lucide-react";
+import { useVoiceRecording } from "../hooks/use-voice-recording";
 // Placeholder component -  Replace with actual implementation
 const TagsInput = ({ tags, onChange, placeholder, maxTags }) => {
   const [tagInput, setTagInput] = useState("");
@@ -81,6 +83,8 @@ export default function DreamForm() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
+  const { isRecording, startRecording, stopRecording, audioURL } = useVoiceRecording();
+
 
   // Initialize the form with default values
   const form = useForm<InsertDream>({
@@ -468,6 +472,13 @@ export default function DreamForm() {
                   )}
                 />
               </div>
+            </div>
+
+            <div>
+              <Button onClick={isRecording ? stopRecording : startRecording}>
+                {isRecording ? <StopIcon /> : <MicIcon />}
+              </Button>
+              {audioURL && <audio controls src={audioURL} />}
             </div>
 
             {/* Hervorgehobener Speichern-Button */}
