@@ -114,6 +114,7 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
   // Schließt den Dialog
   const closeImageDialog = () => {
     setShowImageDialog(false);
+    setIsGeneratingImage(false); // Reset des Ladezustands beim Schließen
   };
   
   // Generate mood image
@@ -145,6 +146,7 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
       });
       
       if (!response.ok) {
+        setIsGeneratingImage(false); // Sicherstellen, dass der Ladezustand zurückgesetzt wird
         throw new Error('Fehler bei der API-Anfrage');
       }
       
@@ -505,7 +507,11 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
                           variant="secondary"
                           size="sm"
                           className="opacity-80 hover:opacity-100"
-                          onClick={openImageGenerationDialog}
+                          onClick={() => {
+                            setIsGeneratingImage(false); // Wichtig: Reset des Ladezustands
+                            openImageGenerationDialog();
+                          }}
+                          title="Neues Bild generieren"
                         >
                           <Sparkles className="h-4 w-4" />
                         </Button>
@@ -518,7 +524,9 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
                             setImagePreview(null);
                             setUploadedImage(null);
                             setGeneratedDescription("");
+                            setIsGeneratingImage(false); // Wichtig: Reset des Ladezustands
                           }}
+                          title="Bild entfernen"
                         >
                           <XIcon className="h-4 w-4" />
                         </Button>
