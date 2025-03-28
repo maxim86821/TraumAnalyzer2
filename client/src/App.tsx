@@ -8,8 +8,8 @@ import NewDream from "@/pages/NewDream";
 import DreamView from "@/pages/DreamView";
 import AuthPage from "@/pages/auth-page";
 import Layout from "@/components/Layout";
-import { AuthProvider } from "@/hooks/use-auth";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AuthProvider } from "./hooks/use-auth";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 function Router() {
   return (

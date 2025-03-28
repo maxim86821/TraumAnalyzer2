@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/use-auth";
-import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Label } from "@/components/ui/label";
+import { useToast } from "../hooks/use-toast";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { Label } from "../components/ui/label";
 import { useLocation } from "wouter";
 
 export default function AuthPage() {
@@ -54,8 +54,13 @@ export default function AuthPage() {
               {/* Registrierungs-Tab */}
               <TabsContent value="register">
                 <RegisterForm onRegister={(username, password) => {
+                  console.log("Registrierungsversuch:", { username, password });
                   registerMutation.mutate({ username, password }, {
+                    onSuccess: () => {
+                      console.log("Registrierung erfolgreich");
+                    },
                     onError: (error: Error) => {
+                      console.error("Registrierungsfehler:", error);
                       toast({
                         title: "Registrierung fehlgeschlagen",
                         description: error.message,
@@ -159,6 +164,27 @@ function RegisterForm({ onRegister, isPending }: { onRegister: (username: string
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validiere Benutzername (mindestens 3 Zeichen)
+    if (username.length < 3) {
+      toast({
+        title: "Benutzername zu kurz",
+        description: "Der Benutzername muss mindestens 3 Zeichen lang sein",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Validiere Passwort (mindestens 6 Zeichen)
+    if (password.length < 6) {
+      toast({
+        title: "Passwort zu kurz",
+        description: "Das Passwort muss mindestens 6 Zeichen lang sein",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Validiere Passwortbestätigung
     if (password !== passwordConfirm) {
       toast({
         title: "Passwörter stimmen nicht überein",

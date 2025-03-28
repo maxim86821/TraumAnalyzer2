@@ -90,27 +90,37 @@ export function setupAuth(app: Express) {
   // Registrierung
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {
-      // Validiere die Anfragedaten
-      const parseResult = insertUserSchema.safeParse(req.body);
-      if (!parseResult.success) {
+      console.log("Registrierungsanfrage empfangen:", req.body);
+      
+      // Einfache manuelle Validierung für Benutzername und Passwort
+      const { username, password: userPassword } = req.body;
+      
+      if (!username || typeof username !== 'string' || username.length < 3) {
         return res.status(400).json({ 
           message: "Ungültige Benutzerdaten", 
-          errors: parseResult.error.errors 
+          errors: [{ path: ["username"], message: "Benutzername muss mindestens 3 Zeichen lang sein" }]
+        });
+      }
+      
+      if (!userPassword || typeof userPassword !== 'string' || userPassword.length < 6) {
+        return res.status(400).json({ 
+          message: "Ungültige Benutzerdaten", 
+          errors: [{ path: ["password"], message: "Passwort muss mindestens 6 Zeichen lang sein" }]
         });
       }
       
       // Prüfe, ob der Benutzername bereits existiert
-      const existingUser = await storage.getUserByUsername(parseResult.data.username);
+      const existingUser = await storage.getUserByUsername(username);
       if (existingUser) {
         return res.status(400).json({ message: "Benutzername bereits vergeben" });
       }
       
       // Hash des Passworts
-      const hashedPassword = await hashPassword(parseResult.data.password);
+      const hashedPassword = await hashPassword(userPassword);
       
       // Erstelle neuen Benutzer
       const user = await storage.createUser({
-        ...parseResult.data,
+        username,
         password: hashedPassword
       });
       
@@ -126,7 +136,7 @@ export function setupAuth(app: Express) {
       });
       
       // Sende Benutzerinformationen zurück (ohne Passwort)
-      const { password, ...userWithoutPassword } = user;
+      const userWithoutPassword = { id: user.id, username: user.username };
       res.status(201).json(userWithoutPassword);
     } catch (error) {
       console.error("Fehler bei der Registrierung:", error);
@@ -157,8 +167,8 @@ export function setupAuth(app: Express) {
       });
       
       // Sende Benutzerinformationen zurück (ohne Passwort)
-      const { password, ...userWithoutPassword } = user;
-      return res.json(userWithoutPassword);
+      const userInfo = { id: user.id, username: user.username };
+      return res.json(userInfo);
     })(req, res, next);
   });
   

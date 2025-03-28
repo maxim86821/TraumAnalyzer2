@@ -14,13 +14,10 @@ export const users = pgTable("users", {
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
-  name: true,
-  email: true,
 }).extend({
   // Add validation rules
   username: z.string().min(3, { message: "Benutzername muss mindestens 3 Zeichen lang sein" }),
   password: z.string().min(6, { message: "Passwort muss mindestens 6 Zeichen lang sein" }),
-  email: z.string().email({ message: "Ungültige E-Mail-Adresse" }).optional(),
 });
 
 export const dreams = pgTable("dreams", {

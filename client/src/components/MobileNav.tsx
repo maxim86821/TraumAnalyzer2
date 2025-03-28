@@ -31,11 +31,13 @@ export default function MobileNav() {
         {navItems.map((item, index) => {
           const isActive = item.path === location;
           return (
-            <Link key={index} href={item.path}>
-              <a className={`flex flex-col items-center py-3 px-4 ${isActive ? 'text-dream-primary' : 'text-gray-600'}`}>
-                {item.icon}
-                <span className="text-xs mt-1">{item.name}</span>
-              </a>
+            <Link 
+              key={index} 
+              href={item.path}
+              className={`flex flex-col items-center py-3 px-4 ${isActive ? 'text-dream-primary' : 'text-gray-600'}`}
+            >
+              {item.icon}
+              <span className="text-xs mt-1">{item.name}</span>
             </Link>
           );
         })}
