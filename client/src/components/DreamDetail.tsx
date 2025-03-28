@@ -80,6 +80,13 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
     try {
       setIsUpdating(true);
       
+      // Überprüfen, ob dream.id definiert ist, bevor wir die Anfrage senden
+      if (!dream.id) {
+        throw new Error("Ungültige Traum-ID. Der Traum kann nicht aktualisiert werden.");
+      }
+      
+      console.log("Updating dream with ID:", dream.id);
+      
       const updateData: any = {
         title,
         content,
@@ -95,7 +102,12 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
       }
       
       // Update the dream
-      await apiRequest('PATCH', `/api/dreams/${dream.id}`, updateData);
+      const response = await apiRequest('PATCH', `/api/dreams/${dream.id}`, updateData);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Fehler beim Aktualisieren des Traums");
+      }
       
       // Invalidate the cache to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/dreams', dream.id] });
@@ -110,7 +122,7 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
       console.error('Error updating dream:', error);
       toast({
         title: "Fehler",
-        description: "Der Traum konnte nicht aktualisiert werden.",
+        description: "Der Traum konnte nicht aktualisiert werden: " + (error as Error).message,
         variant: "destructive",
       });
     } finally {
@@ -141,6 +153,12 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
         description: "Das KI-Bild wird basierend auf deinem Traum erstellt. Dies kann einen Moment dauern...",
       });
       
+      // Überprüfen, ob dream.id definiert ist, bevor wir die Anfrage senden
+      if (!dream.id) {
+        throw new Error("Ungültige Traum-ID. Bitte speichern Sie den Traum zuerst.");
+      }
+      
+      console.log("Generating image for dream ID:", dream.id);
       const response = await apiRequest('POST', `/api/dreams/${dream.id}/generate-image`);
       const data = await response.json();
       

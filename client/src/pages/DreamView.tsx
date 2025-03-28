@@ -28,13 +28,26 @@ export default function DreamView() {
   // Fetch the dream by ID
   const { data: dream, isLoading, error } = useQuery<Dream>({
     queryKey: ['/api/dreams', id ? parseInt(id) : 0],
+    enabled: !!id // Nur abfragen, wenn eine ID vorhanden ist
   });
 
   // Handle dream deletion
   const handleDeleteDream = async () => {
     try {
       setIsDeleting(true);
-      await apiRequest('DELETE', `/api/dreams/${id}`);
+      
+      // Überprüfen, ob id definiert ist
+      if (!id) {
+        throw new Error("Ungültige Traum-ID");
+      }
+      
+      console.log("Deleting dream with ID:", id);
+      const response = await apiRequest('DELETE', `/api/dreams/${id}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Fehler beim Löschen des Traums");
+      }
       
       // Invalidate the dreams list to update it
       queryClient.invalidateQueries({ queryKey: ['/api/dreams'] });
@@ -50,7 +63,7 @@ export default function DreamView() {
       console.error('Error deleting dream:', error);
       toast({
         title: "Fehler",
-        description: "Der Traum konnte nicht gelöscht werden.",
+        description: "Der Traum konnte nicht gelöscht werden: " + (error as Error).message,
         variant: "destructive",
       });
     } finally {
