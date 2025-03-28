@@ -197,18 +197,18 @@ export class MemStorage implements IStorage {
   private journalEntries: Map<number, JournalEntry>;
   private dreamContentEntries: Map<number, DreamContentEntry>;
   private contentComments: Map<number, ContentComment>;
+  // Community data storage
+  private sharedDreams: Map<number, SharedDream>;
+  private dreamComments: Map<number, DreamComment>;
+  private commentLikes: Map<string, CommentLike>; // Key: `${commentId}:${userId}`
+  private dreamChallenges: Map<number, DreamChallenge>;
+  private challengeSubmissions: Map<number, ChallengeSubmission>;
   // Traumsymbol-Bibliothek
   private cultures: Map<number, Culture>;
   private dreamSymbols: Map<number, DreamSymbol>;
   private culturalInterpretations: Map<number, CulturalSymbolInterpretation>;
   private symbolComparisons: Map<number, SymbolComparison>;
   private userSymbolFavorites: Map<number, UserSymbolFavorite>;
-  // Collaborative Dream Interpretation
-  private sharedDreams: Map<number, SharedDream>;
-  private dreamComments: Map<number, DreamComment>;
-  private commentLikes: Map<number, CommentLike>;
-  private dreamChallenges: Map<number, DreamChallenge>;
-  private challengeSubmissions: Map<number, ChallengeSubmission>;
   // Laufende IDs
   private currentUserId: number;
   private currentDreamId: number;
@@ -253,6 +253,9 @@ export class MemStorage implements IStorage {
     this.challengeSubmissions = new Map();
     // IDs initialisieren
     this.currentUserId = 1;
+    
+    // Testdaten für Community-Funktionen initialisieren
+    this.initializeCommunityData();
     this.currentDreamId = 1;
     this.currentAnalysisId = 1;
     this.currentAchievementId = 1;
@@ -570,6 +573,214 @@ export class MemStorage implements IStorage {
         }
       } as any
     });
+  }
+  
+  /**
+   * Initialisiert die Testdaten für Community-Funktionen
+   * Erstellt Shared Dreams, Dream Comments, Dream Challenges und Challenge Submissions
+   */
+  private initializeCommunityData() {
+    // Prüfen, ob bereits Daten vorhanden sind
+    if (this.sharedDreams.size > 0) {
+      return; // Daten bereits initialisiert
+    }
+    
+    try {
+      // Demo-Benutzer erstellen, falls noch nicht vorhanden
+      if (this.users.size === 0) {
+        this.createUser({
+          username: "dreamwalker",
+          name: "Alex Träumer",
+          email: "alex@example.com",
+          password: "hashedpassword123"
+        });
+        
+        this.createUser({
+          username: "traumreisender",
+          name: "Maria Nachtfalter",
+          email: "maria@example.com",
+          password: "hashedpassword456"
+        });
+        
+        this.createUser({
+          username: "traumdeuterNRW",
+          name: "Thomas Schlafwandler",
+          email: "thomas@example.com",
+          password: "hashedpassword789"
+        });
+        
+        this.createUser({
+          username: "naturträumer",
+          name: "Jana Waldtraum",
+          email: "jana@example.com",
+          password: "hashedpassword101"
+        });
+      }
+      
+      // Shared Dreams erstellen
+      const dream1 = {
+        userId: 2,
+        dreamId: null,
+        title: "Flug über eine fremde Stadt",
+        content: "Ich flog über eine Stadt mit merkwürdigen Gebäuden, die wie Kristalle aussahen. Die Sonne spiegelte sich in ihnen und erzeugte ein faszinierendes Lichtspiel. Ich konnte die Menschen unten sehen, wie sie ihren Alltag nachgingen, aber sie schienen mich nicht zu bemerken. Die ganze Stadt pulsierte in einem sanften blauen Licht.",
+        imageUrl: null,
+        tags: ["fliegen", "stadt", "kristalle"],
+        visibility: "public",
+        allowComments: true,
+        allowInterpretations: true,
+        viewCount: 24,
+        createdAt: new Date("2025-03-20T14:32:00Z"),
+        username: "traumreisender"
+      };
+      
+      const dream2 = {
+        userId: 3,
+        dreamId: null,
+        title: "Im Labyrinth der Erinnerungen",
+        content: "Ich befand mich in einem sich ständig verändernden Labyrinth. An jeder Ecke sah ich Szenen aus meiner Vergangenheit, aber leicht verändert. Menschen, die ich kannte, verhielten sich anders, Orte sahen nicht ganz so aus, wie ich sie in Erinnerung hatte. Je tiefer ich ins Labyrinth vordrang, desto unbekannter wurden die Erinnerungen.",
+        imageUrl: null,
+        tags: ["labyrinth", "erinnerungen", "vergangenheit"],
+        visibility: "public",
+        allowComments: true,
+        allowInterpretations: true,
+        viewCount: 18,
+        createdAt: new Date("2025-03-25T09:15:00Z"),
+        username: "traumdeuterNRW"
+      };
+      
+      const dream3 = {
+        userId: 4,
+        dreamId: null,
+        title: "Die sprechenden Bäume",
+        content: "In einem alten Wald begannen die Bäume mit mir zu sprechen. Sie erzählten Geschichten von längst vergangenen Zeiten und gaben mir Ratschläge für die Zukunft. Ein besonders alter Baum in der Mitte des Waldes sagte, ich solle auf meine innere Stimme hören und meinem Pfad treu bleiben.",
+        imageUrl: null,
+        tags: ["natur", "kommunikation", "weisheit"],
+        visibility: "public",
+        allowComments: true,
+        allowInterpretations: true,
+        viewCount: 42,
+        createdAt: new Date("2025-03-15T16:20:00Z"),
+        username: "naturträumer"
+      };
+      
+      const dream4 = {
+        userId: 1,
+        dreamId: 10,
+        title: "Reise zum Meeresgrund",
+        content: "Ich konnte unter Wasser atmen und erkundete den Meeresboden. Seltsame leuchtende Wesen begleiteten mich auf meiner Reise. Sie schienen mir den Weg zu einer versunkenen Stadt zu zeigen. Als ich die Stadt erreichte, konnte ich verstehen, was die Meeresbewohner sagten.",
+        imageUrl: null,
+        tags: ["meer", "unterwasser", "entdeckung"],
+        visibility: "public",
+        allowComments: true,
+        allowInterpretations: true,
+        viewCount: 8,
+        createdAt: new Date("2025-03-26T22:10:00Z"),
+        username: "dreamwalker"
+      };
+      
+      // Shared Dreams in die Map einfügen
+      this.sharedDreams.set(1, {
+        id: 1,
+        ...dream1,
+      });
+      
+      this.sharedDreams.set(2, {
+        id: 2,
+        ...dream2,
+      });
+      
+      this.sharedDreams.set(3, {
+        id: 3,
+        ...dream3,
+      });
+      
+      this.sharedDreams.set(4, {
+        id: 4,
+        ...dream4,
+      });
+      
+      // Dream Comments erstellen
+      this.dreamComments.set(1, {
+        id: 1,
+        userId: 1,
+        sharedDreamId: 3,
+        text: "Dieser Traum erinnert mich an alte Mythen über die Weisheit der Natur. Die Bäume könnten dein Unterbewusstsein repräsentieren, das versucht, dir wichtige Botschaften mitzuteilen.",
+        isInterpretation: true,
+        likesCount: 5,
+        createdAt: new Date("2025-03-16T10:45:00Z"),
+        username: "dreamwalker"
+      });
+      
+      this.dreamComments.set(2, {
+        id: 2,
+        userId: 2,
+        sharedDreamId: 3,
+        text: "Ich hatte auch schon Träume mit sprechenden Bäumen! Bei mir waren sie allerdings eher beunruhigend und haben Warnungen ausgesprochen. Interessant, wie unterschiedlich ähnliche Symbole wirken können.",
+        isInterpretation: false,
+        likesCount: 2,
+        createdAt: new Date("2025-03-17T14:20:00Z"),
+        username: "traumreisender"
+      });
+      
+      this.dreamComments.set(3, {
+        id: 3,
+        userId: 3,
+        sharedDreamId: 1,
+        text: "Das Fliegen im Traum symbolisiert oft ein Gefühl der Freiheit und des Loslassens. Die kristalline Stadt könnte für Klarheit und neue Perspektiven stehen, die du in deinem Leben gewinnst.",
+        isInterpretation: true,
+        likesCount: 3,
+        createdAt: new Date("2025-03-21T08:30:00Z"),
+        username: "traumdeuterNRW"
+      });
+      
+      // Dream Challenges erstellen
+      this.dreamChallenges.set(1, {
+        id: 1,
+        title: "Wochentema: Wasser",
+        description: "Achte diese Woche besonders auf Traumsymbole, die mit Wasser zu tun haben. Teile deinen Traum und die Bedeutung, die Wasser darin hatte.",
+        imageUrl: null,
+        difficulty: "medium",
+        startDate: new Date("2025-03-20T00:00:00Z"),
+        endDate: new Date("2025-03-27T23:59:59Z"),
+        isActive: true,
+        tags: ["wasser", "symbolik", "elemente"],
+        createdAt: new Date("2025-03-19T12:00:00Z")
+      });
+      
+      this.dreamChallenges.set(2, {
+        id: 2,
+        title: "Lucides Träumen",
+        description: "Versuche, in dieser Woche einen luziden Traum zu erleben und zu dokumentieren. Teile deine Erfahrungen und Techniken, die dir dabei geholfen haben.",
+        imageUrl: null,
+        difficulty: "hard",
+        startDate: new Date("2025-03-25T00:00:00Z"),
+        endDate: new Date("2025-04-01T23:59:59Z"),
+        isActive: true,
+        tags: ["luzid", "kontrolle", "bewusstsein"],
+        createdAt: new Date("2025-03-24T15:30:00Z")
+      });
+      
+      // Challenge Submissions erstellen
+      this.challengeSubmissions.set(1, {
+        id: 1,
+        userId: 4,
+        challengeId: 1,
+        dreamId: null,
+        title: "Der sprechende Ozean",
+        content: "In meinem Traum stand ich am Ufer eines unendlich weiten Ozeans. Das Wasser begann, mit einer tiefen, hallenden Stimme zu sprechen. Es erzählte von den Geheimnissen der Tiefsee und den Veränderungen, die der Planet durchmacht. Ich fühlte mich gleichzeitig klein und verbunden mit etwas viel Größerem.",
+        reflection: "Wasser scheint in meinen Träumen oft als Vermittler von tiefem Wissen zu fungieren. Es repräsentiert für mich die Verbindung zur Natur und zu größeren Zusammenhängen.",
+        imageUrl: null,
+        tags: ["ozean", "kommunikation", "natur"],
+        submissionDate: new Date("2025-03-23T19:45:00Z"),
+        likesCount: 7,
+        username: "naturträumer"
+      });
+      
+      console.log("Community test data initialized");
+      
+    } catch (error) {
+      console.error('Error initializing community data:', error);
+    }
   }
 
   // User methods
