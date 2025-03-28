@@ -58,13 +58,13 @@ const RelatedContentSelector: React.FC<RelatedContentProps> = ({ type, id, onCha
   const { user } = useAuth();
   
   // Fetch user's dreams for the dropdown
-  const { data: dreams } = useQuery({
+  const { data: dreams = [] } = useQuery({
     queryKey: ['/api/dreams'],
     enabled: !!user,
   });
   
   // Fetch user's journal entries for the dropdown
-  const { data: journalEntries } = useQuery({
+  const { data: journalEntries = [] } = useQuery({
     queryKey: ['/api/journal'],
     enabled: !!user,
   });
@@ -128,20 +128,24 @@ const AIAssistant: React.FC = () => {
   const [showSidebar, setShowSidebar] = useState(true);
   
   // Fetch user's conversations
-  const { data: conversations, isLoading: isLoadingConversations } = useQuery({
+  const { data: conversations = [], isLoading: isLoadingConversations } = useQuery({
     queryKey: ['/api/assistant/conversations'],
     enabled: !!user,
   });
   
   // Fetch messages for the active conversation
-  const { data: conversationData, isLoading: isLoadingMessages } = useQuery({
+  const { data: conversationData = { conversation: null, messages: [] }, isLoading: isLoadingMessages } = useQuery({
     queryKey: ['/api/assistant/conversations', activeConversationId],
     enabled: !!activeConversationId,
   });
   
   // Create a new conversation
   const createConversationMutation = useMutation({
-    mutationFn: () => apiRequest('/api/assistant/conversations', { method: 'POST' }),
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/assistant/conversations');
+      const responseData = await response.json();
+      return responseData;
+    },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/assistant/conversations'] });
       setActiveConversationId(data.id);
@@ -157,11 +161,11 @@ const AIAssistant: React.FC = () => {
   
   // Update a conversation (e.g., to archive it)
   const updateConversationMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number, data: Partial<Conversation> }) => 
-      apiRequest(`/api/assistant/conversations/${id}`, { 
-        method: 'PATCH', 
-        body: JSON.stringify(data) 
-      }),
+    mutationFn: async ({ id, data }: { id: number, data: Partial<Conversation> }) => { 
+      const response = await apiRequest('PATCH', `/api/assistant/conversations/${id}`, data);
+      const responseData = await response.json();
+      return responseData;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/assistant/conversations'] });
     },
@@ -176,8 +180,11 @@ const AIAssistant: React.FC = () => {
   
   // Delete a conversation
   const deleteConversationMutation = useMutation({
-    mutationFn: (id: number) => 
-      apiRequest(`/api/assistant/conversations/${id}`, { method: 'DELETE' }),
+    mutationFn: async (id: number) => {
+      const response = await apiRequest('DELETE', `/api/assistant/conversations/${id}`);
+      const responseData = await response.json();
+      return responseData;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/assistant/conversations'] });
       setActiveConversationId(null);
@@ -192,12 +199,12 @@ const AIAssistant: React.FC = () => {
   });
   
   // Send a message to the AI assistant
-  const sendMessageMutation = useMutation({
-    mutationFn: (chatRequest: ChatRequest) => 
-      apiRequest('/api/assistant/chat', { 
-        method: 'POST', 
-        body: JSON.stringify(chatRequest) 
-      }),
+  const sendMessageMutation = useMutation<ChatResponse, Error, ChatRequest>({
+    mutationFn: async (chatRequest: ChatRequest) => {
+      const response = await apiRequest('POST', '/api/assistant/chat', chatRequest);
+      const responseData = await response.json();
+      return responseData as ChatResponse;
+    },
     onSuccess: (data: ChatResponse) => {
       setInputMessage('');
       setIsLoading(false);

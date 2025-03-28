@@ -107,6 +107,17 @@ export interface IStorage {
   deleteContentComment(id: number): Promise<boolean>;
 
   // Kulturelle Traumsymbol-Bibliothek
+  
+  // AI Assistant
+  createAssistantConversation(conversation: InsertAssistantConversation): Promise<AssistantConversation>;
+  getAssistantConversation(id: number): Promise<AssistantConversation | undefined>;
+  getUserAssistantConversations(userId: number): Promise<AssistantConversation[]>;
+  updateAssistantConversation(id: number, data: Partial<InsertAssistantConversation>): Promise<AssistantConversation | undefined>;
+  deleteAssistantConversation(id: number): Promise<boolean>;
+  
+  // Assistant Messages
+  createAssistantMessage(message: InsertAssistantMessage): Promise<AssistantMessage>;
+  getAssistantMessages(conversationId: number): Promise<AssistantMessage[]>;
 
   // Kulturen
   createCulture(culture: InsertCulture): Promise<Culture>;
