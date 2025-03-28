@@ -88,3 +88,15 @@
     background-color: var(--dream-primary-light);
   }
 }
+/* Dream gradient backgrounds */
+.bg-dream-gradient {
+  background: linear-gradient(to bottom, #9bce50, #a271f8);
+}
+
+.bg-dream-gradient-reverse {
+  background: linear-gradient(to top, #9bce50, #a271f8);
+}
+
+.bg-dream-gradient-diagonal {
+  background: linear-gradient(135deg, #9bce50, #a271f8);
+}

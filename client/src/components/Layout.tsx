@@ -19,7 +19,7 @@ export default function Layout({ children }: LayoutProps) {
   }, [isMobile, isMobileMenuOpen]);
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-dream-light">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-dream-gradient">
       {/* Sidebar - Only visible on desktop */}
       <Sidebar className="hidden lg:flex" />
 
