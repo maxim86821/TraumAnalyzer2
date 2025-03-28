@@ -10,7 +10,7 @@ import { Button } from "../components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../components/ui/form";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
-import { CalendarIcon, PlusIcon, TagIcon, XIcon } from "lucide-react";
+import { CalendarIcon, PlusIcon, TagIcon, XIcon, SunIcon, MoonIcon, CloudIcon, CloudRainIcon, CloudSunIcon } from "lucide-react";
 import { format } from "date-fns";
 import { Calendar } from "../components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
@@ -309,28 +309,53 @@ export default function DreamForm() {
                     name="moodBeforeSleep"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Stimmung vor dem Schlafen (1-10)</FormLabel>
+                        <FormLabel className="flex items-center gap-2">
+                          <MoonIcon className="h-4 w-4 text-indigo-600" />
+                          Stimmung vor dem Schlafen
+                        </FormLabel>
                         <FormControl>
-                          <div className="space-y-2">
-                            <Input 
-                              type="number" 
-                              min="1" 
-                              max="10"
-                              placeholder="1-10"
-                              {...field}
-                              onChange={(e) => {
-                                const value = parseInt(e.target.value);
-                                if (!isNaN(value) && value >= 1 && value <= 10) {
-                                  field.onChange(value);
-                                } else if (e.target.value === "") {
-                                  field.onChange(undefined);
-                                }
-                              }}
-                            />
+                          <div className="space-y-4">
+                            <div className="flex justify-between gap-1 mt-2">
+                              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => (
+                                <Button
+                                  key={value}
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className={`w-9 h-9 p-0 flex items-center justify-center rounded-full ${
+                                    field.value === value
+                                      ? value <= 3
+                                        ? "bg-red-100 border-red-400 text-red-600"
+                                        : value <= 7
+                                        ? "bg-amber-100 border-amber-400 text-amber-600"
+                                        : "bg-green-100 border-green-400 text-green-600"
+                                      : ""
+                                  }`}
+                                  onClick={() => field.onChange(value)}
+                                >
+                                  {value <= 3 && field.value === value && (
+                                    <CloudRainIcon className="h-4 w-4" />
+                                  )}
+                                  {value > 3 && value <= 7 && field.value === value && (
+                                    <CloudIcon className="h-4 w-4" />
+                                  )}
+                                  {value > 7 && field.value === value && (
+                                    <CloudSunIcon className="h-4 w-4" />
+                                  )}
+                                  {field.value !== value && value}
+                                </Button>
+                              ))}
+                            </div>
                             <div className="flex justify-between text-xs text-gray-500 px-1">
-                              <span>Negativ (1)</span>
-                              <span>Neutral (5)</span>
-                              <span>Positiv (10)</span>
+                              <span className="flex items-center gap-1 text-red-600">
+                                <CloudRainIcon className="h-3 w-3" /> Schlecht (1-3)
+                              </span>
+                              <span className="flex items-center gap-1 text-amber-600">
+                                <CloudIcon className="h-3 w-3" /> Neutral (4-7)
+                              </span>
+                              <span className="flex items-center gap-1 text-green-600">
+                                <CloudSunIcon className="h-3 w-3" /> Gut (8-10)
+                              </span>
                             </div>
                           </div>
                         </FormControl>
@@ -347,28 +372,53 @@ export default function DreamForm() {
                     name="moodAfterWakeup"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Stimmung nach dem Aufwachen (1-10)</FormLabel>
+                        <FormLabel className="flex items-center gap-2">
+                          <SunIcon className="h-4 w-4 text-amber-500" />
+                          Stimmung nach dem Aufwachen
+                        </FormLabel>
                         <FormControl>
-                          <div className="space-y-2">
-                            <Input 
-                              type="number" 
-                              min="1" 
-                              max="10"
-                              placeholder="1-10"
-                              {...field}
-                              onChange={(e) => {
-                                const value = parseInt(e.target.value);
-                                if (!isNaN(value) && value >= 1 && value <= 10) {
-                                  field.onChange(value);
-                                } else if (e.target.value === "") {
-                                  field.onChange(undefined);
-                                }
-                              }}
-                            />
+                          <div className="space-y-4">
+                            <div className="flex justify-between gap-1 mt-2">
+                              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((value) => (
+                                <Button
+                                  key={value}
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className={`w-9 h-9 p-0 flex items-center justify-center rounded-full ${
+                                    field.value === value
+                                      ? value <= 3
+                                        ? "bg-red-100 border-red-400 text-red-600"
+                                        : value <= 7
+                                        ? "bg-amber-100 border-amber-400 text-amber-600"
+                                        : "bg-green-100 border-green-400 text-green-600"
+                                      : ""
+                                  }`}
+                                  onClick={() => field.onChange(value)}
+                                >
+                                  {value <= 3 && field.value === value && (
+                                    <CloudRainIcon className="h-4 w-4" />
+                                  )}
+                                  {value > 3 && value <= 7 && field.value === value && (
+                                    <CloudIcon className="h-4 w-4" />
+                                  )}
+                                  {value > 7 && field.value === value && (
+                                    <SunIcon className="h-4 w-4" />
+                                  )}
+                                  {field.value !== value && value}
+                                </Button>
+                              ))}
+                            </div>
                             <div className="flex justify-between text-xs text-gray-500 px-1">
-                              <span>Negativ (1)</span>
-                              <span>Neutral (5)</span>
-                              <span>Positiv (10)</span>
+                              <span className="flex items-center gap-1 text-red-600">
+                                <CloudRainIcon className="h-3 w-3" /> Schlecht (1-3)
+                              </span>
+                              <span className="flex items-center gap-1 text-amber-600">
+                                <CloudIcon className="h-3 w-3" /> Neutral (4-7)
+                              </span>
+                              <span className="flex items-center gap-1 text-green-600">
+                                <SunIcon className="h-3 w-3" /> Gut (8-10)
+                              </span>
                             </div>
                           </div>
                         </FormControl>

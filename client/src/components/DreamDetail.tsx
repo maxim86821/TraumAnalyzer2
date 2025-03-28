@@ -8,7 +8,7 @@ import { apiRequest } from "../lib/queryClient";
 import { queryClient } from "../lib/queryClient";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { PencilIcon, CameraIcon, XIcon, CheckIcon, TagIcon, PlusIcon } from "lucide-react";
+import { PencilIcon, CameraIcon, XIcon, CheckIcon, TagIcon, PlusIcon, Sparkles, Loader2 } from "lucide-react";
 import { useToast } from "../hooks/use-toast";
 
 interface DreamDetailProps {
@@ -28,6 +28,7 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
   const [moodBeforeSleep, setMoodBeforeSleep] = useState<number | undefined>(dream.moodBeforeSleep || undefined);
   const [moodAfterWakeup, setMoodAfterWakeup] = useState<number | undefined>(dream.moodAfterWakeup || undefined);
   const [moodNotes, setMoodNotes] = useState<string | undefined>(dream.moodNotes || undefined);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
   // Parse the analysis JSON if it exists
   const analysis = dream.analysis ? JSON.parse(dream.analysis) : null;
@@ -128,6 +129,43 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
     setMoodNotes(dream.moodNotes || undefined);
     setEditing(false);
   };
+  
+  // Generate AI image for the dream
+  const handleGenerateImage = async () => {
+    try {
+      setIsGeneratingImage(true);
+      toast({
+        title: "Bild wird generiert",
+        description: "Das KI-Bild wird basierend auf deinem Traum erstellt. Dies kann einen Moment dauern...",
+      });
+      
+      const response = await apiRequest('POST', `/api/dreams/${dream.id}/generate-image`);
+      const data = await response.json();
+      
+      if (data.success) {
+        // Invalidate the cache to refresh data
+        queryClient.invalidateQueries({ queryKey: ['/api/dreams', dream.id] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dreams'] });
+        
+        toast({
+          title: "Bild generiert!",
+          description: "Dein Traumbild wurde erfolgreich erstellt.",
+          variant: "default",
+        });
+      } else {
+        throw new Error(data.details || "Fehler bei der Bildgenerierung");
+      }
+    } catch (error) {
+      console.error('Error generating dream image:', error);
+      toast({
+        title: "Fehler",
+        description: "Das Bild konnte nicht generiert werden. " + (error as Error).message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
 
   if (!dream) return null;
 
@@ -155,16 +193,21 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
           </div>
           
           <div className="mt-4 relative">
-            {(imagePreview || dream.imageUrl) && (
+            {(imagePreview || dream.imageUrl) ? (
               <img 
                 src={imagePreview || dream.imageUrl || ''} 
                 alt="Traumvisualisierung" 
                 className="w-full h-56 object-cover rounded-lg"
               />
+            ) : (
+              <div className="w-full h-56 flex items-center justify-center bg-gray-100 rounded-lg">
+                <span className="text-gray-500 text-sm">Kein Bild verfügbar</span>
+              </div>
             )}
             
-            {editing && (
-              <div className="absolute bottom-4 right-4 flex gap-2">
+            {/* Controls for editing and generating images */}
+            <div className="absolute bottom-4 right-4 flex gap-2">
+              {editing && (
                 <label className="bg-white p-2 rounded-full shadow-md hover:bg-gray-50 transition-colors cursor-pointer">
                   <CameraIcon className="h-5 w-5 text-gray-600" />
                   <input 
@@ -174,8 +217,30 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
                     onChange={handleImageChange}
                   />
                 </label>
-              </div>
-            )}
+              )}
+              
+              {!editing && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-white/80 backdrop-blur-sm hover:bg-white/90 text-dream-primary border-dream-primary"
+                  onClick={handleGenerateImage}
+                  disabled={isGeneratingImage}
+                >
+                  {isGeneratingImage ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      Generiere...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-1" />
+                      Bild generieren
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
           </div>
           
           {/* Mood tracking display/edit */}

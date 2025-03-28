@@ -5,6 +5,93 @@ import { AnalysisResponse, DeepPatternResponse } from "@shared/schema";
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /**
+ * Generate an image based on dream content, analysis and other factors
+ * @param dreamContent The text content of the dream
+ * @param analysis The analysis results if available
+ * @param tags Array of tags if available
+ * @param mood Mood information if available
+ * @returns URL to the generated image
+ */
+export async function generateDreamImage(
+  dreamContent: string, 
+  analysis?: AnalysisResponse | null,
+  tags?: string[] | null,
+  mood?: { beforeSleep?: number | null, afterWakeup?: number | null, notes?: string | null } | null
+): Promise<string> {
+  try {
+    // Create a detailed prompt based on the dream content and analysis
+    let promptBase = "Eine traumhafte Illustration basierend auf folgendem Traum:\n\n";
+    
+    // Add a short version of the dream content
+    promptBase += dreamContent.substring(0, 300);
+    
+    // Add analysis information if available
+    if (analysis) {
+      promptBase += "\n\nHauptthemen: " + analysis.themes.join(", ");
+      
+      // Add key emotions
+      if (analysis.emotions && analysis.emotions.length > 0) {
+        const topEmotions = analysis.emotions
+          .sort((a, b) => b.intensity - a.intensity)
+          .slice(0, 3)
+          .map(e => e.name);
+        promptBase += "\nEmotionen: " + topEmotions.join(", ");
+      }
+      
+      // Add key symbols
+      if (analysis.symbols && analysis.symbols.length > 0) {
+        const topSymbols = analysis.symbols.slice(0, 3).map(s => s.symbol);
+        promptBase += "\nSymbole: " + topSymbols.join(", ");
+      }
+    }
+    
+    // Add tags if available
+    if (tags && tags.length > 0) {
+      promptBase += "\n\nTags: " + tags.join(", ");
+    }
+    
+    // Add mood information if available to adjust the tone
+    if (mood) {
+      if (mood.beforeSleep && mood.beforeSleep <= 3) {
+        promptBase += "\n\nDer Traum begann mit einer sehr negativen Stimmung.";
+      } else if (mood.beforeSleep && mood.beforeSleep >= 8) {
+        promptBase += "\n\nDer Traum begann mit einer sehr positiven Stimmung.";
+      }
+      
+      if (mood.afterWakeup && mood.afterWakeup <= 3) {
+        promptBase += "\n\nDer Traum hinterließ ein negatives Gefühl.";
+      } else if (mood.afterWakeup && mood.afterWakeup >= 8) {
+        promptBase += "\n\nDer Traum hinterließ ein positives Gefühl.";
+      }
+    }
+    
+    // Add style directions
+    promptBase += "\n\nStil: Traumartig, surreal, mit fließenden Übergängen und symbolischer Bedeutung. Eine Mischung aus realistischen und fantastischen Elementen.";
+    
+    console.log("Generating image with prompt:", promptBase);
+    
+    // Call the OpenAI DALL-E API to generate the image
+    const response = await openai.images.generate({
+      model: "dall-e-3",
+      prompt: promptBase,
+      n: 1,
+      size: "1024x1024",
+      quality: "standard",
+    });
+    
+    const imageUrl = response.data[0].url;
+    if (!imageUrl) {
+      throw new Error("No image URL in response");
+    }
+    
+    return imageUrl;
+  } catch (error) {
+    console.error("Error generating dream image:", error);
+    throw new Error("Failed to generate dream image: " + (error as Error).message);
+  }
+}
+
+/**
  * Analyze dream content using OpenAI
  * @param dreamContent The text content of the dream
  * @returns Analysis response with themes, emotions, symbols, and interpretation

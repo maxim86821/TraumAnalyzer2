@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { analyzeDream, analyzePatterns } from "./openai";
+import { analyzeDream, analyzePatterns, generateDreamImage } from "./openai";
 import { saveBase64Image, deleteImage } from "./utils";
 import { insertDreamSchema } from "@shared/schema";
 import { setupAuth, authenticateJWT } from "./auth";
@@ -343,6 +343,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error uploading image:', error);
       res.status(500).json({ message: 'Fehler beim Hochladen des Bildes' });
+    }
+  });
+  
+  // Generate AI image for a dream
+  app.post('/api/dreams/:id/generate-image', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Ungültige Traum-ID' });
+      }
+
+      // Get the existing dream
+      const dream = await storage.getDream(id);
+      if (!dream) {
+        return res.status(404).json({ message: 'Traum nicht gefunden' });
+      }
+      
+      // Check if user is the owner of the dream
+      if (dream.userId !== req.user?.id) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Ändern dieses Traums' });
+      }
+
+      // Parse analysis if present
+      let analysis = null;
+      if (dream.analysis) {
+        try {
+          analysis = JSON.parse(dream.analysis);
+        } catch (error) {
+          console.error('Error parsing dream analysis:', error);
+        }
+      }
+
+      // Prepare mood info (handle both null and undefined)
+      const moodInfo = {
+        beforeSleep: dream.moodBeforeSleep ?? undefined,
+        afterWakeup: dream.moodAfterWakeup ?? undefined,
+        notes: dream.moodNotes ?? undefined
+      };
+
+      // Generate dream image
+      const imageUrl = await generateDreamImage(dream.content, analysis, dream.tags, moodInfo);
+
+      // Save the image to our system
+      try {
+        // Fetch the image
+        console.log("Fetching image from:", imageUrl);
+        const imageResponse = await fetch(imageUrl);
+        if (!imageResponse.ok) {
+          throw new Error(`Failed to fetch image: ${imageResponse.statusText}`);
+        }
+        
+        const arrayBuffer = await imageResponse.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const base64Data = buffer.toString('base64');
+        const mimeType = imageResponse.headers.get('content-type') || 'image/jpeg';
+        
+        // Delete the old image if it exists
+        if (dream.imageUrl) {
+          await deleteImage(dream.imageUrl);
+        }
+        
+        // Save the new image
+        const imagePath = await saveBase64Image(base64Data, mimeType);
+        
+        // Update the dream with the new image URL
+        const updatedDream = await storage.updateDream(id, { imageUrl: imagePath });
+        
+        res.json({
+          success: true,
+          dream: updatedDream
+        });
+      } catch (error) {
+        console.error('Error saving generated image:', error);
+        // Return the external URL if we couldn't save it locally
+        res.json({
+          success: true,
+          imageUrl,
+          message: 'Bild wurde generiert, konnte aber nicht lokal gespeichert werden.'
+        });
+      }
+    } catch (error) {
+      console.error('Error generating dream image:', error);
+      res.status(500).json({ 
+        success: false,
+        message: 'Fehler bei der Bildgenerierung', 
+        details: (error as Error).message
+      });
     }
   });
 
