@@ -247,7 +247,7 @@ const DreamSymbolLibrary: React.FC = () => {
                 <SelectValue placeholder="Kategorie" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Alle Kategorien</SelectItem>
+                <SelectItem value="all">Alle Kategorien</SelectItem>
                 {getUniqueCategories().map((category) => (
                   <SelectItem key={category} value={category}>
                     {category}
