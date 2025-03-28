@@ -8,8 +8,29 @@ import { apiRequest } from "../lib/queryClient";
 import { queryClient } from "../lib/queryClient";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { PencilIcon, CameraIcon, XIcon, CheckIcon, TagIcon, PlusIcon, Sparkles, Loader2 } from "lucide-react";
+import { 
+  PencilIcon, 
+  CameraIcon, 
+  XIcon, 
+  CheckIcon, 
+  TagIcon, 
+  PlusIcon, 
+  Sparkles, 
+  Loader2,
+  ZoomIn 
+} from "lucide-react";
 import { useToast } from "../hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface DreamDetailProps {
   dream: Dream;
@@ -691,11 +712,22 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
               {dream.imageUrl && (
                 <div className="mt-6">
                   <h4 className="text-sm font-medium text-gray-700 mb-2">Traumbild:</h4>
-                  <img 
-                    src={dream.imageUrl} 
-                    alt="Traumbild" 
-                    className="rounded-lg shadow-sm max-h-96 max-w-full object-contain" 
-                  />
+                  <div className="relative group">
+                    <img 
+                      src={dream.imageUrl} 
+                      alt="Traumbild" 
+                      className="rounded-lg shadow-md hover:shadow-xl transition-all duration-300 max-h-96 max-w-full object-contain cursor-pointer transform hover:scale-[1.01]" 
+                      onClick={() => {
+                        setNewImage(dream.imageUrl);
+                        setIsImageModalOpen(true);
+                      }}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="bg-black bg-opacity-50 rounded-full p-2">
+                        <ZoomIn className="h-6 w-6 text-white" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -897,5 +929,50 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
         </div>
       </div>
     </section>
+
+      {/* Image Modal */}
+      <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
+        <DialogContent className="sm:max-w-4xl bg-black/95 border-none">
+          <DialogHeader>
+            <DialogTitle className="text-white">Traumbild</DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center justify-center py-4">
+            <img 
+              src={newImage || dream.imageUrl} 
+              alt="Traumbild (Vergrößerte Ansicht)" 
+              className="max-h-[70vh] max-w-full object-contain rounded-lg shadow-2xl animate-fadeIn" 
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Traum löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Bist du sicher, dass du diesen Traum löschen möchtest? Diese Aktion kann nicht rückgängig gemacht werden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={deleteDream}
+              className="bg-red-500 hover:bg-red-600 text-white"
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Löschen...
+                </>
+              ) : (
+                "Traum löschen"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
   );
 }

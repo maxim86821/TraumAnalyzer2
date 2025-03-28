@@ -2,7 +2,7 @@ import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Dream } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import DreamDetail from "@/components/DreamDetail";
+import DreamDetail from "@/components/DreamDetail.new";
 import { ArrowLeftIcon, TrashIcon } from "lucide-react";
 import {
   AlertDialog,
