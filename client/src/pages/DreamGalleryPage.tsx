@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Search, Filter, Image, Clock, Tag, TrendingUp } from 'lucide-react';
+import { Loader2, Search, Filter, Image, Clock, Tag } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 // Gallery view types
@@ -25,6 +25,8 @@ export default function DreamGalleryPage() {
   const [sortBy, setSortBy] = useState<SortOption>('recent');
   const [filters, setFilters] = useState<FilterCriteria>({});
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]); // Added tag state
+  const [availableTags, setAvailableTags] = useState<string[]>([]); // Added available tags state
 
   // Fetch dreams
   const { data: dreams, isLoading, error } = useQuery({
@@ -34,7 +36,7 @@ export default function DreamGalleryPage() {
 
   // Apply filters and sorting to dream data
   const dreamsArray = Array.isArray(dreams) ? dreams : [];
-  const filteredDreams = filterDreams(dreamsArray, filters);
+  const filteredDreams = filterDreams(dreamsArray, filters, selectedTags); // Updated filterDreams call
   const sortedDreams = sortDreams(filteredDreams, sortBy);
 
   // Handle search input change with debounce
@@ -52,9 +54,28 @@ export default function DreamGalleryPage() {
   }, [searchTerm]);
 
   // Handle tag filter change
-  const handleTagFilterChange = (tags: string[]) => {
-    setFilters(prev => ({ ...prev, tags }));
+  const handleTagFilterChange = (tag: string) => {
+    if (selectedTags.includes(tag)) {
+      setSelectedTags(selectedTags.filter(t => t !== tag));
+    } else {
+      setSelectedTags([...selectedTags, tag]);
+    }
+    setFilters(prev => ({ ...prev, tags: selectedTags }));
   };
+
+    // Extract unique tags from all dreams for filtering
+  useEffect(() => {
+    if (dreams?.length > 0) {
+      const allTags = new Set<string>();
+      dreams.forEach((dream: any) => {
+        if (dream.tags && Array.isArray(dream.tags)) {
+          dream.tags.forEach((tag: string) => allTags.add(tag));
+        }
+      });
+      setAvailableTags(Array.from(allTags));
+    }
+  }, [dreams]);
+
 
   // Handle time range filter change
   const handleTimeRangeChange = (timeRange: string) => {
@@ -117,7 +138,7 @@ export default function DreamGalleryPage() {
               className="pl-10"
             />
           </div>
-          
+
           <div className="flex gap-2">
             <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
               <SelectTrigger className="min-w-[160px]">
@@ -130,7 +151,7 @@ export default function DreamGalleryPage() {
                 <SelectItem value="popular">Most Viewed</SelectItem>
               </SelectContent>
             </Select>
-            
+
             <Select onValueChange={handleTimeRangeChange} defaultValue="all">
               <SelectTrigger className="min-w-[140px]">
                 <Clock className="h-4 w-4 mr-2" />
@@ -144,6 +165,14 @@ export default function DreamGalleryPage() {
               </SelectContent>
             </Select>
           </div>
+        </div>
+        {/* Tag filter */}
+        <div className="flex flex-wrap gap-2">
+          {availableTags.map((tag) => (
+            <Button key={tag} onClick={() => handleTagFilterChange(tag)} className={`border border-gray-300 px-3 py-1 rounded-md ${selectedTags.includes(tag) ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'}`}>
+              {tag}
+            </Button>
+          ))}
         </div>
       </div>
 
@@ -169,7 +198,7 @@ export default function DreamGalleryPage() {
             </div>
           </TabsTrigger>
         </TabsList>
-        
+
         {/* Grid View */}
         <TabsContent value="grid" className="mt-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -259,7 +288,7 @@ function DreamVisualizationCard({ dream, index, viewMode }: { dream: any, index:
           <div className="p-4 flex flex-col flex-grow">
             <h3 className="font-semibold text-lg mb-1 line-clamp-1">{dream.title}</h3>
             <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{dream.content}</p>
-            
+
             {dream.tags && dream.tags.length > 0 && (
               <div className="mt-auto flex flex-wrap gap-1">
                 {dream.tags.slice(0, 3).map((tag: string) => (
@@ -285,33 +314,33 @@ function DreamVisualizationCard({ dream, index, viewMode }: { dream: any, index:
 }
 
 // Helper function to filter dreams based on criteria
-function filterDreams(dreams: any[], criteria: FilterCriteria): any[] {
+function filterDreams(dreams: any[], criteria: FilterCriteria, selectedTags: string[]): any[] {
   return dreams.filter(dream => {
     // Filter out dreams without images
     if (!dream.imageUrl) return false;
-    
+
     // Apply search term filter
     if (criteria.searchTerm) {
       const searchTermLower = criteria.searchTerm.toLowerCase();
       const titleMatch = dream.title?.toLowerCase().includes(searchTermLower);
       const contentMatch = dream.content?.toLowerCase().includes(searchTermLower);
       const tagMatch = dream.tags?.some((tag: string) => tag.toLowerCase().includes(searchTermLower));
-      
+
       if (!titleMatch && !contentMatch && !tagMatch) return false;
     }
-    
+
     // Apply tag filter
-    if (criteria.tags && criteria.tags.length > 0) {
-      if (!dream.tags || !criteria.tags.some(tag => dream.tags.includes(tag))) {
+    if (selectedTags && selectedTags.length > 0) { // Use selectedTags instead of criteria.tags
+      if (!dream.tags || !selectedTags.every(tag => dream.tags.includes(tag))) {
         return false;
       }
     }
-    
+
     // Apply time range filter
     if (criteria.timeRange && criteria.timeRange !== 'all') {
       const dreamDate = new Date(dream.date || dream.createdAt);
       const now = new Date();
-      
+
       switch (criteria.timeRange) {
         case 'week':
           if (now.getTime() - dreamDate.getTime() > 7 * 24 * 60 * 60 * 1000) return false;
@@ -324,7 +353,7 @@ function filterDreams(dreams: any[], criteria: FilterCriteria): any[] {
           break;
       }
     }
-    
+
     return true;
   });
 }
@@ -332,7 +361,7 @@ function filterDreams(dreams: any[], criteria: FilterCriteria): any[] {
 // Helper function to sort dreams
 function sortDreams(dreams: any[], sortOption: SortOption): any[] {
   const dreamsToSort = [...dreams];
-  
+
   switch (sortOption) {
     case 'recent':
       return dreamsToSort.sort((a, b) => {
@@ -364,18 +393,18 @@ function sortDreams(dreams: any[], sortOption: SortOption): any[] {
 // Helper function to calculate emotional score from dream analysis
 function getEmotionalScore(dream: any): number {
   if (!dream.analysis) return 0;
-  
+
   try {
     // If analysis is stored as a string, parse it
     const analysis = typeof dream.analysis === 'string' 
       ? JSON.parse(dream.analysis) 
       : dream.analysis;
-    
+
     // If there are emotions with intensity, calculate average intensity
     if (analysis.emotions && Array.isArray(analysis.emotions)) {
       const emotionIntensities = analysis.emotions
         .map((emotion: any) => emotion.intensity || 0);
-      
+
       if (emotionIntensities.length) {
         return emotionIntensities.reduce((a: number, b: number) => a + b, 0) / emotionIntensities.length;
       }
@@ -384,6 +413,6 @@ function getEmotionalScore(dream: any): number {
     // If parsing fails, return 0
     console.error('Error parsing dream analysis:', e);
   }
-  
+
   return 0;
 }

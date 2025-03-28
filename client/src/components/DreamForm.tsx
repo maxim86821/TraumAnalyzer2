@@ -17,15 +17,71 @@ import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popove
 import { Badge } from "../components/ui/badge";
 import { cn } from "../lib/utils";
 import DreamWritingPrompts from "./DreamWritingPrompts";
+// Placeholder component -  Replace with actual implementation
+const TagsInput = ({ tags, onChange, placeholder, maxTags }) => {
+  const [tagInput, setTagInput] = useState("");
+
+  const addTag = () => {
+    const trimmedTag = tagInput.trim();
+    if (trimmedTag && !tags.includes(trimmedTag) && tags.length < maxTags) {
+      onChange([...tags, trimmedTag]);
+      setTagInput("");
+    }
+  };
+
+  const removeTag = (tagToRemove) => {
+    onChange(tags.filter((tag) => tag !== tagToRemove));
+  };
+
+  const handleTagInputKeyDown = (e) => {
+    if (e.key === "Enter" && tagInput.trim()) {
+      e.preventDefault();
+      addTag();
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex flex-wrap gap-2 mb-2">
+        {tags.map((tag) => (
+          <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+            {tag}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => removeTag(tag)}
+              className="h-5 w-5 p-0 hover:bg-muted/50"
+            >
+              <XIcon className="h-3 w-3" />
+              <span className="sr-only">Remove {tag}</span>
+            </Button>
+          </Badge>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <Input
+          value={tagInput}
+          onChange={(e) => setTagInput(e.target.value)}
+          onKeyDown={handleTagInputKeyDown}
+          placeholder={placeholder}
+        />
+        <Button type="button" variant="outline" onClick={addTag}>
+          Add
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 
 export default function DreamForm() {
   const [_, setLocation] = useLocation();
   const { toast } = useToast();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
-  
+
   // Initialize the form with default values
   const form = useForm<InsertDream>({
     resolver: zodResolver(insertDreamSchema),
@@ -63,57 +119,35 @@ export default function DreamForm() {
   const removeImage = () => {
     setImagePreview(null);
   };
-  
-  // Add a tag
-  const addTag = () => {
-    const trimmedTag = tagInput.trim();
-    if (trimmedTag && !tags.includes(trimmedTag)) {
-      setTags([...tags, trimmedTag]);
-      setTagInput("");
-    }
-  };
-  
-  // Remove a tag
-  const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
-  };
-  
-  // Handle tag input keydown events
-  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" || e.key === ",") {
-      e.preventDefault();
-      addTag();
-    }
-  };
 
   // Submit the form
   const onSubmit = async (data: InsertDream) => {
     try {
       setIsSubmitting(true);
-      
+
       // Add the image as base64 if available
-      let submitData = imagePreview 
-        ? { ...data, imageBase64: imagePreview } 
+      let submitData = imagePreview
+        ? { ...data, imageBase64: imagePreview }
         : data;
-      
+
       // Add tags if available
       if (tags.length > 0) {
         submitData = { ...submitData, tags };
       }
-      
+
       // Send the dream data to the server
-      const response = await apiRequest('POST', '/api/dreams', submitData);
+      const response = await apiRequest("POST", "/api/dreams", submitData);
       const newDream = await response.json();
-      
+
       // Invalidate the dreams query to refresh the list
-      queryClient.invalidateQueries({ queryKey: ['/api/dreams'] });
-      
+      queryClient.invalidateQueries({ queryKey: ["/api/dreams"] });
+
       // Show success message
       toast({
         title: "Traum gespeichert",
         description: "Dein Traum wurde erfolgreich gespeichert und wird analysiert.",
       });
-      
+
       // Navigate to the dream detail page
       setLocation(`/dreams/${newDream.id}`);
     } catch (error) {
@@ -200,7 +234,7 @@ export default function DreamForm() {
                 <FormItem>
                   <div className="flex justify-between items-center">
                     <FormLabel>Trauminhalt</FormLabel>
-                    <DreamWritingPrompts 
+                    <DreamWritingPrompts
                       onSelectPrompt={(prompt) => {
                         const currentValue = field.value || "";
                         field.onChange(currentValue ? `${currentValue}\n\n${prompt}` : prompt);
@@ -209,10 +243,10 @@ export default function DreamForm() {
                     />
                   </div>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Beschreibe deinen Traum so detailliert wie möglich..." 
+                    <Textarea
+                      placeholder="Beschreibe deinen Traum so detailliert wie möglich..."
                       className="min-h-[200px]"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormDescription>
@@ -228,11 +262,7 @@ export default function DreamForm() {
               <FormLabel className="block mb-2">Traumvisualisierung (optional)</FormLabel>
               {imagePreview ? (
                 <div className="relative mt-2">
-                  <img 
-                    src={imagePreview} 
-                    alt="Vorschau" 
-                    className="w-full max-h-56 object-cover rounded-md" 
-                  />
+                  <img src={imagePreview} alt="Vorschau" className="w-full max-h-56 object-cover rounded-md" />
                   <Button
                     type="button"
                     variant="outline"
@@ -246,17 +276,28 @@ export default function DreamForm() {
               ) : (
                 <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
                   <div className="space-y-1 text-center">
-                    <svg className="mx-auto h-12 w-12 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    <svg
+                      className="mx-auto h-12 w-12 text-gray-400"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
                     </svg>
                     <div className="flex text-sm text-gray-600 justify-center">
                       <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-dream-primary hover:text-dream-dark focus-within:outline-none">
                         <span>Bild hochladen</span>
-                        <input 
-                          id="file-upload" 
-                          name="file-upload" 
-                          type="file" 
-                          className="sr-only" 
+                        <input
+                          id="file-upload"
+                          name="file-upload"
+                          type="file"
+                          className="sr-only"
                           accept="image/*"
                           onChange={handleImageUpload}
                         />
@@ -272,48 +313,12 @@ export default function DreamForm() {
             <div className="space-y-6">
               <div>
                 <FormLabel className="block mb-2">Tags hinzufügen (optional)</FormLabel>
-                <div className="flex gap-2 mb-2">
-                  <Input
-                    value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={handleTagInputKeyDown}
-                    placeholder="Tag eingeben und Enter drücken..."
-                    className="flex-grow"
-                  />
-                  <Button 
-                    type="button" 
-                    onClick={addTag}
-                    variant="outline"
-                    className="shrink-0"
-                  >
-                    <PlusIcon className="h-4 w-4 mr-1" />
-                    Hinzufügen
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="px-3 py-1">
-                      <span className="flex items-center gap-1">
-                        <TagIcon className="h-3 w-3" />
-                        {tag}
-                        <XIcon 
-                          className="h-3 w-3 ml-1 cursor-pointer" 
-                          onClick={() => removeTag(tag)}
-                        />
-                      </span>
-                    </Badge>
-                  ))}
-                  {tags.length === 0 && (
-                    <div className="text-sm text-muted-foreground italic">
-                      Keine Tags hinzugefügt. Gute Tags könnten sein: "alptraum", "luzid", "wiederkehrend", "fliegend", etc.
-                    </div>
-                  )}
-                </div>
+                <TagsInput tags={tags} onChange={setTags} placeholder="Add a tag..." maxTags={10} />
               </div>
-              
+
               <div className="border-t border-gray-100 pt-6">
                 <h3 className="font-medium text-lg mb-4">Stimmungstracking</h3>
-                
+
                 <div className="grid md:grid-cols-2 gap-6">
                   <FormField
                     control={form.control}
@@ -377,7 +382,7 @@ export default function DreamForm() {
                       </FormItem>
                     )}
                   />
-                  
+
                   <FormField
                     control={form.control}
                     name="moodAfterWakeup"
@@ -441,7 +446,7 @@ export default function DreamForm() {
                     )}
                   />
                 </div>
-                
+
                 <FormField
                   control={form.control}
                   name="moodNotes"
@@ -449,10 +454,10 @@ export default function DreamForm() {
                     <FormItem className="mt-4">
                       <FormLabel>Stimmungsnotizen (optional)</FormLabel>
                       <FormControl>
-                        <Textarea 
-                          placeholder="Notizen zu deiner Stimmung oder Faktoren, die sie beeinflusst haben könnten..." 
+                        <Textarea
+                          placeholder="Notizen zu deiner Stimmung oder Faktoren, die sie beeinflusst haben könnten..."
                           className="min-h-[80px]"
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormDescription>
@@ -468,7 +473,7 @@ export default function DreamForm() {
             {/* Hervorgehobener Speichern-Button */}
             <div className="flex flex-col space-y-4 mt-12">
               <div className="flex justify-center">
-                <Button 
+                <Button
                   type="submit"
                   disabled={isSubmitting}
                   className="bg-gradient-to-r from-dream-primary to-dream-dark hover:from-dream-dark hover:to-dream-primary text-white text-lg py-6 px-8 rounded-xl shadow-lg transform transition-all duration-300 hover:scale-105 w-full max-w-md flex items-center justify-center gap-3"
@@ -480,7 +485,14 @@ export default function DreamForm() {
                     </>
                   ) : (
                     <>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-6 w-6"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       <span className="font-medium">Traum speichern & analysieren</span>
@@ -489,8 +501,8 @@ export default function DreamForm() {
                 </Button>
               </div>
               <div className="flex justify-center">
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   variant="outline"
                   disabled={isSubmitting}
                   onClick={() => setLocation("/")}
