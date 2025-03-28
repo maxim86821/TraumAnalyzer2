@@ -669,3 +669,72 @@ export type InsertDreamChallenge = z.infer<typeof insertDreamChallengeSchema>;
 
 export type ChallengeSubmission = typeof challengeSubmissions.$inferSelect;
 export type InsertChallengeSubmission = z.infer<typeof insertChallengeSubmissionSchema>;
+
+// AI Assistant Chat Features
+
+// Conversation with AI Assistant
+export const assistantConversations = pgTable("assistant_conversations", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  title: text("title").notNull().default("Neue Unterhaltung"),
+  summary: text("summary"), // AI-generated summary of the conversation
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  isArchived: boolean("is_archived").notNull().default(false),
+});
+
+// Insert schema for assistant conversations
+export const insertAssistantConversationSchema = createInsertSchema(assistantConversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  summary: true,
+}).extend({
+  title: z.string().default("Neue Unterhaltung"),
+});
+
+// Messages in a conversation
+export const assistantMessages = pgTable("assistant_messages", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id").notNull(),
+  content: text("content").notNull(),
+  role: text("role").notNull(), // "user" or "assistant"
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  relatedDreamId: integer("related_dream_id"), // Optional reference to a dream
+  relatedJournalId: integer("related_journal_id"), // Optional reference to a journal entry
+  metadata: json("metadata"), // Additional info like references, sources, etc.
+});
+
+// Insert schema for assistant messages
+export const insertAssistantMessageSchema = createInsertSchema(assistantMessages).omit({
+  id: true,
+  timestamp: true,
+}).extend({
+  content: z.string().min(1, { message: "Nachricht darf nicht leer sein" }),
+  role: z.enum(["user", "assistant"]),
+  relatedDreamId: z.number().optional(),
+  relatedJournalId: z.number().optional(),
+  metadata: z.any().optional(),
+});
+
+// Assistant conversation types
+export type AssistantConversation = typeof assistantConversations.$inferSelect;
+export type InsertAssistantConversation = z.infer<typeof insertAssistantConversationSchema>;
+
+// Assistant message types
+export type AssistantMessage = typeof assistantMessages.$inferSelect;
+export type InsertAssistantMessage = z.infer<typeof insertAssistantMessageSchema>;
+
+// Interfaces for message interaction
+export interface ChatRequest {
+  conversationId?: number;
+  message: string;
+  relatedDreamId?: number;
+  relatedJournalId?: number;
+}
+
+export interface ChatResponse {
+  conversationId: number;
+  message: AssistantMessage;
+  relatedContent?: any;
+}

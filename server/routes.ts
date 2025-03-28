@@ -16,6 +16,9 @@ import {
   insertCommentLikeSchema,
   insertDreamChallengeSchema,
   insertChallengeSubmissionSchema,
+  // AI Assistant imports
+  ChatRequest,
+  InsertAssistantConversation,
   MoodData
 } from "@shared/schema";
 import { setupAuth, authenticateJWT } from "./auth";
@@ -1003,6 +1006,220 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting journal entry:', error);
       res.status(500).json({ message: 'Fehler beim Löschen des Journaleintrags' });
+    }
+  });
+
+  // AI Assistant Chat API
+
+  // Get all conversations for the current user
+  app.get('/api/assistant/conversations', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+
+      const conversations = await storage.getAssistantConversationsByUserId(req.user.id);
+      res.json(conversations);
+    } catch (error) {
+      console.error('Error fetching assistant conversations:', error);
+      res.status(500).json({ message: 'Fehler beim Laden der Unterhaltungen' });
+    }
+  });
+
+  // Get a specific conversation by ID
+  app.get('/api/assistant/conversations/:id', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Ungültige Konversations-ID' });
+      }
+
+      const conversation = await storage.getAssistantConversation(id);
+      
+      if (!conversation) {
+        return res.status(404).json({ message: 'Unterhaltung nicht gefunden' });
+      }
+
+      // Check if user is the owner of the conversation
+      if (conversation.userId !== req.user.id) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Anzeigen dieser Unterhaltung' });
+      }
+
+      // Get all messages for this conversation
+      const messages = await storage.getAssistantMessagesByConversationId(id);
+      
+      // Return conversation with messages
+      res.json({
+        conversation,
+        messages
+      });
+    } catch (error) {
+      console.error('Error fetching assistant conversation:', error);
+      res.status(500).json({ message: 'Fehler beim Laden der Unterhaltung' });
+    }
+  });
+
+  // Create a new conversation
+  app.post('/api/assistant/conversations', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+
+      const newConversation: InsertAssistantConversation = {
+        userId: req.user.id,
+        title: req.body.title || "Neue Unterhaltung",
+        isArchived: false
+      };
+
+      const conversation = await storage.createAssistantConversation(newConversation);
+      res.status(201).json(conversation);
+    } catch (error) {
+      console.error('Error creating assistant conversation:', error);
+      res.status(500).json({ message: 'Fehler beim Erstellen der Unterhaltung' });
+    }
+  });
+
+  // Update a conversation
+  app.patch('/api/assistant/conversations/:id', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Ungültige Konversations-ID' });
+      }
+
+      // Get the existing conversation
+      const existingConversation = await storage.getAssistantConversation(id);
+      if (!existingConversation) {
+        return res.status(404).json({ message: 'Unterhaltung nicht gefunden' });
+      }
+
+      // Check if user is the owner of the conversation
+      if (existingConversation.userId !== req.user.id) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Ändern dieser Unterhaltung' });
+      }
+
+      // Update the conversation
+      const update: Partial<InsertAssistantConversation> = {};
+      if (req.body.title !== undefined) update.title = req.body.title;
+      if (req.body.isArchived !== undefined) update.isArchived = req.body.isArchived;
+
+      const updatedConversation = await storage.updateAssistantConversation(id, update);
+      if (!updatedConversation) {
+        return res.status(404).json({ message: 'Fehler beim Aktualisieren der Unterhaltung' });
+      }
+
+      res.json(updatedConversation);
+    } catch (error) {
+      console.error('Error updating assistant conversation:', error);
+      res.status(500).json({ message: 'Fehler beim Aktualisieren der Unterhaltung' });
+    }
+  });
+
+  // Delete a conversation
+  app.delete('/api/assistant/conversations/:id', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Ungültige Konversations-ID' });
+      }
+
+      // Get the existing conversation
+      const existingConversation = await storage.getAssistantConversation(id);
+      if (!existingConversation) {
+        return res.status(404).json({ message: 'Unterhaltung nicht gefunden' });
+      }
+
+      // Check if user is the owner of the conversation
+      if (existingConversation.userId !== req.user.id) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Löschen dieser Unterhaltung' });
+      }
+
+      // Delete the conversation (this also deletes all associated messages due to CASCADE)
+      const success = await storage.deleteAssistantConversation(id);
+      if (!success) {
+        return res.status(500).json({ message: 'Fehler beim Löschen der Unterhaltung' });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting assistant conversation:', error);
+      res.status(500).json({ message: 'Fehler beim Löschen der Unterhaltung' });
+    }
+  });
+
+  // Get all messages for a conversation
+  app.get('/api/assistant/conversations/:id/messages', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Ungültige Konversations-ID' });
+      }
+
+      // Get the conversation to check ownership
+      const conversation = await storage.getAssistantConversation(id);
+      if (!conversation) {
+        return res.status(404).json({ message: 'Unterhaltung nicht gefunden' });
+      }
+
+      // Check if user is the owner of the conversation
+      if (conversation.userId !== req.user.id) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Anzeigen dieser Unterhaltung' });
+      }
+
+      const messages = await storage.getAssistantMessagesByConversationId(id);
+      res.json(messages);
+    } catch (error) {
+      console.error('Error fetching assistant messages:', error);
+      res.status(500).json({ message: 'Fehler beim Laden der Nachrichten' });
+    }
+  });
+
+  // Send a message to the assistant (and get a response)
+  app.post('/api/assistant/chat', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+
+      // Validate request
+      if (!req.body.message) {
+        return res.status(400).json({ message: 'Nachricht ist erforderlich' });
+      }
+
+      // Prepare the chat request
+      const chatRequest: ChatRequest = {
+        conversationId: req.body.conversationId,
+        message: req.body.message,
+        relatedDreamId: req.body.relatedDreamId,
+        relatedJournalId: req.body.relatedJournalId
+      };
+
+      // Process the chat request
+      const response = await storage.processAssistantChatRequest(req.user.id, chatRequest);
+      res.json(response);
+    } catch (error) {
+      console.error('Error processing chat request:', error);
+      res.status(500).json({ 
+        message: 'Fehler bei der Verarbeitung der Chat-Anfrage',
+        detail: (error as Error).message
+      });
     }
   });
 
@@ -2345,6 +2562,232 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // </Collaborative Dream Interpretation>
+
+  // <AI Assistant>
+  
+  // Get all conversations for the authenticated user
+  app.get('/api/assistant/conversations', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const conversations = await storage.getUserAssistantConversations(req.user.id);
+      res.json(conversations);
+    } catch (error) {
+      console.error('Error fetching assistant conversations:', error);
+      res.status(500).json({ message: 'Fehler beim Laden der Unterhaltungen' });
+    }
+  });
+  
+  // Get a specific conversation with messages
+  app.get('/api/assistant/conversations/:id', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const conversationId = parseInt(req.params.id);
+      const conversation = await storage.getAssistantConversation(conversationId);
+      
+      if (!conversation || conversation.userId !== req.user.id) {
+        return res.status(404).json({ message: 'Unterhaltung nicht gefunden' });
+      }
+      
+      const messages = await storage.getAssistantMessages(conversationId);
+      
+      res.json({
+        conversation,
+        messages
+      });
+    } catch (error) {
+      console.error('Error fetching assistant conversation:', error);
+      res.status(500).json({ message: 'Fehler beim Laden der Unterhaltung' });
+    }
+  });
+  
+  // Create a new conversation
+  app.post('/api/assistant/conversations', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const newConversation = await storage.createAssistantConversation({
+        userId: req.user.id,
+        title: req.body.title || 'Neue Unterhaltung'
+      });
+      
+      res.status(201).json(newConversation);
+    } catch (error) {
+      console.error('Error creating assistant conversation:', error);
+      res.status(500).json({ message: 'Fehler beim Erstellen der Unterhaltung' });
+    }
+  });
+  
+  // Update a conversation (e.g., archive, change title)
+  app.patch('/api/assistant/conversations/:id', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const conversationId = parseInt(req.params.id);
+      const conversation = await storage.getAssistantConversation(conversationId);
+      
+      if (!conversation || conversation.userId !== req.user.id) {
+        return res.status(404).json({ message: 'Unterhaltung nicht gefunden' });
+      }
+      
+      const updatedConversation = await storage.updateAssistantConversation(conversationId, req.body);
+      res.json(updatedConversation);
+    } catch (error) {
+      console.error('Error updating assistant conversation:', error);
+      res.status(500).json({ message: 'Fehler beim Aktualisieren der Unterhaltung' });
+    }
+  });
+  
+  // Delete a conversation
+  app.delete('/api/assistant/conversations/:id', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const conversationId = parseInt(req.params.id);
+      const conversation = await storage.getAssistantConversation(conversationId);
+      
+      if (!conversation || conversation.userId !== req.user.id) {
+        return res.status(404).json({ message: 'Unterhaltung nicht gefunden' });
+      }
+      
+      await storage.deleteAssistantConversation(conversationId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error deleting assistant conversation:', error);
+      res.status(500).json({ message: 'Fehler beim Löschen der Unterhaltung' });
+    }
+  });
+  
+  // Send a message to the assistant and get a response
+  app.post('/api/assistant/chat', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const { conversationId, message, relatedDreamId, relatedJournalId } = req.body as ChatRequest;
+      
+      let activeConversationId = conversationId;
+      
+      // If no conversation ID is provided, create a new conversation
+      if (!activeConversationId) {
+        const newConversation = await storage.createAssistantConversation({
+          userId: req.user.id,
+          title: message.slice(0, 30) + (message.length > 30 ? '...' : '') // Use part of the first message as the title
+        });
+        activeConversationId = newConversation.id;
+      }
+      
+      // Save the user message
+      const userMessage = await storage.createAssistantMessage({
+        conversationId: activeConversationId,
+        content: message,
+        role: 'user',
+        relatedDreamId: relatedDreamId || null,
+        relatedJournalId: relatedJournalId || null
+      });
+      
+      // Get related content if needed
+      let relatedContent = null;
+      if (relatedDreamId) {
+        relatedContent = await storage.getDream(relatedDreamId);
+      } else if (relatedJournalId) {
+        relatedContent = await storage.getJournalEntry(relatedJournalId);
+      }
+      
+      // Handle collecting context for the AI
+      let context = `Du bist ein Traumdeutungs-Assistent in einer Traumtagebuch-App. 
+Helfe dem Benutzer mit Einsichten zu Traumsymbolen, Traumdeutung, Schlafqualität und mehr.
+Beantworte die Fragen knapp und präzise, aber freundlich und hilfreich.
+Datum: ${new Date().toLocaleDateString('de-DE')}
+`;
+      
+      if (relatedContent) {
+        if (relatedDreamId) {
+          context += `\nBezug auf Traum: "${relatedContent.title}"\n${relatedContent.content}\n`;
+          if (relatedContent.analysis) {
+            context += `Bisherige Analyse: ${relatedContent.analysis}\n`;
+          }
+        } else if (relatedJournalId) {
+          context += `\nBezug auf Tagebucheintrag: "${relatedContent.title}"\n${relatedContent.content}\n`;
+        }
+      }
+      
+      // Get conversation history (last 10 messages)
+      const conversationHistory = await storage.getAssistantMessages(activeConversationId);
+      const recentMessages = conversationHistory
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+        .slice(-10);
+      
+      if (recentMessages.length > 0) {
+        context += "\nBisheriger Gesprächsverlauf:\n";
+        for (const msg of recentMessages) {
+          context += `${msg.role === 'user' ? 'Benutzer' : 'Assistent'}: ${msg.content}\n`;
+        }
+      }
+      
+      // Call OpenAI to generate a response
+      let assistantResponseText = '';
+      try {
+        const { response } = await analyzeDream(context + `\nBenutzer: ${message}\nAssistent:`, []);
+        assistantResponseText = response.trim();
+      } catch (aiError) {
+        console.error('Error generating AI response:', aiError);
+        assistantResponseText = "Entschuldigung, ich konnte deine Nachricht nicht verarbeiten. Bitte versuche es noch einmal oder stelle eine andere Frage.";
+      }
+      
+      // Store assistant's response
+      const assistantMessage = await storage.createAssistantMessage({
+        conversationId: activeConversationId,
+        content: assistantResponseText,
+        role: 'assistant',
+        relatedDreamId: relatedDreamId || null,
+        relatedJournalId: relatedJournalId || null
+      });
+      
+      // Update conversation title if this is the first message
+      if (conversationHistory.length <= 1) {
+        // Generate a better title based on the first message
+        let titlePrompt = `Erstelle einen kurzen, prägnanten Titel für eine Konversation, die mit dieser Nachricht beginnt: "${message}"
+Der Titel sollte nicht länger als 40 Zeichen sein und das Thema der Nachricht präzise zusammenfassen.
+Antworte nur mit dem Titel, keine Anführungszeichen oder andere Formatierung.`;
+        
+        try {
+          const { response: titleResponse } = await analyzeDream(titlePrompt, []);
+          const title = titleResponse.trim();
+          if (title && title.length <= 60) {
+            await storage.updateAssistantConversation(activeConversationId, { title });
+          }
+        } catch (titleError) {
+          console.error('Error generating conversation title:', titleError);
+          // Continue even if title generation fails
+        }
+      }
+      
+      res.json({
+        conversationId: activeConversationId,
+        message: assistantMessage,
+        relatedContent
+      });
+      
+    } catch (error) {
+      console.error('Error in assistant chat:', error);
+      res.status(500).json({ message: 'Fehler bei der Kommunikation mit dem Assistenten' });
+    }
+  });
+  
+  // </AI Assistant>
 
   return httpServer;
 }

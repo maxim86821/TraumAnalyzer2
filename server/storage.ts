@@ -36,11 +36,19 @@ import {
   InsertDreamChallenge,
   ChallengeSubmission,
   InsertChallengeSubmission,
-  MoodData
+  MoodData,
+  // AI Assistant imports
+  AssistantConversation,
+  InsertAssistantConversation,
+  AssistantMessage,
+  InsertAssistantMessage,
+  ChatRequest,
+  ChatResponse
 } from "@shared/schema";
 import pg from 'pg';
 import session from "express-session";
 import connectPg from "connect-pg-simple";
+import OpenAI from "openai";
 
 const PostgresSessionStore = connectPg(session);
 
@@ -184,6 +192,21 @@ export interface IStorage {
   // Challenge Submissions
   getChallengeSubmission(id: number): Promise<ChallengeSubmission | undefined>;
 
+  // AI Assistant functionality
+  createAssistantConversation(conversation: InsertAssistantConversation): Promise<AssistantConversation>;
+  getAssistantConversation(id: number): Promise<AssistantConversation | undefined>;
+  getAssistantConversationsByUserId(userId: number): Promise<AssistantConversation[]>;
+  updateAssistantConversation(id: number, conversation: Partial<InsertAssistantConversation>): Promise<AssistantConversation | undefined>;
+  deleteAssistantConversation(id: number): Promise<boolean>;
+  
+  // AI Assistant messages
+  createAssistantMessage(message: InsertAssistantMessage): Promise<AssistantMessage>;
+  getAssistantMessagesByConversationId(conversationId: number): Promise<AssistantMessage[]>;
+  getAssistantMessageThread(conversationId: number, limit?: number): Promise<AssistantMessage[]>;
+  
+  // Process chat request (main interaction point)
+  processAssistantChatRequest(userId: number, request: ChatRequest): Promise<ChatResponse>;
+
   // Session store
   sessionStore: session.Store;
 }
@@ -209,6 +232,9 @@ export class MemStorage implements IStorage {
   private culturalInterpretations: Map<number, CulturalSymbolInterpretation>;
   private symbolComparisons: Map<number, SymbolComparison>;
   private userSymbolFavorites: Map<number, UserSymbolFavorite>;
+  // AI Assistant storage
+  private assistantConversations: Map<number, AssistantConversation>;
+  private assistantMessages: Map<number, AssistantMessage>;
   // Laufende IDs
   private currentUserId: number;
   private currentDreamId: number;
@@ -228,6 +254,8 @@ export class MemStorage implements IStorage {
   private currentCommentLikeId: number;
   private currentDreamChallengeId: number;
   private currentChallengeSubmissionId: number;
+  private currentAssistantConversationId: number;
+  private currentAssistantMessageId: number;
   public sessionStore: session.Store;
 
   constructor() {
@@ -251,6 +279,9 @@ export class MemStorage implements IStorage {
     this.commentLikes = new Map();
     this.dreamChallenges = new Map();
     this.challengeSubmissions = new Map();
+    // AI Assistant Maps initialisieren
+    this.assistantConversations = new Map();
+    this.assistantMessages = new Map();
     // IDs initialisieren
     this.currentUserId = 1;
     
@@ -273,6 +304,8 @@ export class MemStorage implements IStorage {
     this.currentCommentLikeId = 1;
     this.currentDreamChallengeId = 1;
     this.currentChallengeSubmissionId = 1;
+    this.currentAssistantConversationId = 1;
+    this.currentAssistantMessageId = 1;
 
     // In-Memory Session Store erstellen
     const MemoryStore = require('memorystore')(session);
@@ -1851,6 +1884,341 @@ export class MemStorage implements IStorage {
   async deleteChallengeSubmission(id: number): Promise<boolean> {
     return this.challengeSubmissions.delete(id);
   }
+
+  // AI Assistant methods
+  
+  async createAssistantConversation(conversation: InsertAssistantConversation): Promise<AssistantConversation> {
+    const id = this.currentAssistantConversationId++;
+    const now = new Date();
+
+    const newConversation: AssistantConversation = {
+      id,
+      userId: conversation.userId,
+      title: conversation.title || "Neue Unterhaltung",
+      summary: null,
+      createdAt: now,
+      updatedAt: now,
+      isArchived: conversation.isArchived || false
+    };
+
+    this.assistantConversations.set(id, newConversation);
+    return newConversation;
+  }
+
+  async getAssistantConversation(id: number): Promise<AssistantConversation | undefined> {
+    return this.assistantConversations.get(id);
+  }
+
+  async getAssistantConversationsByUserId(userId: number): Promise<AssistantConversation[]> {
+    const conversations: AssistantConversation[] = [];
+    
+    this.assistantConversations.forEach(conversation => {
+      if (conversation.userId === userId) {
+        conversations.push(conversation);
+      }
+    });
+
+    // Sort by most recently updated
+    return conversations.sort((a, b) => 
+      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    );
+  }
+
+  async updateAssistantConversation(id: number, conversation: Partial<InsertAssistantConversation>): Promise<AssistantConversation | undefined> {
+    const existingConversation = this.assistantConversations.get(id);
+    
+    if (!existingConversation) {
+      return undefined;
+    }
+
+    const updatedConversation: AssistantConversation = {
+      ...existingConversation,
+      title: conversation.title ?? existingConversation.title,
+      updatedAt: new Date(),
+      isArchived: conversation.isArchived ?? existingConversation.isArchived
+    };
+
+    this.assistantConversations.set(id, updatedConversation);
+    return updatedConversation;
+  }
+
+  async deleteAssistantConversation(id: number): Promise<boolean> {
+    // Delete all messages in this conversation first
+    this.assistantMessages.forEach((message, msgId) => {
+      if (message.conversationId === id) {
+        this.assistantMessages.delete(msgId);
+      }
+    });
+    
+    // Then delete the conversation itself
+    return this.assistantConversations.delete(id);
+  }
+
+  async createAssistantMessage(message: InsertAssistantMessage): Promise<AssistantMessage> {
+    const id = this.currentAssistantMessageId++;
+    const now = new Date();
+
+    const newMessage: AssistantMessage = {
+      id,
+      conversationId: message.conversationId,
+      content: message.content,
+      role: message.role,
+      timestamp: now,
+      relatedDreamId: message.relatedDreamId || null,
+      relatedJournalId: message.relatedJournalId || null,
+      metadata: message.metadata || null
+    };
+
+    this.assistantMessages.set(id, newMessage);
+
+    // Update conversation's updatedAt timestamp
+    const conversation = this.assistantConversations.get(message.conversationId);
+    if (conversation) {
+      conversation.updatedAt = now;
+      this.assistantConversations.set(message.conversationId, conversation);
+    }
+
+    return newMessage;
+  }
+
+  async getAssistantMessagesByConversationId(conversationId: number): Promise<AssistantMessage[]> {
+    const messages: AssistantMessage[] = [];
+    
+    this.assistantMessages.forEach(message => {
+      if (message.conversationId === conversationId) {
+        messages.push(message);
+      }
+    });
+
+    // Sort by timestamp (oldest first)
+    return messages.sort((a, b) => 
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+  }
+
+  async getAssistantMessageThread(conversationId: number, limit?: number): Promise<AssistantMessage[]> {
+    const messages = await this.getAssistantMessagesByConversationId(conversationId);
+    
+    if (limit) {
+      return messages.slice(0, limit);
+    }
+    
+    return messages;
+  }
+
+  async processAssistantChatRequest(userId: number, request: ChatRequest): Promise<ChatResponse> {
+    let conversationId = request.conversationId;
+    let conversation: AssistantConversation | undefined;
+    
+    try {
+      // If no conversation ID is provided, create a new conversation
+      if (!conversationId) {
+        const newConversation: InsertAssistantConversation = {
+          userId,
+          title: "Neue Unterhaltung",
+          isArchived: false
+        };
+        
+        conversation = await this.createAssistantConversation(newConversation);
+        conversationId = conversation.id;
+      } else {
+        // Verify the conversation exists and belongs to the user
+        conversation = await this.getAssistantConversation(conversationId);
+        
+        if (!conversation) {
+          throw new Error("Conversation not found");
+        }
+        
+        if (conversation.userId !== userId) {
+          throw new Error("Unauthorized access to conversation");
+        }
+      }
+      
+      // Save the user message
+      const userMessage = await this.createAssistantMessage({
+        conversationId,
+        content: request.message,
+        role: "user",
+        relatedDreamId: request.relatedDreamId,
+        relatedJournalId: request.relatedJournalId
+      });
+      
+      // Get related content if needed
+      let relatedContent: any = null;
+      let contextPrompt = "";
+      
+      if (request.relatedDreamId) {
+        const dream = await this.getDream(request.relatedDreamId);
+        
+        if (dream && dream.userId === userId) {
+          relatedContent = dream;
+          contextPrompt = `Bezüglich des Traums "${dream.title}" vom ${dream.date?.toLocaleDateString()}:\n${dream.content}\n\n`;
+          
+          // If there's analysis, add it to the context
+          if (dream.analysis) {
+            try {
+              const analysis = JSON.parse(dream.analysis);
+              contextPrompt += `Traumanalyse: ${analysis.interpretation || "Keine Interpretation verfügbar."}\n\n`;
+            } catch (e) {
+              // Ignore parsing errors
+            }
+          }
+        }
+      } else if (request.relatedJournalId) {
+        const journal = await this.getJournalEntry(request.relatedJournalId);
+        
+        if (journal && journal.userId === userId) {
+          relatedContent = journal;
+          contextPrompt = `Bezüglich des Tagebucheintrags "${journal.title}" vom ${journal.date?.toLocaleDateString()}:\n${journal.content}\n\n`;
+        }
+      }
+      
+      // Get conversation history for context
+      const conversations = await this.getAssistantMessagesByConversationId(conversationId);
+      const historyPrompt = conversations
+        .map(msg => `${msg.role === 'user' ? 'Benutzer' : 'Assistent'}: ${msg.content}`)
+        .join('\n');
+      
+      // Generate AI response
+      const messageForAI = `${contextPrompt}${request.message}`;
+      console.log("Sending message to OpenAI:", messageForAI);
+      
+      // Call the OpenAI API
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      
+      try {
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "system",
+              content: `Du bist ein hilfreicher Assistent für Traumdeutung und Traumforschung. 
+              
+  Verwende die folgende Anleitung für deine Antworten:
+  
+  1. Sei einfühlsam und verständnisvoll - Träume können tiefgreifende persönliche Bedeutung haben.
+  2. Verbinde deine Antworten mit wissenschaftlichen Erkenntnissen über Träume und Schlaf, wenn möglich.
+  3. Beziehe dich auf psychologische Perspektiven (Jung, Freud, etc.), aber betone die Subjektivität der Traumdeutung.
+  4. Wenn der Benutzer einen bestimmten Traum erwähnt, gehe auf den emotionalen Gehalt ein und biete mögliche Interpretationen an.
+  5. Erwähne bei Bedarf kulturübergreifende Interpretationen von Traumsymbolen.
+  6. Gib keine medizinischen Diagnosen und verweise bei gesundheitsbezogenen Fragen auf Fachleute.
+  7. Halte Antworten knapp, aber informativ - höchstens 2-3 Absätze.
+  8. Präsentiere Interpretationen immer als Möglichkeiten, nicht als definitive Wahrheiten.
+  9. Achte auf kulturellen Kontext bei deinen Interpretationen.
+  10. Vermittle eine ausgewogene Perspektive zwischen wissenschaftlicher und spiritueller Traumdeutung.
+  
+  Bisherige Konversation:
+  ${historyPrompt}`
+            },
+            {
+              role: "user",
+              content: messageForAI
+            }
+          ]
+        });
+      
+        const aiResponse = completion.choices[0].message.content || "Entschuldigung, ich konnte deine Nachricht nicht verarbeiten.";
+        
+        // Save the assistant's response
+        const assistantMessage = await this.createAssistantMessage({
+          conversationId,
+          content: aiResponse,
+          role: "assistant",
+          relatedDreamId: request.relatedDreamId,
+          relatedJournalId: request.relatedJournalId
+        });
+        
+        // Update conversation title if it's new (only 2 messages including this one)
+        if (conversation && conversations.length === 1) {
+          try {
+            // Generate a title based on the first user message
+            const titleCompletion = await openai.chat.completions.create({
+              model: "gpt-4o",
+              messages: [
+                {
+                  role: "system", 
+                  content: "Erstelle einen kurzen, aussagekräftigen Titel (max. 5 Wörter) für das folgende Gespräch. Gib nur den Titel zurück, ohne Anführungszeichen oder zusätzlichen Text."
+                },
+                {
+                  role: "user",
+                  content: request.message
+                }
+              ]
+            });
+            
+            const generatedTitle = titleCompletion.choices[0].message.content || "Neue Unterhaltung";
+            
+            await this.updateAssistantConversation(conversationId, { 
+              title: generatedTitle
+            });
+            
+            // Update the conversation object for the response
+            conversation.title = generatedTitle;
+          } catch (e) {
+            console.error("Error generating title:", e);
+            // Continue even if title generation fails
+          }
+        }
+        
+        return {
+          conversationId,
+          message: assistantMessage,
+          relatedContent
+        };
+      } catch (error) {
+        console.error("Error calling OpenAI API:", error);
+        
+        // Create an error message
+        const errorMessage = await this.createAssistantMessage({
+          conversationId,
+          content: "Entschuldigung, es gab ein Problem bei der Verarbeitung deiner Anfrage. Bitte versuche es später noch einmal.",
+          role: "assistant",
+          relatedDreamId: request.relatedDreamId,
+          relatedJournalId: request.relatedJournalId
+        });
+        
+        return {
+          conversationId,
+          message: errorMessage,
+          relatedContent
+        };
+      }
+    } catch (error) {
+      console.error("Error processing chat request:", error);
+      
+      // If we have a conversation ID, create an error message
+      if (conversationId) {
+        const errorMessage = await this.createAssistantMessage({
+          conversationId,
+          content: "Entschuldigung, es gab ein Problem bei der Verarbeitung deiner Anfrage. Bitte versuche es später noch einmal.",
+          role: "assistant"
+        });
+        
+        return {
+          conversationId,
+          message: errorMessage
+        };
+      }
+      
+      // If we don't even have a conversation ID, create a new conversation with an error message
+      const newConversation = await this.createAssistantConversation({
+        userId,
+        title: "Fehlerhafte Unterhaltung",
+        isArchived: false
+      });
+      
+      const errorMessage = await this.createAssistantMessage({
+        conversationId: newConversation.id,
+        content: "Entschuldigung, es gab ein Problem bei der Verarbeitung deiner Anfrage. Bitte versuche es später noch einmal.",
+        role: "assistant"
+      });
+      
+      return {
+        conversationId: newConversation.id,
+        message: errorMessage
+      };
+    }
+  }
 }
 
 // PostgreSQL Speicherimplementierung
@@ -2989,6 +3357,801 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('Error deleting user symbol favorite:', error);
       throw error;
+    }
+  }
+
+  // AI Assistant implementation
+
+  async createAssistantConversation(conversation: InsertAssistantConversation): Promise<AssistantConversation> {
+    const id = this.currentAssistantConversationId++;
+    const now = new Date();
+    
+    const newConversation: AssistantConversation = {
+      id,
+      userId: conversation.userId,
+      title: conversation.title || "Neue Unterhaltung",
+      summary: null,
+      createdAt: now,
+      updatedAt: now,
+      isArchived: conversation.isArchived || false
+    };
+    
+    this.assistantConversations.set(id, newConversation);
+    return newConversation;
+  }
+
+  async getAssistantConversation(id: number): Promise<AssistantConversation | undefined> {
+    return this.assistantConversations.get(id);
+  }
+
+  async getAssistantConversationsByUserId(userId: number): Promise<AssistantConversation[]> {
+    return Array.from(this.assistantConversations.values())
+      .filter(conv => conv.userId === userId)
+      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()); // Sort by most recent
+  }
+
+  async updateAssistantConversation(id: number, conversation: Partial<InsertAssistantConversation>): Promise<AssistantConversation | undefined> {
+    const existingConversation = this.assistantConversations.get(id);
+    
+    if (!existingConversation) {
+      return undefined;
+    }
+    
+    const updatedConversation: AssistantConversation = {
+      ...existingConversation,
+      title: conversation.title ?? existingConversation.title,
+      isArchived: conversation.isArchived ?? existingConversation.isArchived,
+      updatedAt: new Date()
+    };
+    
+    this.assistantConversations.set(id, updatedConversation);
+    return updatedConversation;
+  }
+
+  async deleteAssistantConversation(id: number): Promise<boolean> {
+    // Get all messages in this conversation to delete them too
+    const messages = await this.getAssistantMessagesByConversationId(id);
+    
+    // Delete all the messages
+    for (const message of messages) {
+      this.assistantMessages.delete(message.id);
+    }
+    
+    // Delete the conversation
+    return this.assistantConversations.delete(id);
+  }
+
+  async createAssistantMessage(message: InsertAssistantMessage): Promise<AssistantMessage> {
+    const id = this.currentAssistantMessageId++;
+    const now = new Date();
+    
+    const newMessage: AssistantMessage = {
+      id,
+      conversationId: message.conversationId,
+      content: message.content,
+      role: message.role,
+      timestamp: now,
+      relatedDreamId: message.relatedDreamId || null,
+      relatedJournalId: message.relatedJournalId || null,
+      metadata: message.metadata || null
+    };
+    
+    this.assistantMessages.set(id, newMessage);
+    
+    // Update the conversation's updatedAt timestamp
+    const conversation = this.assistantConversations.get(message.conversationId);
+    if (conversation) {
+      conversation.updatedAt = now;
+      this.assistantConversations.set(conversation.id, conversation);
+    }
+    
+    return newMessage;
+  }
+
+  async getAssistantMessagesByConversationId(conversationId: number): Promise<AssistantMessage[]> {
+    return Array.from(this.assistantMessages.values())
+      .filter(msg => msg.conversationId === conversationId)
+      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()); // Sort by timestamp
+  }
+
+  async getAssistantMessageThread(conversationId: number, limit?: number): Promise<AssistantMessage[]> {
+    const messages = await this.getAssistantMessagesByConversationId(conversationId);
+    
+    if (limit && messages.length > limit) {
+      return messages.slice(-limit); // Get only the most recent messages
+    }
+    
+    return messages;
+  }
+
+  async processAssistantChatRequest(userId: number, request: ChatRequest): Promise<ChatResponse> {
+    let conversationId = request.conversationId;
+    let conversation: AssistantConversation | undefined;
+    
+    // If no conversation ID is provided, create a new conversation
+    if (!conversationId) {
+      conversation = await this.createAssistantConversation({
+        userId,
+        title: "Neue Unterhaltung", // Default title
+        isArchived: false
+      });
+      conversationId = conversation.id;
+    } else {
+      conversation = await this.getAssistantConversation(conversationId);
+      
+      // Check if the conversation exists and belongs to the user
+      if (!conversation || conversation.userId !== userId) {
+        throw new Error("Conversation not found or unauthorized");
+      }
+    }
+    
+    // Save the user message
+    const userMessage = await this.createAssistantMessage({
+      conversationId,
+      content: request.message,
+      role: "user",
+      relatedDreamId: request.relatedDreamId,
+      relatedJournalId: request.relatedJournalId
+    });
+    
+    try {
+      // Fetch related content if needed
+      let relatedContent: any = null;
+      let contextPrompt = "";
+      
+      if (request.relatedDreamId) {
+        const dream = await this.getDream(request.relatedDreamId);
+        if (dream) {
+          relatedContent = dream;
+          contextPrompt = `Bezüglich des Traums "${dream.title}" vom ${dream.date.toLocaleDateString()}:\n${dream.content}\n\n`;
+          
+          // If there's analysis, add it to the context
+          if (dream.analysis) {
+            try {
+              const analysis = JSON.parse(dream.analysis);
+              contextPrompt += `Traumanalyse: ${analysis.interpretation || "Keine Interpretation verfügbar."}\n\n`;
+            } catch (e) {
+              // Ignore parsing errors
+            }
+          }
+        }
+      } else if (request.relatedJournalId) {
+        const journal = await this.getJournalEntry(request.relatedJournalId);
+        if (journal) {
+          relatedContent = journal;
+          contextPrompt = `Bezüglich des Tagebucheintrags "${journal.title}" vom ${journal.date.toLocaleDateString()}:\n${journal.content}\n\n`;
+        }
+      }
+      
+      // Prepare conversation history for context
+      const conversationHistory = await this.getAssistantMessageThread(conversationId, 10);
+      const historyPrompt = conversationHistory.map(msg => `${msg.role === 'user' ? 'Benutzer' : 'Assistent'}: ${msg.content}`).join('\n');
+      
+      // Generate AI response
+      const messageForAI = `${contextPrompt}${request.message}`;
+      console.log("Sending message to OpenAI:", messageForAI);
+      
+      // Call the OpenAI API
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: `Du bist ein hilfreicher Assistent für Traumdeutung und Traumforschung. 
+            
+Verwende die folgende Anleitung für deine Antworten:
+
+1. Sei einfühlsam und verständnisvoll - Träume können tiefgreifende persönliche Bedeutung haben.
+2. Verbinde deine Antworten mit wissenschaftlichen Erkenntnissen über Träume und Schlaf, wenn möglich.
+3. Beziehe dich auf psychologische Perspektiven (Jung, Freud, etc.), aber betone die Subjektivität der Traumdeutung.
+4. Wenn der Benutzer einen bestimmten Traum erwähnt, gehe auf den emotionalen Gehalt ein und biete mögliche Interpretationen an.
+5. Erwähne bei Bedarf kulturübergreifende Interpretationen von Traumsymbolen.
+6. Gib keine medizinischen Diagnosen und verweise bei gesundheitsbezogenen Fragen auf Fachleute.
+7. Halte Antworten knapp, aber informativ - höchstens 2-3 Absätze.
+8. Präsentiere Interpretationen immer als Möglichkeiten, nicht als definitive Wahrheiten.
+9. Achte auf kulturellen Kontext bei deinen Interpretationen.
+10. Vermittle eine ausgewogene Perspektive zwischen wissenschaftlicher und spiritueller Traumdeutung.
+
+Bisherige Konversation:
+${historyPrompt}`
+          },
+          {
+            role: "user",
+            content: messageForAI
+          }
+        ]
+      });
+      
+      const aiResponse = completion.choices[0].message.content || "Entschuldigung, ich konnte deine Nachricht nicht verarbeiten.";
+      
+      // Save the assistant's response
+      const assistantMessage = await this.createAssistantMessage({
+        conversationId,
+        content: aiResponse,
+        role: "assistant",
+        relatedDreamId: request.relatedDreamId,
+        relatedJournalId: request.relatedJournalId
+      });
+      
+      // Update conversation title if it's new
+      if (conversation && conversationHistory.length === 0) {
+        // Generate a title based on the first user message
+        const titleCompletion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "system", 
+              content: "Erstelle einen kurzen, aussagekräftigen Titel (max. 5 Wörter) für das folgende Gespräch. Gib nur den Titel zurück, ohne Anführungszeichen oder zusätzlichen Text."
+            },
+            {
+              role: "user",
+              content: request.message
+            }
+          ]
+        });
+        
+        const generatedTitle = titleCompletion.choices[0].message.content || "Neue Unterhaltung";
+        await this.updateAssistantConversation(conversationId, { title: generatedTitle });
+      }
+      
+      return {
+        conversationId,
+        message: assistantMessage,
+        relatedContent
+      };
+    } catch (error) {
+      console.error("Error processing assistant chat request:", error);
+      
+      // Create an error response message
+      const errorMessage = await this.createAssistantMessage({
+        conversationId,
+        content: "Entschuldigung, es gab ein Problem bei der Verarbeitung deiner Anfrage. Bitte versuche es später noch einmal.",
+        role: "assistant"
+      });
+      
+      return {
+        conversationId,
+        message: errorMessage
+      };
+    }
+  }
+
+  // AI Assistant methods
+
+  async createAssistantConversation(conversation: InsertAssistantConversation): Promise<AssistantConversation> {
+    try {
+      const now = new Date();
+      const result = await this.pool.query(
+        `INSERT INTO assistant_conversations 
+        (user_id, title, summary, created_at, updated_at, is_archived) 
+        VALUES ($1, $2, $3, $4, $5, $6) 
+        RETURNING *`,
+        [
+          conversation.userId,
+          conversation.title || "Neue Unterhaltung",
+          null,
+          now,
+          now,
+          conversation.isArchived || false
+        ]
+      );
+
+      return {
+        id: result.rows[0].id,
+        userId: result.rows[0].user_id,
+        title: result.rows[0].title,
+        summary: result.rows[0].summary,
+        createdAt: result.rows[0].created_at,
+        updatedAt: result.rows[0].updated_at,
+        isArchived: result.rows[0].is_archived
+      };
+    } catch (error) {
+      console.error('Error creating assistant conversation:', error);
+      throw error;
+    }
+  }
+
+  async getAssistantConversation(id: number): Promise<AssistantConversation | undefined> {
+    try {
+      const result = await this.pool.query(
+        'SELECT * FROM assistant_conversations WHERE id = $1',
+        [id]
+      );
+
+      if (result.rows.length === 0) {
+        return undefined;
+      }
+
+      return {
+        id: result.rows[0].id,
+        userId: result.rows[0].user_id,
+        title: result.rows[0].title,
+        summary: result.rows[0].summary,
+        createdAt: result.rows[0].created_at,
+        updatedAt: result.rows[0].updated_at,
+        isArchived: result.rows[0].is_archived
+      };
+    } catch (error) {
+      console.error('Error getting assistant conversation:', error);
+      throw error;
+    }
+  }
+
+  async getAssistantConversationsByUserId(userId: number): Promise<AssistantConversation[]> {
+    try {
+      const result = await this.pool.query(
+        'SELECT * FROM assistant_conversations WHERE user_id = $1 ORDER BY updated_at DESC',
+        [userId]
+      );
+
+      return result.rows.map(row => ({
+        id: row.id,
+        userId: row.user_id,
+        title: row.title,
+        summary: row.summary,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        isArchived: row.is_archived
+      }));
+    } catch (error) {
+      console.error('Error getting assistant conversations by user ID:', error);
+      return [];
+    }
+  }
+
+  async updateAssistantConversation(id: number, conversation: Partial<InsertAssistantConversation>): Promise<AssistantConversation | undefined> {
+    try {
+      // Get the existing conversation first
+      const existingConversation = await this.getAssistantConversation(id);
+      
+      if (!existingConversation) {
+        return undefined;
+      }
+      
+      const now = new Date();
+      const result = await this.pool.query(
+        `UPDATE assistant_conversations 
+        SET title = $1, is_archived = $2, updated_at = $3 
+        WHERE id = $4 
+        RETURNING *`,
+        [
+          conversation.title ?? existingConversation.title,
+          conversation.isArchived ?? existingConversation.isArchived,
+          now,
+          id
+        ]
+      );
+
+      if (result.rows.length === 0) {
+        return undefined;
+      }
+
+      return {
+        id: result.rows[0].id,
+        userId: result.rows[0].user_id,
+        title: result.rows[0].title,
+        summary: result.rows[0].summary,
+        createdAt: result.rows[0].created_at,
+        updatedAt: result.rows[0].updated_at,
+        isArchived: result.rows[0].is_archived
+      };
+    } catch (error) {
+      console.error('Error updating assistant conversation:', error);
+      throw error;
+    }
+  }
+
+  async deleteAssistantConversation(id: number): Promise<boolean> {
+    try {
+      // Delete all messages in this conversation first
+      await this.pool.query(
+        'DELETE FROM assistant_messages WHERE conversation_id = $1',
+        [id]
+      );
+      
+      // Then delete the conversation
+      const result = await this.pool.query(
+        'DELETE FROM assistant_conversations WHERE id = $1 RETURNING id',
+        [id]
+      );
+      
+      return result.rows.length > 0;
+    } catch (error) {
+      console.error('Error deleting assistant conversation:', error);
+      throw error;
+    }
+  }
+
+  async createAssistantMessage(message: InsertAssistantMessage): Promise<AssistantMessage> {
+    try {
+      const now = new Date();
+      const result = await this.pool.query(
+        `INSERT INTO assistant_messages 
+        (conversation_id, content, role, timestamp, related_dream_id, related_journal_id, metadata) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7) 
+        RETURNING *`,
+        [
+          message.conversationId,
+          message.content,
+          message.role,
+          now,
+          message.relatedDreamId || null,
+          message.relatedJournalId || null,
+          message.metadata ? JSON.stringify(message.metadata) : null
+        ]
+      );
+
+      // Update the conversation's updatedAt timestamp
+      await this.pool.query(
+        'UPDATE assistant_conversations SET updated_at = $1 WHERE id = $2',
+        [now, message.conversationId]
+      );
+
+      return {
+        id: result.rows[0].id,
+        conversationId: result.rows[0].conversation_id,
+        content: result.rows[0].content,
+        role: result.rows[0].role,
+        timestamp: result.rows[0].timestamp,
+        relatedDreamId: result.rows[0].related_dream_id,
+        relatedJournalId: result.rows[0].related_journal_id,
+        metadata: result.rows[0].metadata ? JSON.parse(result.rows[0].metadata) : null
+      };
+    } catch (error) {
+      console.error('Error creating assistant message:', error);
+      throw error;
+    }
+  }
+
+  async getAssistantMessagesByConversationId(conversationId: number): Promise<AssistantMessage[]> {
+    try {
+      const result = await this.pool.query(
+        'SELECT * FROM assistant_messages WHERE conversation_id = $1 ORDER BY timestamp ASC',
+        [conversationId]
+      );
+
+      return result.rows.map(row => ({
+        id: row.id,
+        conversationId: row.conversation_id,
+        content: row.content,
+        role: row.role,
+        timestamp: row.timestamp,
+        relatedDreamId: row.related_dream_id,
+        relatedJournalId: row.related_journal_id,
+        metadata: row.metadata ? JSON.parse(row.metadata) : null
+      }));
+    } catch (error) {
+      console.error('Error getting assistant messages by conversation ID:', error);
+      return [];
+    }
+  }
+
+  async getAssistantMessageThread(conversationId: number, limit?: number): Promise<AssistantMessage[]> {
+    try {
+      let query = 'SELECT * FROM assistant_messages WHERE conversation_id = $1 ORDER BY timestamp ASC';
+      const params = [conversationId];
+      
+      if (limit) {
+        query += ' LIMIT $2';
+        params.push(limit);
+      }
+      
+      const result = await this.pool.query(query, params);
+
+      return result.rows.map(row => ({
+        id: row.id,
+        conversationId: row.conversation_id,
+        content: row.content,
+        role: row.role,
+        timestamp: row.timestamp,
+        relatedDreamId: row.related_dream_id,
+        relatedJournalId: row.related_journal_id,
+        metadata: row.metadata ? JSON.parse(row.metadata) : null
+      }));
+    } catch (error) {
+      console.error('Error getting assistant message thread:', error);
+      return [];
+    }
+  }
+
+  async processAssistantChatRequest(userId: number, request: ChatRequest): Promise<ChatResponse> {
+    let conversationId = request.conversationId;
+    let conversation: AssistantConversation | undefined;
+    
+    // Start a transaction to ensure data consistency
+    const client = await this.pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // If no conversation ID is provided, create a new conversation
+      if (!conversationId) {
+        const createResult = await client.query(
+          `INSERT INTO assistant_conversations 
+          (user_id, title, created_at, updated_at, is_archived) 
+          VALUES ($1, $2, $3, $4, $5) 
+          RETURNING *`,
+          [userId, "Neue Unterhaltung", new Date(), new Date(), false]
+        );
+        
+        conversation = {
+          id: createResult.rows[0].id,
+          userId: createResult.rows[0].user_id,
+          title: createResult.rows[0].title,
+          summary: createResult.rows[0].summary,
+          createdAt: createResult.rows[0].created_at,
+          updatedAt: createResult.rows[0].updated_at,
+          isArchived: createResult.rows[0].is_archived
+        };
+        
+        conversationId = conversation.id;
+      } else {
+        // Verify the conversation exists and belongs to the user
+        const conversationResult = await client.query(
+          'SELECT * FROM assistant_conversations WHERE id = $1 AND user_id = $2',
+          [conversationId, userId]
+        );
+        
+        if (conversationResult.rows.length === 0) {
+          throw new Error("Conversation not found or unauthorized");
+        }
+        
+        conversation = {
+          id: conversationResult.rows[0].id,
+          userId: conversationResult.rows[0].user_id,
+          title: conversationResult.rows[0].title,
+          summary: conversationResult.rows[0].summary,
+          createdAt: conversationResult.rows[0].created_at,
+          updatedAt: conversationResult.rows[0].updated_at,
+          isArchived: conversationResult.rows[0].is_archived
+        };
+      }
+      
+      // Save the user message
+      const now = new Date();
+      const userMessageResult = await client.query(
+        `INSERT INTO assistant_messages 
+        (conversation_id, content, role, timestamp, related_dream_id, related_journal_id) 
+        VALUES ($1, $2, $3, $4, $5, $6) 
+        RETURNING *`,
+        [conversationId, request.message, "user", now, request.relatedDreamId || null, request.relatedJournalId || null]
+      );
+      
+      // Update conversation timestamp
+      await client.query(
+        'UPDATE assistant_conversations SET updated_at = $1 WHERE id = $2',
+        [now, conversationId]
+      );
+      
+      const userMessage = {
+        id: userMessageResult.rows[0].id,
+        conversationId: userMessageResult.rows[0].conversation_id,
+        content: userMessageResult.rows[0].content,
+        role: userMessageResult.rows[0].role,
+        timestamp: userMessageResult.rows[0].timestamp,
+        relatedDreamId: userMessageResult.rows[0].related_dream_id,
+        relatedJournalId: userMessageResult.rows[0].related_journal_id,
+        metadata: userMessageResult.rows[0].metadata ? JSON.parse(userMessageResult.rows[0].metadata) : null
+      };
+      
+      // Get related content if needed
+      let relatedContent: any = null;
+      let contextPrompt = "";
+      
+      if (request.relatedDreamId) {
+        const dreamResult = await client.query(
+          'SELECT * FROM dreams WHERE id = $1 AND user_id = $2',
+          [request.relatedDreamId, userId]
+        );
+        
+        if (dreamResult.rows.length > 0) {
+          const dream = {
+            id: dreamResult.rows[0].id,
+            userId: dreamResult.rows[0].user_id,
+            date: dreamResult.rows[0].date,
+            title: dreamResult.rows[0].title,
+            content: dreamResult.rows[0].content,
+            imageUrl: dreamResult.rows[0].image_url,
+            createdAt: dreamResult.rows[0].created_at,
+            analysis: dreamResult.rows[0].analysis,
+            tags: dreamResult.rows[0].tags,
+            moodBeforeSleep: dreamResult.rows[0].mood_before_sleep,
+            moodAfterWakeup: dreamResult.rows[0].mood_after_wakeup,
+            moodNotes: dreamResult.rows[0].mood_notes
+          };
+          
+          relatedContent = dream;
+          contextPrompt = `Bezüglich des Traums "${dream.title}" vom ${dream.date.toLocaleDateString()}:\n${dream.content}\n\n`;
+          
+          // If there's analysis, add it to the context
+          if (dream.analysis) {
+            try {
+              const analysis = JSON.parse(dream.analysis);
+              contextPrompt += `Traumanalyse: ${analysis.interpretation || "Keine Interpretation verfügbar."}\n\n`;
+            } catch (e) {
+              // Ignore parsing errors
+            }
+          }
+        }
+      } else if (request.relatedJournalId) {
+        const journalResult = await client.query(
+          'SELECT * FROM journal_entries WHERE id = $1 AND user_id = $2',
+          [request.relatedJournalId, userId]
+        );
+        
+        if (journalResult.rows.length > 0) {
+          const journal = {
+            id: journalResult.rows[0].id,
+            userId: journalResult.rows[0].user_id,
+            date: journalResult.rows[0].date,
+            title: journalResult.rows[0].title,
+            content: journalResult.rows[0].content,
+            imageUrl: journalResult.rows[0].image_url,
+            createdAt: journalResult.rows[0].created_at
+          };
+          
+          relatedContent = journal;
+          contextPrompt = `Bezüglich des Tagebucheintrags "${journal.title}" vom ${journal.date.toLocaleDateString()}:\n${journal.content}\n\n`;
+        }
+      }
+      
+      // Get conversation history for context
+      const historyResult = await client.query(
+        'SELECT * FROM assistant_messages WHERE conversation_id = $1 ORDER BY timestamp ASC LIMIT 10',
+        [conversationId]
+      );
+      
+      const conversationHistory = historyResult.rows.map(row => ({
+        id: row.id,
+        conversationId: row.conversation_id,
+        content: row.content,
+        role: row.role,
+        timestamp: row.timestamp,
+        relatedDreamId: row.related_dream_id,
+        relatedJournalId: row.related_journal_id,
+        metadata: row.metadata ? JSON.parse(row.metadata) : null
+      }));
+      
+      const historyPrompt = conversationHistory.map(msg => `${msg.role === 'user' ? 'Benutzer' : 'Assistent'}: ${msg.content}`).join('\n');
+      
+      // Generate AI response
+      const messageForAI = `${contextPrompt}${request.message}`;
+      console.log("Sending message to OpenAI:", messageForAI);
+      
+      // Call the OpenAI API
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: `Du bist ein hilfreicher Assistent für Traumdeutung und Traumforschung. 
+            
+Verwende die folgende Anleitung für deine Antworten:
+
+1. Sei einfühlsam und verständnisvoll - Träume können tiefgreifende persönliche Bedeutung haben.
+2. Verbinde deine Antworten mit wissenschaftlichen Erkenntnissen über Träume und Schlaf, wenn möglich.
+3. Beziehe dich auf psychologische Perspektiven (Jung, Freud, etc.), aber betone die Subjektivität der Traumdeutung.
+4. Wenn der Benutzer einen bestimmten Traum erwähnt, gehe auf den emotionalen Gehalt ein und biete mögliche Interpretationen an.
+5. Erwähne bei Bedarf kulturübergreifende Interpretationen von Traumsymbolen.
+6. Gib keine medizinischen Diagnosen und verweise bei gesundheitsbezogenen Fragen auf Fachleute.
+7. Halte Antworten knapp, aber informativ - höchstens 2-3 Absätze.
+8. Präsentiere Interpretationen immer als Möglichkeiten, nicht als definitive Wahrheiten.
+9. Achte auf kulturellen Kontext bei deinen Interpretationen.
+10. Vermittle eine ausgewogene Perspektive zwischen wissenschaftlicher und spiritueller Traumdeutung.
+
+Bisherige Konversation:
+${historyPrompt}`
+          },
+          {
+            role: "user",
+            content: messageForAI
+          }
+        ]
+      });
+      
+      const aiResponse = completion.choices[0].message.content || "Entschuldigung, ich konnte deine Nachricht nicht verarbeiten.";
+      
+      // Save the assistant's response
+      const assistantMessageResult = await client.query(
+        `INSERT INTO assistant_messages 
+        (conversation_id, content, role, timestamp, related_dream_id, related_journal_id) 
+        VALUES ($1, $2, $3, $4, $5, $6) 
+        RETURNING *`,
+        [conversationId, aiResponse, "assistant", new Date(), request.relatedDreamId || null, request.relatedJournalId || null]
+      );
+      
+      const assistantMessage = {
+        id: assistantMessageResult.rows[0].id,
+        conversationId: assistantMessageResult.rows[0].conversation_id,
+        content: assistantMessageResult.rows[0].content,
+        role: assistantMessageResult.rows[0].role,
+        timestamp: assistantMessageResult.rows[0].timestamp,
+        relatedDreamId: assistantMessageResult.rows[0].related_dream_id,
+        relatedJournalId: assistantMessageResult.rows[0].related_journal_id,
+        metadata: assistantMessageResult.rows[0].metadata ? JSON.parse(assistantMessageResult.rows[0].metadata) : null
+      };
+      
+      // Update conversation title if it's new
+      if (conversation && conversationHistory.length === 0) {
+        try {
+          // Generate a title based on the first user message
+          const titleCompletion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+              {
+                role: "system", 
+                content: "Erstelle einen kurzen, aussagekräftigen Titel (max. 5 Wörter) für das folgende Gespräch. Gib nur den Titel zurück, ohne Anführungszeichen oder zusätzlichen Text."
+              },
+              {
+                role: "user",
+                content: request.message
+              }
+            ]
+          });
+          
+          const generatedTitle = titleCompletion.choices[0].message.content || "Neue Unterhaltung";
+          
+          await client.query(
+            'UPDATE assistant_conversations SET title = $1 WHERE id = $2',
+            [generatedTitle, conversationId]
+          );
+        } catch (e) {
+          console.error("Error generating title:", e);
+          // Continue even if title generation fails
+        }
+      }
+      
+      // Commit the transaction
+      await client.query('COMMIT');
+      
+      return {
+        conversationId,
+        message: assistantMessage,
+        relatedContent
+      };
+    } catch (error) {
+      // Rollback the transaction on error
+      await client.query('ROLLBACK');
+      console.error("Error processing assistant chat request:", error);
+      
+      // Create an error response message
+      try {
+        const errorResult = await this.pool.query(
+          `INSERT INTO assistant_messages 
+          (conversation_id, content, role, timestamp) 
+          VALUES ($1, $2, $3, $4) 
+          RETURNING *`,
+          [
+            conversationId,
+            "Entschuldigung, es gab ein Problem bei der Verarbeitung deiner Anfrage. Bitte versuche es später noch einmal.",
+            "assistant",
+            new Date()
+          ]
+        );
+        
+        const errorMessage = {
+          id: errorResult.rows[0].id,
+          conversationId: errorResult.rows[0].conversation_id,
+          content: errorResult.rows[0].content,
+          role: errorResult.rows[0].role,
+          timestamp: errorResult.rows[0].timestamp,
+          relatedDreamId: errorResult.rows[0].related_dream_id,
+          relatedJournalId: errorResult.rows[0].related_journal_id,
+          metadata: errorResult.rows[0].metadata ? JSON.parse(errorResult.rows[0].metadata) : null
+        };
+        
+        return {
+          conversationId: conversationId!,
+          message: errorMessage
+        };
+      } catch (e) {
+        console.error("Error creating error message:", e);
+        throw error; // Re-throw if we can't even create an error message
+      }
+    } finally {
+      client.release();
     }
   }
 }
