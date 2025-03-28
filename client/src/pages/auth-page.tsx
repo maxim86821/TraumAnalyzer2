@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,13 @@ export default function AuthPage() {
   const [, setLocation] = useLocation();
   
   // Weiterleiten, wenn der Benutzer bereits angemeldet ist
+  useEffect(() => {
+    if (user) {
+      setLocation("/");
+    }
+  }, [user, setLocation]);
+  
   if (user) {
-    setLocation("/");
     return null;
   }
   

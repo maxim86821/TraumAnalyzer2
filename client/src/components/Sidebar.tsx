@@ -61,18 +61,17 @@ export default function Sidebar({ className = "", onClose }: SidebarProps) {
             const isActive = item.path === location;
             return (
               <li key={index} className="mb-1">
-                <Link href={item.path}>
-                  <a 
-                    className={`flex items-center p-3 rounded-lg ${
-                      isActive 
-                        ? "bg-dream-light text-dream-primary" 
-                        : "text-gray-600 hover:bg-gray-100"
-                    }`}
-                    onClick={onClose}
-                  >
-                    {item.icon}
-                    {item.name}
-                  </a>
+                <Link 
+                  href={item.path}
+                  className={`flex items-center p-3 rounded-lg ${
+                    isActive 
+                      ? "bg-dream-light text-dream-primary" 
+                      : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                  onClick={onClose}
+                >
+                  {item.icon}
+                  {item.name}
                 </Link>
               </li>
             );
