@@ -18,29 +18,40 @@ interface DreamDetailProps {
 export default function DreamDetail({ dream }: DreamDetailProps) {
   const { toast } = useToast();
   const [editing, setEditing] = useState(false);
-  // Verwenden Sie useEffect, um die Zustände zu aktualisieren, wenn sich die Dream-Props ändern
-  const [title, setTitle] = useState(dream?.title || "");
-  const [content, setContent] = useState(dream?.content || "");
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [tagInput, setTagInput] = useState("");
-  const [tags, setTags] = useState<string[]>(dream?.tags || []);
-  const [moodBeforeSleep, setMoodBeforeSleep] = useState<number | undefined>(dream?.moodBeforeSleep || undefined);
-  const [moodAfterWakeup, setMoodAfterWakeup] = useState<number | undefined>(dream?.moodAfterWakeup || undefined);
-  const [moodNotes, setMoodNotes] = useState<string | undefined>(dream?.moodNotes || undefined);
+  const [tags, setTags] = useState<string[]>([]);
+  const [moodBeforeSleep, setMoodBeforeSleep] = useState<number | undefined>(undefined);
+  const [moodAfterWakeup, setMoodAfterWakeup] = useState<number | undefined>(undefined);
+  const [moodNotes, setMoodNotes] = useState<string | undefined>(undefined);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  
-  // Stellen Sie sicher, dass die Dream-ID eine valide Zahl ist und aktualisieren Sie sie bei Änderungen
   const [dreamId, setDreamId] = useState<number>(0);
   
-  // ID aktualisieren, wenn sich das Dream-Objekt ändert
+  // Ein normalisiertes Dream-Objekt mit garantiert numerischer ID erstellen
   useEffect(() => {
-    if (dream && dream.id) {
-      const parsedId = parseInt(String(dream.id), 10);
-      if (!isNaN(parsedId) && parsedId > 0) {
-        setDreamId(parsedId);
-        console.log("Dream ID updated to:", parsedId);
+    if (dream && dream.id !== undefined && dream.id !== null) {
+      const numericId = typeof dream.id === 'number' ? dream.id : Number(dream.id);
+      
+      if (!isNaN(numericId) && numericId > 0) {
+        setDreamId(numericId);
+        console.log("Dream ID updated to:", numericId, "Type:", typeof numericId);
+        
+        // Aktualisiere alle anderen Zustandsvariablen
+        setTitle(dream.title || "");
+        setContent(dream.content || "");
+        setTags(dream.tags || []);
+        setMoodBeforeSleep(dream.moodBeforeSleep || undefined);
+        setMoodAfterWakeup(dream.moodAfterWakeup || undefined);
+        setMoodNotes(dream.moodNotes || undefined);
+        setEditing(false);
+        setImagePreview(null);
+        setImageFile(null);
+      } else {
+        console.error("Invalid dream ID received:", dream.id);
       }
     }
   }, [dream?.id]);
@@ -49,25 +60,8 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
     id: dream?.id, 
     parsedId: dreamId, 
     dreamTitle: dream?.title,
-    dreamFullObject: dream 
+    idType: typeof dream?.id
   });
-  
-  // Aktualisieren Sie alle Zustände, wenn sich die Dream-Props ändern
-  useEffect(() => {
-    if (dream && dream.id) {
-      setTitle(dream.title || "");
-      setContent(dream.content || "");
-      setTags(dream.tags || []);
-      setMoodBeforeSleep(dream.moodBeforeSleep || undefined);
-      setMoodAfterWakeup(dream.moodAfterWakeup || undefined);
-      setMoodNotes(dream.moodNotes || undefined);
-      setEditing(false); // Bearbeitungsmodus zurücksetzen
-      setImagePreview(null);
-      setImageFile(null);
-      
-      console.log("Dream props changed, updating state with dream ID:", dream.id);
-    }
-  }, [dream]); // Jetzt überwachen wir das gesamte Dream-Objekt
 
   // Parse the analysis JSON if it exists
   const analysis = dream.analysis ? JSON.parse(dream.analysis) : null;

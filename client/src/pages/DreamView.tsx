@@ -30,10 +30,22 @@ export default function DreamView() {
   console.log("DreamView Component - Traum-ID:", id, "Parsed ID:", dreamId);
   
   // Fetch the dream by ID
-  const { data: dream, isLoading, error } = useQuery<Dream>({
+  const { data: fetchedDream, isLoading, error } = useQuery<Dream>({
     queryKey: ['/api/dreams', dreamId],
     enabled: dreamId > 0 // Nur abfragen, wenn eine gültige ID vorhanden ist
   });
+  
+  // Stelle sicher, dass das Dream-Objekt eine numerische ID hat
+  const dream = fetchedDream ? {
+    ...fetchedDream,
+    id: fetchedDream.id ? Number(fetchedDream.id) : 0 // Stelle sicher, dass die ID numerisch ist und niemals null
+  } : null;
+  
+  console.log("DreamView Component - Normalized Dream:", dream ? {
+    id: dream.id,
+    title: dream.title,
+    idType: typeof dream.id
+  } : null);
 
   // Handle dream deletion
   const handleDeleteDream = async () => {
