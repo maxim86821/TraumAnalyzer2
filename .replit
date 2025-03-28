@@ -7,11 +7,11 @@ channel = "stable-24_05"
 
 [deployment]
 deploymentTarget = "autoscale"
-build = ["npm", "run", "build"]
-run = ["sh", "-c", "npm run dev"]
+build = ["sh", "-c", "npm run build"]
+run = ["sh", "-c", "npm start"]
 
 [workflows]
-runButton = "Project"
+runButton = "Run Production"
 
 [[workflows.workflow]]
 name = "Project"
@@ -63,6 +63,15 @@ author = 38207286
 [[workflows.workflow.tasks]]
 task = "packager.installForLanguage"
 args = "nodejs"
+
+[[workflows.workflow]]
+name = "Run Production"
+author = 38207286
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm start"
 
 [[ports]]
 localPort = 5000

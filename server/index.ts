@@ -1,17 +1,5 @@
-import express from 'express';
+import express, { type Request, Response, NextFunction } from "express";
 import { createServer } from 'http';
-
-const app = express();
-const PORT = 5000;
-
-// Your middleware and routes here
-
-const server = createServer(app);
-
-// Listen on all interfaces
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
-});import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
