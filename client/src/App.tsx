@@ -8,6 +8,7 @@ import NewDream from "@/pages/NewDream";
 import DreamView from "@/pages/DreamView";
 import DreamPatterns from "@/pages/DreamPatterns";
 import AchievementsPage from "@/pages/AchievementsPage";
+import CalendarView from "@/pages/CalendarView";
 import AuthPage from "@/pages/auth-page";
 import Layout from "@/components/Layout";
 import { AuthProvider } from "./hooks/use-auth";
@@ -33,6 +34,11 @@ function Router() {
       )} />
       <ProtectedRoute path="/patterns" component={DreamPatterns} />
       <ProtectedRoute path="/achievements" component={AchievementsPage} />
+      <ProtectedRoute path="/calendar" component={() => (
+        <Layout>
+          <CalendarView />
+        </Layout>
+      )} />
       <Route path="/auth" component={AuthPage} />
       {/* Fallback to 404 */}
       <Route component={NotFound} />

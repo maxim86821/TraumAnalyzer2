@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "../hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Award, LogOut, User } from "lucide-react";
+import { Award, LogOut, User, Calendar } from "lucide-react";
 
 interface SidebarProps {
   className?: string;
@@ -30,6 +30,13 @@ export default function Sidebar({ className = "", onClose }: SidebarProps) {
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
         </svg>
+      )
+    },
+    {
+      name: "Traumkalender",
+      path: "/calendar",
+      icon: (
+        <Calendar className="h-5 w-5 mr-3" />
       )
     },
     {

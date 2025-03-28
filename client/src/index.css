@@ -10,4 +10,71 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
+
+  /* Custom colors for the dream app */
+  :root {
+    --dream-primary: #8B5CF6;
+    --dream-primary-light: rgba(139, 92, 246, 0.1);
+    --dream-dark: #4C1D95;
+  }
+}
+
+@layer components {
+  /* Calendar styling */
+  .rdp {
+    --rdp-cell-size: 40px;
+    --rdp-accent-color: var(--dream-primary);
+    --rdp-background-color: var(--dream-primary-light);
+    --rdp-accent-color-dark: var(--dream-dark);
+    --rdp-background-color-dark: #e7e7e7;
+    --rdp-outline: 2px solid var(--dream-primary);
+    --rdp-outline-selected: 2px solid var(--dream-dark);
+    margin: 0;
+  }
+
+  .rdp-caption {
+    @apply py-2 font-semibold text-lg;
+  }
+
+  .rdp-cell {
+    @apply text-center text-sm;
+  }
+
+  .rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
+    @apply bg-gray-100;
+  }
+
+  .rdp-day_selected {
+    @apply bg-dream-primary text-white hover:bg-dream-dark;
+  }
+
+  .rdp-day_today {
+    @apply font-bold border border-dream-primary;
+  }
+
+  /* Dream card styling */
+  .dream-card {
+    @apply transition-all hover:shadow-md;
+  }
+
+  /* Custom colors */
+  .text-dream-primary {
+    color: var(--dream-primary);
+  }
+
+  .bg-dream-primary {
+    background-color: var(--dream-primary);
+  }
+
+  .text-dream-dark {
+    color: var(--dream-dark);
+  }
+
+  .bg-dream-dark {
+    background-color: var(--dream-dark);
+  }
+
+  .bg-dream-light {
+    background-color: var(--dream-primary-light);
+  }
 }

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import DreamCard from "@/components/DreamCard";
-import { PlusIcon, SearchIcon } from "lucide-react";
+import { PlusIcon, SearchIcon, CalendarIcon } from "lucide-react";
 import { useMobile } from "@/hooks/use-mobile";
 
 export default function Home() {
@@ -53,19 +53,30 @@ export default function Home() {
         )}
       </div>
 
-      {/* Search Bar - Only show if there are dreams */}
+      {/* Search Bar and Calendar Button - Only show if there are dreams */}
       {!isLoading && !error && dreams && dreams.length > 0 && (
-        <div className="relative mb-6">
-          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <SearchIcon className="h-5 w-5 text-gray-400" />
+        <div className="flex gap-3 mb-6">
+          <div className="relative flex-grow">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <SearchIcon className="h-5 w-5 text-gray-400" />
+            </div>
+            <Input
+              type="text"
+              placeholder="Suche nach Titeln, Inhalten oder Themen..."
+              className="pl-10 pr-4 py-2 bg-white"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
-          <Input
-            type="text"
-            placeholder="Suche nach Titeln, Inhalten oder Themen..."
-            className="pl-10 pr-4 py-2 bg-white"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+          
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2 border-dream-primary text-dream-primary hover:bg-dream-light"
+            onClick={() => setLocation("/calendar")}
+          >
+            <CalendarIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">Kalender</span>
+          </Button>
         </div>
       )}
       
@@ -159,13 +170,24 @@ export default function Home() {
             <p className="text-gray-500 mb-4">
               Du hast noch keine Träume in deinem Tagebuch. Beginne damit, deinen ersten Traum zu erfassen.
             </p>
-            <Button 
-              onClick={() => setLocation("/new")}
-              className="bg-dream-primary hover:bg-dream-dark text-white"
-            >
-              <PlusIcon className="h-5 w-5 mr-2" />
-              Ersten Traum erfassen
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button 
+                onClick={() => setLocation("/new")}
+                className="bg-dream-primary hover:bg-dream-dark text-white"
+              >
+                <PlusIcon className="h-5 w-5 mr-2" />
+                Ersten Traum erfassen
+              </Button>
+              
+              <Button 
+                variant="outline"
+                onClick={() => setLocation("/calendar")}
+                className="border-dream-primary text-dream-primary hover:bg-dream-light mt-2 sm:mt-0"
+              >
+                <CalendarIcon className="h-5 w-5 mr-2" />
+                Zum Kalender
+              </Button>
+            </div>
           </div>
         )}
       </section>
