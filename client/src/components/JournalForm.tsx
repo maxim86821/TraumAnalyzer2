@@ -129,86 +129,86 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
     setIsGeneratingImage(true);
     
     try {
-      // Erstelle einen Prompt basierend auf den Eingaben und dem Journalinhalt
-      const promptText = `
-        Journal: ${content.substring(0, 200)}...
-        Aktuelle Stimmung: ${mood ? mood + "/10" : "Keine Angabe"}
-        Farbe: ${colorThought}
-        Spontaner Gedanke: ${spontaneousThought}
-        Tags: ${tags.join(", ")}
-      `;
+      // Stelle eine Anfrage an den Server zur Bildgenerierung
+      const response = await fetch('/api/journal/generate-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          journalContent: content,
+          colorImpression: colorThought,
+          spontaneousThought: spontaneousThought,
+          tags,
+          mood
+        }),
+      });
       
-      setImagePrompt(promptText);
+      if (!response.ok) {
+        throw new Error('Fehler bei der API-Anfrage');
+      }
       
-      // Here we would normally call our API to generate an image
-      // For now, let's simulate the generation with a placeholder
+      const result = await response.json();
       
-      // Mock image generation - in real implementation, call API
-      setTimeout(() => {
-        // This would be the response from our AI image generation
-        // Using color from the user input to influence the generated image
-        const colorName = colorThought.toLowerCase();
-        let baseColor = "#86A7FC"; // Default blau
-        
-        if (colorName.includes("rot") || colorName.includes("orange") || colorName.includes("feuer")) {
-          baseColor = "#FF7F50";
-        } else if (colorName.includes("grün") || colorName.includes("wald")) {
-          baseColor = "#4C9A2A";
-        } else if (colorName.includes("blau") || colorName.includes("himmel") || colorName.includes("wasser")) {
-          baseColor = "#1E90FF";
-        } else if (colorName.includes("gelb") || colorName.includes("sonne")) {
-          baseColor = "#FFD700";
-        } else if (colorName.includes("violett") || colorName.includes("lila") || colorName.includes("purpur")) {
-          baseColor = "#8A2BE2";
-        } else if (colorName.includes("rosa") || colorName.includes("pink")) {
-          baseColor = "#FF69B4";
-        } else if (colorName.includes("braun") || colorName.includes("erde")) {
-          baseColor = "#8B4513";
-        } else if (colorName.includes("grau") || colorName.includes("nebel")) {
-          baseColor = "#778899";
-        }
-        
-        // Generiere eine künstlerische Beschreibung
-        const moodDescriptions = [
-          `Ein Naturgemälde in sanften ${colorThought}-Tönen, das die Essenz von "${spontaneousThought}" einfängt. Die fließenden Formen erinnern an Wasserbewegungen, während das Licht Hoffnung und Klarheit symbolisiert.`,
-          `Eine abstrakte Komposition in ${colorThought}, inspiriert vom Gedanken "${spontaneousThought}". Die Natur spiegelt sich in organischen Formen wider, die Ruhe und innere Stärke vermitteln.`,
-          `Ein atmosphärisches Kunstwerk, das ${colorThought} mit natürlichen Elementen verbindet. Der Gedanke "${spontaneousThought}" manifestiert sich in den sanften Übergängen zwischen Licht und Schatten.`
-        ];
-        
-        const randomDescription = moodDescriptions[Math.floor(Math.random() * moodDescriptions.length)];
-        setGeneratedDescription(randomDescription);
-        
-        // Creating a data URL for a simple SVG with random swirls or patterns
-        const svgContent = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
-          <rect width="100%" height="100%" fill="${baseColor}" opacity="0.2" />
-          <path d="M50,250 C150,50 250,350 350,150" stroke="${baseColor}" stroke-width="20" fill="none" opacity="0.7" />
-          <path d="M50,150 C150,350 250,50 350,250" stroke="${baseColor}" stroke-width="15" fill="none" opacity="0.5" />
-          <circle cx="200" cy="200" r="50" fill="${baseColor}" opacity="0.3" />
-          <circle cx="150" cy="150" r="20" fill="${baseColor}" opacity="0.4" />
-          <circle cx="250" cy="250" r="30" fill="${baseColor}" opacity="0.4" />
-        </svg>`;
-        
-        const dataUrl = `data:image/svg+xml;base64,${btoa(svgContent)}`;
-        setImagePreview(dataUrl);
-        setIsGeneratingImage(false);
-        
-        // Schließe den Dialog nach erfolgreicher Generierung
-        closeImageDialog();
-        
-        toast({
-          title: "Erfolg",
-          description: "Stimmungsbild wurde generiert",
-        });
-      }, 2000);
+      // Setze das generierte Bild und die Beschreibung
+      setImagePreview(result.imageUrl);
+      setGeneratedDescription(result.description);
+      
+      // Schließe den Dialog nach erfolgreicher Generierung
+      closeImageDialog();
+      
+      toast({
+        title: "Erfolg",
+        description: "Stimmungsbild wurde generiert",
+      });
       
     } catch (error) {
       console.error("Error generating mood image:", error);
+      
+      // Fallback zur Offline-Generierung, falls die API nicht verfügbar ist
       toast({
-        title: "Fehler",
-        description: "Fehler bei der Generierung des Stimmungsbildes",
-        variant: "destructive",
+        title: "Hinweis",
+        description: "Lokales Fallback-Bild wird generiert, da die KI-Bildgenerierung nicht verfügbar ist.",
       });
+      
+      // Extrahiere wichtige Schlüsselwörter aus dem Journalinhalt
+      const words = content.toLowerCase().split(/\s+/).filter(w => w.length > 4);
+      // Erstelle ein Array mit eindeutigen Wörtern
+      const uniqueWords = Array.from(new Set(words));
+      const importantWords = uniqueWords.slice(0, 5);
+      
+      // Farben extrahieren und SVG-Fallback generieren
+      const colorName = colorThought.toLowerCase();
+      let baseColor = "#86A7FC"; // Default blau
+      
+      if (colorName.includes("rot") || colorName.includes("orange")) {
+        baseColor = "#FF7F50";
+      } else if (colorName.includes("grün")) {
+        baseColor = "#4C9A2A";
+      } else if (colorName.includes("blau")) {
+        baseColor = "#1E90FF";
+      } else if (colorName.includes("gelb")) {
+        baseColor = "#FFD700";
+      } else if (colorName.includes("violett") || colorName.includes("lila")) {
+        baseColor = "#8A2BE2";
+      }
+      
+      // Einfaches SVG zur Darstellung der Stimmung
+      const svgContent = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+        <rect width="100%" height="100%" fill="${baseColor}" opacity="0.2" />
+        <path d="M50,250 C150,50 250,350 350,150" stroke="${baseColor}" stroke-width="20" fill="none" opacity="0.7" />
+        <circle cx="200" cy="200" r="50" fill="${baseColor}" opacity="0.3" />
+      </svg>`;
+      
+      const dataUrl = `data:image/svg+xml;base64,${btoa(svgContent)}`;
+      setImagePreview(dataUrl);
+      
+      // Einfache Beschreibung
+      setGeneratedDescription(`Ein Kunstwerk in ${colorThought}, inspiriert von Ihrem Gedanken "${spontaneousThought}".`);
+      
+      // Dialog schließen
+      closeImageDialog();
       setIsGeneratingImage(false);
     }
   };

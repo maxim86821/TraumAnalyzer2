@@ -5,6 +5,100 @@ import { AnalysisResponse, DeepPatternResponse } from "@shared/schema";
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /**
+ * Generiert ein Stimmungsbild basierend auf dem Journalinhalt und zusätzlichen Eingaben
+ * @param journalContent Der Textinhalt des Journaleintrags
+ * @param colorImpression Farbimpression vom Benutzer
+ * @param spontaneousThought Spontaner Gedanke des Benutzers
+ * @param tags Array von Tags wenn verfügbar
+ * @param mood Stimmungsinformation wenn verfügbar
+ * @returns URL zum generierten Bild und Beschreibungstext
+ */
+export async function generateJournalMoodImage(
+  journalContent: string,
+  colorImpression: string,
+  spontaneousThought: string,
+  tags?: string[] | null,
+  mood?: number | null
+): Promise<{ imageUrl: string, description: string }> {
+  try {
+    // Extrahiere wichtige Schlüsselwörter aus dem Journalinhalt
+    const words = journalContent.split(/\s+/)
+      .filter(w => w.length > 4)
+      .map(w => w.toLowerCase().replace(/[^\wäöüß]/g, ''))
+      .slice(0, 30);
+    
+    const uniqueWords = Array.from(new Set(words));
+    const importantWords = uniqueWords.slice(0, 5);
+    
+    // Erstelle einen detaillierten Prompt basierend auf Journal und Eingaben
+    let promptBase = "Erstelle ein aussagekräftiges visuelles Kunstwerk im Stil einer Hochqualitäts-Illustration, das";
+    promptBase += ` die Essenz dieses Journaleintrags einfängt:\n\n"${journalContent.substring(0, 300)}..."`;
+    
+    // Füge Farbimpressionen und Gedanken hinzu
+    promptBase += `\n\nDer Autor verbindet diese Gedanken mit der Farbe "${colorImpression}" und denkt dabei an "${spontaneousThought}".`;
+    
+    // Füge Tags hinzu
+    if (tags && tags.length > 0) {
+      promptBase += `\n\nWichtige Tags: ${tags.join(", ")}`;
+    }
+    
+    // Füge Stimmungsinformation hinzu
+    if (mood !== undefined && mood !== null) {
+      const moodDescription = mood > 7 ? "sehr positiv" : 
+                             mood > 5 ? "positiv" : 
+                             mood > 3 ? "neutral" : "negativ";
+      promptBase += `\n\nDie Stimmung ist ${moodDescription} (${mood}/10).`;
+    }
+    
+    // Füge wichtige Wörter hinzu
+    if (importantWords.length > 0) {
+      promptBase += `\n\nSchlüsselwörter aus dem Text: ${importantWords.join(", ")}`;
+    }
+    
+    // Kunstrichtung und Stil basierend auf Inhalt
+    promptBase += `\n\nDas Bild soll konkrete, erkennbare Elemente enthalten, keine abstrakten Formen oder Farbflächen.`;
+    promptBase += `\n\nVisualisiere besonders diese Aspekte: (1) die Hauptemotion, (2) den Kerngedanken und (3) die bedeutendste Metapher aus dem Journal.`;
+    promptBase += `\n\nVerwende lebendige Farben mit hohem Kontrast und erkennbaren Naturelementen. Integriere subtil Text- oder Symbolelemente, die sich auf die wichtigsten Schlüsselwörter beziehen.`;
+    
+    // Generiere ein Bild mit DALL-E 3
+    const response = await openai.images.generate({
+      model: "dall-e-3",
+      prompt: promptBase,
+      n: 1,
+      size: "1024x1024",
+      quality: "standard",
+      style: "vivid",
+    });
+    
+    // Generiere eine beschreibende Interpretation des Bildes
+    const descriptionResponse = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "Du bist ein Kunstinterpreter, der Bilder in einer poetischen, emotionalen Sprache beschreibt. Erstelle eine kurze (max. 3 Sätze), aber ausdrucksstarke Beschreibung eines Kunstwerks basierend auf dem Prompt, der zur Erstellung verwendet wurde."
+        },
+        {
+          role: "user",
+          content: `Basierend auf diesem Prompt wurde ein Bild erstellt:\n\n${promptBase}\n\nSchreibe eine kurze, poetische Beschreibung des resultierenden Bildes (nur 2-3 Sätze).`
+        }
+      ]
+    });
+    
+    const description = descriptionResponse.choices[0]?.message.content || 
+      `Ein stimmungsvolles Kunstwerk in ${colorImpression}-Tönen, inspiriert von Gedanken zu "${spontaneousThought}".`;
+    
+    return {
+      imageUrl: response.data[0]?.url || "",
+      description
+    };
+  } catch (error) {
+    console.error("Error generating image:", error);
+    throw new Error("Fehler bei der Bildgenerierung");
+  }
+}
+
+/**
  * Generate an image based on dream content, analysis and other factors
  * @param dreamContent The text content of the dream
  * @param analysis The analysis results if available

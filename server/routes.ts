@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { analyzeDream, analyzePatterns, generateDreamImage } from "./openai";
+import { analyzeDream, analyzePatterns, generateDreamImage, generateJournalMoodImage } from "./openai";
 import { saveBase64Image, deleteImage, saveUploadedFile } from "./utils";
 import { 
   insertDreamSchema, 
@@ -771,6 +771,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching journal entries:', error);
       res.status(500).json({ message: 'Fehler beim Laden der Journaleinträge' });
+    }
+  });
+  
+  // Generiert ein Stimmungsbild für einen Journaleintrag
+  app.post('/api/journal/generate-image', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const { journalContent, colorImpression, spontaneousThought, tags, mood } = req.body;
+      
+      if (!journalContent || !colorImpression || !spontaneousThought) {
+        return res.status(400).json({ 
+          message: 'Journalinhalt, Farbeindrücke und spontane Gedanken werden benötigt' 
+        });
+      }
+      
+      // OpenAI API aufrufen, um ein Bild zu generieren
+      const { imageUrl, description } = await generateJournalMoodImage(
+        journalContent,
+        colorImpression,
+        spontaneousThought,
+        tags,
+        mood
+      );
+      
+      res.json({ imageUrl, description });
+    } catch (error) {
+      console.error('Error generating journal mood image:', error);
+      res.status(500).json({ message: 'Fehler bei der Generierung des Stimmungsbildes' });
     }
   });
   
