@@ -11,7 +11,6 @@ build = ["npm", "run", "build"]
 run = ["npm", "run", "start"]
 
 [workflows]
-runButton = "Dev Server"
 
 [[workflows.workflow]]
 name = "Project"
@@ -37,14 +36,39 @@ task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
 
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+waitForPort = 5000
+
 [[workflows.workflow]]
 name = "Dev Server"
 author = 38207286
 mode = "sequential"
 
 [[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm run dev"
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Project"
+
+[[workflows.workflow]]
+name = "zrdz"
+mode = "parallel"
+author = 38207286
+
+[[workflows.workflow.tasks]]
+task = "packager.installForLanguage"
+args = "nodejs"
 
 [[ports]]
 localPort = 5000
