@@ -499,19 +499,30 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
                         alt="Vorschau" 
                         className="object-cover w-full h-full"
                       />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        className="absolute top-2 right-2 opacity-80 hover:opacity-100"
-                        onClick={() => {
-                          setImagePreview(null);
-                          setUploadedImage(null);
-                          setGeneratedDescription("");
-                        }}
-                      >
-                        <XIcon className="h-4 w-4" />
-                      </Button>
+                      <div className="absolute top-2 right-2 flex gap-2">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          className="opacity-80 hover:opacity-100"
+                          onClick={openImageGenerationDialog}
+                        >
+                          <Sparkles className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="opacity-80 hover:opacity-100"
+                          onClick={() => {
+                            setImagePreview(null);
+                            setUploadedImage(null);
+                            setGeneratedDescription("");
+                          }}
+                        >
+                          <XIcon className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                     
                     {/* Zeige die Bildbeschreibung an, wenn eine generiert wurde */}
