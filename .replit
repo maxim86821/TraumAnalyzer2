@@ -131,10 +131,6 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "prybar-nodejs -q "
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
 args = "npm install"
 
 [[workflows.workflow.tasks]]
