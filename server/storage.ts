@@ -24,7 +24,19 @@ import {
   SymbolComparison,
   InsertSymbolComparison,
   UserSymbolFavorite,
-  InsertUserSymbolFavorite
+  InsertUserSymbolFavorite,
+  // Collaborative dream interpretation imports
+  SharedDream,
+  InsertSharedDream,
+  DreamComment,
+  InsertDreamComment,
+  CommentLike,
+  InsertCommentLike,
+  DreamChallenge,
+  InsertDreamChallenge,
+  ChallengeSubmission,
+  InsertChallengeSubmission,
+  MoodData
 } from "@shared/schema";
 import pg from 'pg';
 import session from "express-session";
@@ -124,6 +136,54 @@ export interface IStorage {
   getUserSymbolFavoritesByUserId(userId: number): Promise<UserSymbolFavorite[]>;
   deleteUserSymbolFavorite(id: number): Promise<boolean>;
 
+  // Custom methods for tag and mood operations
+  updateDreamTags(id: number, tags: string[]): Promise<Dream | undefined>;
+  updateDreamMood(id: number, moodData: MoodData): Promise<Dream | undefined>;
+
+  // Collaborative Dream Interpretation
+  // Shared Dreams
+  createSharedDream(sharedDream: InsertSharedDream): Promise<SharedDream>;
+  getSharedDream(id: number): Promise<SharedDream | undefined>;
+  getSharedDreamsByUserId(userId: number): Promise<SharedDream[]>;
+  getPublicSharedDreams(limit?: number, offset?: number): Promise<SharedDream[]>; 
+  getCommunitySharedDreams(limit?: number, offset?: number): Promise<SharedDream[]>;
+  getFeaturedSharedDreams(limit?: number): Promise<SharedDream[]>;
+  updateSharedDream(id: number, sharedDream: Partial<InsertSharedDream>): Promise<SharedDream | undefined>;
+  deleteSharedDream(id: number): Promise<boolean>;
+  incrementSharedDreamViewCount(id: number): Promise<SharedDream | undefined>;
+
+  // Dream Comments
+  createDreamComment(comment: InsertDreamComment): Promise<DreamComment>;
+  getDreamCommentsBySharedDreamId(sharedDreamId: number): Promise<DreamComment[]>;
+  getDreamComment(id: number): Promise<DreamComment | undefined>;
+  updateDreamComment(id: number, comment: Partial<InsertDreamComment>): Promise<DreamComment | undefined>;
+  deleteDreamComment(id: number): Promise<boolean>;
+  
+  // Comment Likes
+  createCommentLike(like: InsertCommentLike): Promise<CommentLike>;
+  getCommentLike(commentId: number, userId: number): Promise<CommentLike | undefined>;
+  deleteCommentLike(id: number): Promise<boolean>;
+  updateCommentLikesCount(commentId: number): Promise<number>;
+  
+  // Dream Challenges
+  createDreamChallenge(challenge: InsertDreamChallenge): Promise<DreamChallenge>;
+  getDreamChallenge(id: number): Promise<DreamChallenge | undefined>;
+  getActiveDreamChallenges(): Promise<DreamChallenge[]>;
+  getAllDreamChallenges(): Promise<DreamChallenge[]>;
+  updateDreamChallenge(id: number, challenge: Partial<InsertDreamChallenge>): Promise<DreamChallenge | undefined>;
+  deleteDreamChallenge(id: number): Promise<boolean>;
+  
+  // Challenge Submissions
+  createChallengeSubmission(submission: InsertChallengeSubmission): Promise<ChallengeSubmission>;
+  getChallengeSubmission(id: number): Promise<ChallengeSubmission | undefined>;
+  getChallengeSubmissionsByUserId(userId: number): Promise<ChallengeSubmission[]>;
+  getChallengeSubmissionsByChallengeId(challengeId: number): Promise<ChallengeSubmission[]>;
+  updateChallengeSubmission(id: number, submission: Partial<InsertChallengeSubmission>): Promise<ChallengeSubmission | undefined>;
+  deleteChallengeSubmission(id: number): Promise<boolean>;
+  
+  // Challenge Submissions
+  getChallengeSubmission(id: number): Promise<ChallengeSubmission | undefined>;
+
   // Session store
   sessionStore: session.Store;
 }
@@ -143,6 +203,12 @@ export class MemStorage implements IStorage {
   private culturalInterpretations: Map<number, CulturalSymbolInterpretation>;
   private symbolComparisons: Map<number, SymbolComparison>;
   private userSymbolFavorites: Map<number, UserSymbolFavorite>;
+  // Collaborative Dream Interpretation
+  private sharedDreams: Map<number, SharedDream>;
+  private dreamComments: Map<number, DreamComment>;
+  private commentLikes: Map<number, CommentLike>;
+  private dreamChallenges: Map<number, DreamChallenge>;
+  private challengeSubmissions: Map<number, ChallengeSubmission>;
   // Laufende IDs
   private currentUserId: number;
   private currentDreamId: number;
@@ -157,6 +223,11 @@ export class MemStorage implements IStorage {
   private currentCulturalInterpretationId: number;
   private currentSymbolComparisonId: number;
   private currentUserSymbolFavoriteId: number;
+  private currentSharedDreamId: number;
+  private currentDreamCommentId: number;
+  private currentCommentLikeId: number;
+  private currentDreamChallengeId: number;
+  private currentChallengeSubmissionId: number;
   public sessionStore: session.Store;
 
   constructor() {
@@ -174,6 +245,12 @@ export class MemStorage implements IStorage {
     this.culturalInterpretations = new Map();
     this.symbolComparisons = new Map();
     this.userSymbolFavorites = new Map();
+    // Collaborative Dream Interpretation Maps initialisieren
+    this.sharedDreams = new Map();
+    this.dreamComments = new Map();
+    this.commentLikes = new Map();
+    this.dreamChallenges = new Map();
+    this.challengeSubmissions = new Map();
     // IDs initialisieren
     this.currentUserId = 1;
     this.currentDreamId = 1;
@@ -188,6 +265,11 @@ export class MemStorage implements IStorage {
     this.currentCulturalInterpretationId = 1;
     this.currentSymbolComparisonId = 1;
     this.currentUserSymbolFavoriteId = 1;
+    this.currentSharedDreamId = 1;
+    this.currentDreamCommentId = 1;
+    this.currentCommentLikeId = 1;
+    this.currentDreamChallengeId = 1;
+    this.currentChallengeSubmissionId = 1;
 
     // In-Memory Session Store erstellen
     const MemoryStore = require('memorystore')(session);
@@ -1141,6 +1223,422 @@ export class MemStorage implements IStorage {
 
   async deleteUserSymbolFavorite(id: number): Promise<boolean> {
     return this.userSymbolFavorites.delete(id);
+  }
+
+  // Custom methods for tag and mood operations
+  async updateDreamTags(id: number, tags: string[]): Promise<Dream | undefined> {
+    const dream = this.dreams.get(id);
+    if (!dream) {
+      return undefined;
+    }
+    
+    const updatedDream = {
+      ...dream,
+      tags: tags
+    };
+    
+    this.dreams.set(id, updatedDream);
+    return updatedDream;
+  }
+
+  async updateDreamMood(id: number, moodData: MoodData): Promise<Dream | undefined> {
+    const dream = this.dreams.get(id);
+    if (!dream) {
+      return undefined;
+    }
+    
+    const updatedDream = {
+      ...dream,
+      moodBeforeSleep: moodData.beforeSleep || dream.moodBeforeSleep,
+      moodAfterWakeup: moodData.afterWakeup || dream.moodAfterWakeup,
+      moodNotes: moodData.notes || dream.moodNotes
+    };
+    
+    this.dreams.set(id, updatedDream);
+    return updatedDream;
+  }
+
+  // Collaborative Dream Interpretation methods
+
+  // Shared Dreams
+  async createSharedDream(sharedDream: InsertSharedDream): Promise<SharedDream> {
+    const id = this.currentSharedDreamId++;
+    const now = new Date();
+    
+    const newSharedDream: SharedDream = {
+      id,
+      dreamId: sharedDream.dreamId,
+      userId: sharedDream.userId,
+      title: sharedDream.title,
+      content: sharedDream.content,
+      anonymousShare: sharedDream.anonymousShare || false,
+      visibility: sharedDream.visibility || "community",
+      allowComments: sharedDream.allowComments !== undefined ? sharedDream.allowComments : true,
+      allowInterpretations: sharedDream.allowInterpretations !== undefined ? sharedDream.allowInterpretations : true,
+      includeAiAnalysis: sharedDream.includeAiAnalysis || false,
+      featuredInCommunity: false,
+      viewCount: 0,
+      createdAt: now,
+      updatedAt: now,
+      tags: sharedDream.tags || [],
+      imageUrl: sharedDream.imageUrl || null
+    };
+    
+    this.sharedDreams.set(id, newSharedDream);
+    return newSharedDream;
+  }
+  
+  async getSharedDream(id: number): Promise<SharedDream | undefined> {
+    return this.sharedDreams.get(id);
+  }
+  
+  async getSharedDreamsByUserId(userId: number): Promise<SharedDream[]> {
+    return Array.from(this.sharedDreams.values())
+      .filter(dream => dream.userId === userId);
+  }
+  
+  async getPublicSharedDreams(limit?: number, offset?: number): Promise<SharedDream[]> {
+    let dreams = Array.from(this.sharedDreams.values())
+      .filter(dream => dream.visibility === "public")
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    
+    if (offset !== undefined) {
+      dreams = dreams.slice(offset);
+    }
+    
+    if (limit !== undefined) {
+      dreams = dreams.slice(0, limit);
+    }
+    
+    return dreams;
+  }
+  
+  async getCommunitySharedDreams(limit?: number, offset?: number): Promise<SharedDream[]> {
+    let dreams = Array.from(this.sharedDreams.values())
+      .filter(dream => dream.visibility === "community" || dream.visibility === "public")
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    
+    if (offset !== undefined) {
+      dreams = dreams.slice(offset);
+    }
+    
+    if (limit !== undefined) {
+      dreams = dreams.slice(0, limit);
+    }
+    
+    return dreams;
+  }
+  
+  async getFeaturedSharedDreams(limit?: number): Promise<SharedDream[]> {
+    let dreams = Array.from(this.sharedDreams.values())
+      .filter(dream => dream.featuredInCommunity)
+      .sort((a, b) => b.viewCount - a.viewCount);
+    
+    if (limit !== undefined) {
+      dreams = dreams.slice(0, limit);
+    }
+    
+    return dreams;
+  }
+  
+  async updateSharedDream(id: number, sharedDream: Partial<InsertSharedDream>): Promise<SharedDream | undefined> {
+    const dream = this.sharedDreams.get(id);
+    if (!dream) {
+      return undefined;
+    }
+    
+    const updatedDream = {
+      ...dream,
+      ...sharedDream,
+      updatedAt: new Date()
+    };
+    
+    this.sharedDreams.set(id, updatedDream);
+    return updatedDream;
+  }
+  
+  async deleteSharedDream(id: number): Promise<boolean> {
+    // Also delete all comments and likes associated with this shared dream
+    Array.from(this.dreamComments.values())
+      .filter(comment => comment.sharedDreamId === id)
+      .forEach(comment => {
+        this.dreamComments.delete(comment.id);
+        
+        // Delete all likes associated with this comment
+        Array.from(this.commentLikes.values())
+          .filter(like => like.commentId === comment.id)
+          .forEach(like => this.commentLikes.delete(like.id));
+      });
+    
+    return this.sharedDreams.delete(id);
+  }
+  
+  async incrementSharedDreamViewCount(id: number): Promise<SharedDream | undefined> {
+    const dream = this.sharedDreams.get(id);
+    if (!dream) {
+      return undefined;
+    }
+    
+    const updatedDream = {
+      ...dream,
+      viewCount: dream.viewCount + 1
+    };
+    
+    this.sharedDreams.set(id, updatedDream);
+    return updatedDream;
+  }
+  
+  // Dream Comments
+  async createDreamComment(comment: InsertDreamComment): Promise<DreamComment> {
+    const id = this.currentDreamCommentId++;
+    const now = new Date();
+    
+    const newComment: DreamComment = {
+      id,
+      sharedDreamId: comment.sharedDreamId,
+      userId: comment.userId,
+      content: comment.content,
+      isInterpretation: comment.isInterpretation || false,
+      likes: 0,
+      parentCommentId: comment.parentCommentId || null,
+      createdAt: now,
+      updatedAt: now
+    };
+    
+    this.dreamComments.set(id, newComment);
+    return newComment;
+  }
+  
+  async getDreamCommentsBySharedDreamId(sharedDreamId: number): Promise<DreamComment[]> {
+    return Array.from(this.dreamComments.values())
+      .filter(comment => comment.sharedDreamId === sharedDreamId)
+      .sort((a, b) => {
+        // Sort top-level comments by creation time (newest first)
+        if (!a.parentCommentId && !b.parentCommentId) {
+          return b.createdAt.getTime() - a.createdAt.getTime();
+        }
+        // Put replies after their parent comments
+        if (a.parentCommentId && !b.parentCommentId) return 1;
+        if (!a.parentCommentId && b.parentCommentId) return -1;
+        
+        // If both are replies, sort by creation time (oldest first)
+        return a.createdAt.getTime() - b.createdAt.getTime();
+      });
+  }
+  
+  async getDreamComment(id: number): Promise<DreamComment | undefined> {
+    return this.dreamComments.get(id);
+  }
+  
+  async updateDreamComment(id: number, comment: Partial<InsertDreamComment>): Promise<DreamComment | undefined> {
+    const existingComment = this.dreamComments.get(id);
+    if (!existingComment) {
+      return undefined;
+    }
+    
+    const updatedComment = {
+      ...existingComment,
+      ...comment,
+      updatedAt: new Date()
+    };
+    
+    this.dreamComments.set(id, updatedComment);
+    return updatedComment;
+  }
+  
+  async deleteDreamComment(id: number): Promise<boolean> {
+    // Delete all likes associated with this comment
+    Array.from(this.commentLikes.values())
+      .filter(like => like.commentId === id)
+      .forEach(like => this.commentLikes.delete(like.id));
+    
+    // Delete all child comments (replies)
+    Array.from(this.dreamComments.values())
+      .filter(comment => comment.parentCommentId === id)
+      .forEach(comment => this.deleteDreamComment(comment.id));
+    
+    return this.dreamComments.delete(id);
+  }
+  
+  // Comment Likes
+  async createCommentLike(like: InsertCommentLike): Promise<CommentLike> {
+    const id = this.currentCommentLikeId++;
+    
+    const newLike: CommentLike = {
+      id,
+      commentId: like.commentId,
+      userId: like.userId,
+      createdAt: new Date()
+    };
+    
+    this.commentLikes.set(id, newLike);
+    
+    // Increment the likes count on the comment
+    await this.updateCommentLikesCount(like.commentId);
+    
+    return newLike;
+  }
+  
+  async getCommentLike(commentId: number, userId: number): Promise<CommentLike | undefined> {
+    return Array.from(this.commentLikes.values())
+      .find(like => like.commentId === commentId && like.userId === userId);
+  }
+  
+  async deleteCommentLike(id: number): Promise<boolean> {
+    const like = this.commentLikes.get(id);
+    if (like) {
+      const result = this.commentLikes.delete(id);
+      
+      // Update the likes count on the comment
+      await this.updateCommentLikesCount(like.commentId);
+      
+      return result;
+    }
+    return false;
+  }
+  
+  async updateCommentLikesCount(commentId: number): Promise<number> {
+    const comment = this.dreamComments.get(commentId);
+    if (!comment) {
+      return 0;
+    }
+    
+    const likesCount = Array.from(this.commentLikes.values())
+      .filter(like => like.commentId === commentId)
+      .length;
+    
+    const updatedComment = {
+      ...comment,
+      likes: likesCount
+    };
+    
+    this.dreamComments.set(commentId, updatedComment);
+    return likesCount;
+  }
+  
+  // Dream Challenges
+  async createDreamChallenge(challenge: InsertDreamChallenge): Promise<DreamChallenge> {
+    const id = this.currentDreamChallengeId++;
+    const now = new Date();
+    
+    const newChallenge: DreamChallenge = {
+      id,
+      title: challenge.title,
+      description: challenge.description,
+      startDate: new Date(challenge.startDate),
+      endDate: new Date(challenge.endDate),
+      isActive: challenge.isActive !== undefined ? challenge.isActive : true,
+      createdBy: challenge.createdBy,
+      prizes: challenge.prizes || null,
+      rules: challenge.rules,
+      createdAt: now,
+      updatedAt: now
+    };
+    
+    this.dreamChallenges.set(id, newChallenge);
+    return newChallenge;
+  }
+  
+  async getDreamChallenge(id: number): Promise<DreamChallenge | undefined> {
+    return this.dreamChallenges.get(id);
+  }
+  
+  async getActiveDreamChallenges(): Promise<DreamChallenge[]> {
+    const now = new Date();
+    
+    return Array.from(this.dreamChallenges.values())
+      .filter(challenge => 
+        challenge.isActive && 
+        challenge.startDate <= now && 
+        challenge.endDate >= now
+      )
+      .sort((a, b) => b.endDate.getTime() - a.endDate.getTime());
+  }
+  
+  async getAllDreamChallenges(): Promise<DreamChallenge[]> {
+    return Array.from(this.dreamChallenges.values())
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+  
+  async updateDreamChallenge(id: number, challenge: Partial<InsertDreamChallenge>): Promise<DreamChallenge | undefined> {
+    const existingChallenge = this.dreamChallenges.get(id);
+    if (!existingChallenge) {
+      return undefined;
+    }
+    
+    const updatedChallenge = {
+      ...existingChallenge,
+      ...challenge,
+      startDate: challenge.startDate ? new Date(challenge.startDate) : existingChallenge.startDate,
+      endDate: challenge.endDate ? new Date(challenge.endDate) : existingChallenge.endDate,
+      updatedAt: new Date()
+    };
+    
+    this.dreamChallenges.set(id, updatedChallenge);
+    return updatedChallenge;
+  }
+  
+  async deleteDreamChallenge(id: number): Promise<boolean> {
+    // Delete all submissions for this challenge
+    Array.from(this.challengeSubmissions.values())
+      .filter(submission => submission.challengeId === id)
+      .forEach(submission => this.challengeSubmissions.delete(submission.id));
+    
+    return this.dreamChallenges.delete(id);
+  }
+  
+  // Challenge Submissions
+  async createChallengeSubmission(submission: InsertChallengeSubmission): Promise<ChallengeSubmission> {
+    const id = this.currentChallengeSubmissionId++;
+    
+    const newSubmission: ChallengeSubmission = {
+      id,
+      challengeId: submission.challengeId,
+      sharedDreamId: submission.sharedDreamId,
+      userId: submission.userId,
+      submissionDate: new Date(),
+      status: submission.status || "pending",
+      notes: submission.notes || null,
+      createdAt: new Date()
+    };
+    
+    this.challengeSubmissions.set(id, newSubmission);
+    return newSubmission;
+  }
+  
+  async getChallengeSubmissionsByUserId(userId: number): Promise<ChallengeSubmission[]> {
+    return Array.from(this.challengeSubmissions.values())
+      .filter(submission => submission.userId === userId)
+      .sort((a, b) => b.submissionDate.getTime() - a.submissionDate.getTime());
+  }
+  
+  async getChallengeSubmissionsByChallengeId(challengeId: number): Promise<ChallengeSubmission[]> {
+    return Array.from(this.challengeSubmissions.values())
+      .filter(submission => submission.challengeId === challengeId)
+      .sort((a, b) => b.submissionDate.getTime() - a.submissionDate.getTime());
+  }
+
+  async getChallengeSubmission(id: number): Promise<ChallengeSubmission | undefined> {
+    return this.challengeSubmissions.get(id);
+  }
+  
+  async updateChallengeSubmission(id: number, submission: Partial<InsertChallengeSubmission>): Promise<ChallengeSubmission | undefined> {
+    const existingSubmission = this.challengeSubmissions.get(id);
+    if (!existingSubmission) {
+      return undefined;
+    }
+    
+    const updatedSubmission = {
+      ...existingSubmission,
+      ...submission
+    };
+    
+    this.challengeSubmissions.set(id, updatedSubmission);
+    return updatedSubmission;
+  }
+  
+  async deleteChallengeSubmission(id: number): Promise<boolean> {
+    return this.challengeSubmissions.delete(id);
   }
 }
 

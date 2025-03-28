@@ -9,7 +9,14 @@ import {
   insertUserAchievementSchema, 
   insertJournalEntrySchema,
   InsertJournalEntry,
-  JournalEntry
+  JournalEntry,
+  // Collaborative dream interpretation imports
+  insertSharedDreamSchema,
+  insertDreamCommentSchema,
+  insertCommentLikeSchema,
+  insertDreamChallengeSchema,
+  insertChallengeSubmissionSchema,
+  MoodData
 } from "@shared/schema";
 import { setupAuth, authenticateJWT } from "./auth";
 import express from "express";
@@ -1434,7 +1441,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Tags must be an array' });
       }
 
-      const dream = await storage.getDreamById(dreamId);
+      const dream = await storage.getDream(dreamId);
 
       if (!dream) {
         return res.status(404).json({ message: 'Dream not found' });
@@ -1487,7 +1494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         moodData.notes = notes;
       }
 
-      const dream = await storage.getDreamById(dreamId);
+      const dream = await storage.getDream(dreamId);
 
       if (!dream) {
         return res.status(404).json({ message: 'Traum nicht gefunden' });
@@ -1506,6 +1513,838 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Interner Serverfehler' });
     }
   });
+
+  // <Collaborative Dream Interpretation>
+  
+  // Shared Dreams Routes
+  // Get all public shared dreams with optional pagination
+  app.get('/api/community/dreams/public', async (req: Request, res: Response) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;
+      
+      const dreams = await storage.getPublicSharedDreams(limit, offset);
+      res.json(dreams);
+    } catch (error) {
+      console.error('Error fetching public shared dreams:', error);
+      res.status(500).json({ message: 'Fehler beim Laden der öffentlichen Traumeinträge' });
+    }
+  });
+  
+  // Get all community shared dreams with optional pagination
+  app.get('/api/community/dreams', async (req: Request, res: Response) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : undefined;
+      
+      const dreams = await storage.getCommunitySharedDreams(limit, offset);
+      res.json(dreams);
+    } catch (error) {
+      console.error('Error fetching community shared dreams:', error);
+      res.status(500).json({ message: 'Fehler beim Laden der Community-Traumeinträge' });
+    }
+  });
+  
+  // Get featured shared dreams
+  app.get('/api/community/dreams/featured', async (req: Request, res: Response) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      
+      const dreams = await storage.getFeaturedSharedDreams(limit);
+      res.json(dreams);
+    } catch (error) {
+      console.error('Error fetching featured shared dreams:', error);
+      res.status(500).json({ message: 'Fehler beim Laden der empfohlenen Traumeinträge' });
+    }
+  });
+  
+  // Get all shared dreams by the authenticated user
+  app.get('/api/community/dreams/my', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const dreams = await storage.getSharedDreamsByUserId(req.user.id);
+      res.json(dreams);
+    } catch (error) {
+      console.error('Error fetching user shared dreams:', error);
+      res.status(500).json({ message: 'Fehler beim Laden Ihrer geteilten Traumeinträge' });
+    }
+  });
+  
+  // Get a specific shared dream by ID
+  app.get('/api/community/dreams/:id', async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Ungültige Traum-ID' });
+      }
+      
+      const dream = await storage.getSharedDream(id);
+      if (!dream) {
+        return res.status(404).json({ message: 'Geteilter Traum nicht gefunden' });
+      }
+      
+      // Increment view count
+      await storage.incrementSharedDreamViewCount(id);
+      
+      // If the dream is private, only the owner can view it
+      if (dream.visibility === 'private' && (!req.user || dream.userId !== req.user.id)) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Anzeigen dieses Traums' });
+      }
+      
+      res.json(dream);
+    } catch (error) {
+      console.error('Error fetching shared dream:', error);
+      res.status(500).json({ message: 'Fehler beim Laden des geteilten Traums' });
+    }
+  });
+  
+  // Create a new shared dream
+  app.post('/api/community/dreams', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      // Validate the request body
+      const parseResult = insertSharedDreamSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: 'Ungültige Daten für geteilten Traum', 
+          errors: parseResult.error.errors 
+        });
+      }
+      
+      // Set the user ID from the authenticated user
+      parseResult.data.userId = req.user.id;
+      
+      // Create the shared dream
+      const newSharedDream = await storage.createSharedDream(parseResult.data);
+      
+      res.status(201).json(newSharedDream);
+    } catch (error) {
+      console.error('Error creating shared dream:', error);
+      res.status(500).json({ message: 'Fehler beim Erstellen des geteilten Traums' });
+    }
+  });
+  
+  // Update a shared dream
+  app.patch('/api/community/dreams/:id', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Ungültige Traum-ID' });
+      }
+      
+      // Get the existing shared dream
+      const existingDream = await storage.getSharedDream(id);
+      if (!existingDream) {
+        return res.status(404).json({ message: 'Geteilter Traum nicht gefunden' });
+      }
+      
+      // Check if user is the owner of the dream
+      if (existingDream.userId !== req.user.id) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Ändern dieses Traums' });
+      }
+      
+      // Update the shared dream
+      const updatedDream = await storage.updateSharedDream(id, req.body);
+      if (!updatedDream) {
+        return res.status(404).json({ message: 'Geteilter Traum nicht gefunden' });
+      }
+      
+      res.json(updatedDream);
+    } catch (error) {
+      console.error('Error updating shared dream:', error);
+      res.status(500).json({ message: 'Fehler beim Aktualisieren des geteilten Traums' });
+    }
+  });
+  
+  // Delete a shared dream
+  app.delete('/api/community/dreams/:id', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Ungültige Traum-ID' });
+      }
+      
+      // Get the shared dream
+      const dream = await storage.getSharedDream(id);
+      if (!dream) {
+        return res.status(404).json({ message: 'Geteilter Traum nicht gefunden' });
+      }
+      
+      // Check if user is the owner of the dream
+      if (dream.userId !== req.user.id) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Löschen dieses Traums' });
+      }
+      
+      // Delete the shared dream
+      const success = await storage.deleteSharedDream(id);
+      if (!success) {
+        return res.status(404).json({ message: 'Geteilter Traum nicht gefunden' });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting shared dream:', error);
+      res.status(500).json({ message: 'Fehler beim Löschen des geteilten Traums' });
+    }
+  });
+  
+  // Dream Comments Routes
+  // Get all comments for a shared dream
+  app.get('/api/community/dreams/:dreamId/comments', async (req: Request, res: Response) => {
+    try {
+      const dreamId = parseInt(req.params.dreamId);
+      if (isNaN(dreamId)) {
+        return res.status(400).json({ message: 'Ungültige Traum-ID' });
+      }
+      
+      // Check if the shared dream exists
+      const dream = await storage.getSharedDream(dreamId);
+      if (!dream) {
+        return res.status(404).json({ message: 'Geteilter Traum nicht gefunden' });
+      }
+      
+      // If the dream is private, only the owner can view comments
+      if (dream.visibility === 'private' && (!req.user || dream.userId !== req.user.id)) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Anzeigen der Kommentare' });
+      }
+      
+      // Get comments
+      const comments = await storage.getDreamCommentsBySharedDreamId(dreamId);
+      
+      res.json(comments);
+    } catch (error) {
+      console.error('Error fetching dream comments:', error);
+      res.status(500).json({ message: 'Fehler beim Laden der Kommentare' });
+    }
+  });
+  
+  // Create a new comment for a shared dream
+  app.post('/api/community/dreams/:dreamId/comments', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const dreamId = parseInt(req.params.dreamId);
+      if (isNaN(dreamId)) {
+        return res.status(400).json({ message: 'Ungültige Traum-ID' });
+      }
+      
+      // Check if the shared dream exists
+      const dream = await storage.getSharedDream(dreamId);
+      if (!dream) {
+        return res.status(404).json({ message: 'Geteilter Traum nicht gefunden' });
+      }
+      
+      // Check if comments are allowed
+      if (!dream.allowComments) {
+        return res.status(403).json({ message: 'Kommentare sind für diesen Traum deaktiviert' });
+      }
+      
+      // If it's an interpretation, check if interpretations are allowed
+      if (req.body.isInterpretation && !dream.allowInterpretations) {
+        return res.status(403).json({ message: 'Interpretationen sind für diesen Traum deaktiviert' });
+      }
+      
+      // Validate the request body
+      const parseResult = insertDreamCommentSchema.safeParse({
+        ...req.body,
+        sharedDreamId: dreamId,
+        userId: req.user.id
+      });
+      
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: 'Ungültige Kommentardaten', 
+          errors: parseResult.error.errors 
+        });
+      }
+      
+      // Create the comment
+      const newComment = await storage.createDreamComment(parseResult.data);
+      
+      res.status(201).json(newComment);
+    } catch (error) {
+      console.error('Error creating dream comment:', error);
+      res.status(500).json({ message: 'Fehler beim Erstellen des Kommentars' });
+    }
+  });
+  
+  // Update a comment
+  app.patch('/api/community/comments/:id', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Ungültige Kommentar-ID' });
+      }
+      
+      // Get the existing comment
+      const existingComment = await storage.getDreamComment(id);
+      if (!existingComment) {
+        return res.status(404).json({ message: 'Kommentar nicht gefunden' });
+      }
+      
+      // Check if user is the owner of the comment
+      if (existingComment.userId !== req.user.id) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Ändern dieses Kommentars' });
+      }
+      
+      // Update the comment
+      const updatedComment = await storage.updateDreamComment(id, req.body);
+      if (!updatedComment) {
+        return res.status(404).json({ message: 'Kommentar nicht gefunden' });
+      }
+      
+      res.json(updatedComment);
+    } catch (error) {
+      console.error('Error updating dream comment:', error);
+      res.status(500).json({ message: 'Fehler beim Aktualisieren des Kommentars' });
+    }
+  });
+  
+  // Delete a comment
+  app.delete('/api/community/comments/:id', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Ungültige Kommentar-ID' });
+      }
+      
+      // Get the comment
+      const comment = await storage.getDreamComment(id);
+      if (!comment) {
+        return res.status(404).json({ message: 'Kommentar nicht gefunden' });
+      }
+      
+      // Get the shared dream to check if user is the dream owner
+      const dream = await storage.getSharedDream(comment.sharedDreamId);
+      
+      // Check if user is the owner of the comment or the owner of the dream
+      if (comment.userId !== req.user.id && dream?.userId !== req.user.id) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Löschen dieses Kommentars' });
+      }
+      
+      // Delete the comment
+      const success = await storage.deleteDreamComment(id);
+      if (!success) {
+        return res.status(404).json({ message: 'Kommentar nicht gefunden' });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting dream comment:', error);
+      res.status(500).json({ message: 'Fehler beim Löschen des Kommentars' });
+    }
+  });
+  
+  // Comment Likes Routes
+  // Like a comment
+  app.post('/api/community/comments/:commentId/like', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const commentId = parseInt(req.params.commentId);
+      if (isNaN(commentId)) {
+        return res.status(400).json({ message: 'Ungültige Kommentar-ID' });
+      }
+      
+      // Check if the comment exists
+      const comment = await storage.getDreamComment(commentId);
+      if (!comment) {
+        return res.status(404).json({ message: 'Kommentar nicht gefunden' });
+      }
+      
+      // Check if user has already liked this comment
+      const existingLike = await storage.getCommentLike(commentId, req.user.id);
+      if (existingLike) {
+        return res.status(400).json({ message: 'Kommentar wurde bereits geliked' });
+      }
+      
+      // Create the like
+      const newLike = await storage.createCommentLike({
+        commentId,
+        userId: req.user.id
+      });
+      
+      res.status(201).json(newLike);
+    } catch (error) {
+      console.error('Error liking comment:', error);
+      res.status(500).json({ message: 'Fehler beim Liken des Kommentars' });
+    }
+  });
+  
+  // Unlike a comment
+  app.delete('/api/community/comments/:commentId/like', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const commentId = parseInt(req.params.commentId);
+      if (isNaN(commentId)) {
+        return res.status(400).json({ message: 'Ungültige Kommentar-ID' });
+      }
+      
+      // Check if user has liked this comment
+      const existingLike = await storage.getCommentLike(commentId, req.user.id);
+      if (!existingLike) {
+        return res.status(404).json({ message: 'Like nicht gefunden' });
+      }
+      
+      // Delete the like
+      const success = await storage.deleteCommentLike(existingLike.id);
+      if (!success) {
+        return res.status(404).json({ message: 'Like nicht gefunden' });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error unliking comment:', error);
+      res.status(500).json({ message: 'Fehler beim Entfernen des Likes' });
+    }
+  });
+  
+  // Dream Challenges Routes
+  // Get all active challenges
+  app.get('/api/community/challenges/active', async (req: Request, res: Response) => {
+    try {
+      const challenges = await storage.getActiveDreamChallenges();
+      res.json(challenges);
+    } catch (error) {
+      console.error('Error fetching active challenges:', error);
+      res.status(500).json({ message: 'Fehler beim Laden der aktiven Challenges' });
+    }
+  });
+  
+  // Get all challenges
+  app.get('/api/community/challenges', async (req: Request, res: Response) => {
+    try {
+      const challenges = await storage.getAllDreamChallenges();
+      res.json(challenges);
+    } catch (error) {
+      console.error('Error fetching all challenges:', error);
+      res.status(500).json({ message: 'Fehler beim Laden der Challenges' });
+    }
+  });
+  
+  // Get a specific challenge by ID
+  app.get('/api/community/challenges/:id', async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Ungültige Challenge-ID' });
+      }
+      
+      const challenge = await storage.getDreamChallenge(id);
+      if (!challenge) {
+        return res.status(404).json({ message: 'Challenge nicht gefunden' });
+      }
+      
+      res.json(challenge);
+    } catch (error) {
+      console.error('Error fetching challenge:', error);
+      res.status(500).json({ message: 'Fehler beim Laden der Challenge' });
+    }
+  });
+  
+  // Create a new challenge
+  app.post('/api/community/challenges', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      // Validate the request body
+      const parseResult = insertDreamChallengeSchema.safeParse({
+        ...req.body,
+        createdBy: req.user.id
+      });
+      
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: 'Ungültige Challenge-Daten', 
+          errors: parseResult.error.errors 
+        });
+      }
+      
+      // Create the challenge
+      const newChallenge = await storage.createDreamChallenge(parseResult.data);
+      
+      res.status(201).json(newChallenge);
+    } catch (error) {
+      console.error('Error creating challenge:', error);
+      res.status(500).json({ message: 'Fehler beim Erstellen der Challenge' });
+    }
+  });
+  
+  // Update a challenge
+  app.patch('/api/community/challenges/:id', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Ungültige Challenge-ID' });
+      }
+      
+      // Get the existing challenge
+      const existingChallenge = await storage.getDreamChallenge(id);
+      if (!existingChallenge) {
+        return res.status(404).json({ message: 'Challenge nicht gefunden' });
+      }
+      
+      // Check if user is the creator of the challenge
+      if (existingChallenge.createdBy !== req.user.id) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Ändern dieser Challenge' });
+      }
+      
+      // Update the challenge
+      const updatedChallenge = await storage.updateDreamChallenge(id, req.body);
+      if (!updatedChallenge) {
+        return res.status(404).json({ message: 'Challenge nicht gefunden' });
+      }
+      
+      res.json(updatedChallenge);
+    } catch (error) {
+      console.error('Error updating challenge:', error);
+      res.status(500).json({ message: 'Fehler beim Aktualisieren der Challenge' });
+    }
+  });
+  
+  // Delete a challenge
+  app.delete('/api/community/challenges/:id', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Ungültige Challenge-ID' });
+      }
+      
+      // Get the challenge
+      const challenge = await storage.getDreamChallenge(id);
+      if (!challenge) {
+        return res.status(404).json({ message: 'Challenge nicht gefunden' });
+      }
+      
+      // Check if user is the creator of the challenge
+      if (challenge.createdBy !== req.user.id) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Löschen dieser Challenge' });
+      }
+      
+      // Delete the challenge
+      const success = await storage.deleteDreamChallenge(id);
+      if (!success) {
+        return res.status(404).json({ message: 'Challenge nicht gefunden' });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting challenge:', error);
+      res.status(500).json({ message: 'Fehler beim Löschen der Challenge' });
+    }
+  });
+  
+  // Challenge Submissions Routes
+  // Get all submissions for a challenge
+  app.get('/api/community/challenges/:challengeId/submissions', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const challengeId = parseInt(req.params.challengeId);
+      if (isNaN(challengeId)) {
+        return res.status(400).json({ message: 'Ungültige Challenge-ID' });
+      }
+      
+      // Check if the challenge exists
+      const challenge = await storage.getDreamChallenge(challengeId);
+      if (!challenge) {
+        return res.status(404).json({ message: 'Challenge nicht gefunden' });
+      }
+      
+      // Get submissions
+      const submissions = await storage.getChallengeSubmissionsByChallengeId(challengeId);
+      
+      res.json(submissions);
+    } catch (error) {
+      console.error('Error fetching challenge submissions:', error);
+      res.status(500).json({ message: 'Fehler beim Laden der Einreichungen' });
+    }
+  });
+  
+  // Get all submissions by the authenticated user
+  app.get('/api/community/submissions/my', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const submissions = await storage.getChallengeSubmissionsByUserId(req.user.id);
+      res.json(submissions);
+    } catch (error) {
+      console.error('Error fetching user submissions:', error);
+      res.status(500).json({ message: 'Fehler beim Laden Ihrer Einreichungen' });
+    }
+  });
+  
+  // Create a new submission for a challenge
+  app.post('/api/community/challenges/:challengeId/submissions', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const challengeId = parseInt(req.params.challengeId);
+      if (isNaN(challengeId)) {
+        return res.status(400).json({ message: 'Ungültige Challenge-ID' });
+      }
+      
+      // Check if the challenge exists and is active
+      const challenge = await storage.getDreamChallenge(challengeId);
+      if (!challenge) {
+        return res.status(404).json({ message: 'Challenge nicht gefunden' });
+      }
+      
+      const now = new Date();
+      if (!challenge.isActive || challenge.startDate > now || challenge.endDate < now) {
+        return res.status(400).json({ message: 'Challenge ist nicht aktiv oder der Einreichungszeitraum ist abgelaufen' });
+      }
+      
+      // Check if the shared dream exists
+      const sharedDreamId = parseInt(req.body.sharedDreamId);
+      if (isNaN(sharedDreamId)) {
+        return res.status(400).json({ message: 'Ungültige Traum-ID' });
+      }
+      
+      const sharedDream = await storage.getSharedDream(sharedDreamId);
+      if (!sharedDream) {
+        return res.status(404).json({ message: 'Geteilter Traum nicht gefunden' });
+      }
+      
+      // Check if user is the owner of the shared dream
+      if (sharedDream.userId !== req.user.id) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Einreichen dieses Traums' });
+      }
+      
+      // Validate the request body
+      const parseResult = insertChallengeSubmissionSchema.safeParse({
+        challengeId,
+        sharedDreamId,
+        userId: req.user.id,
+        notes: req.body.notes
+      });
+      
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: 'Ungültige Einreichungsdaten', 
+          errors: parseResult.error.errors 
+        });
+      }
+      
+      // Create the submission
+      const newSubmission = await storage.createChallengeSubmission(parseResult.data);
+      
+      res.status(201).json(newSubmission);
+    } catch (error) {
+      console.error('Error creating challenge submission:', error);
+      res.status(500).json({ message: 'Fehler beim Erstellen der Einreichung' });
+    }
+  });
+  
+  // Update a submission status (for challenge creators only)
+  app.patch('/api/community/submissions/:id', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Ungültige Einreichungs-ID' });
+      }
+      
+      // Check if the submission exists
+      const submission = await storage.getChallengeSubmission(id);
+      if (!submission) {
+        return res.status(404).json({ message: 'Einreichung nicht gefunden' });
+      }
+      
+      // Get the challenge to check if user is the creator
+      const challenge = await storage.getDreamChallenge(submission.challengeId);
+      if (!challenge) {
+        return res.status(404).json({ message: 'Challenge nicht gefunden' });
+      }
+      
+      // Check if user is the creator of the challenge
+      if (challenge.createdBy !== req.user.id) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Ändern dieser Einreichung' });
+      }
+      
+      // Update the submission
+      const updatedSubmission = await storage.updateChallengeSubmission(id, {
+        status: req.body.status,
+        notes: req.body.notes
+      });
+      
+      if (!updatedSubmission) {
+        return res.status(404).json({ message: 'Einreichung nicht gefunden' });
+      }
+      
+      res.json(updatedSubmission);
+    } catch (error) {
+      console.error('Error updating submission:', error);
+      res.status(500).json({ message: 'Fehler beim Aktualisieren der Einreichung' });
+    }
+  });
+  
+  // Delete a submission (only allowed for the submitting user)
+  app.delete('/api/community/submissions/:id', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Ungültige Einreichungs-ID' });
+      }
+      
+      // Check if the submission exists
+      const submission = await storage.getChallengeSubmission(id);
+      if (!submission) {
+        return res.status(404).json({ message: 'Einreichung nicht gefunden' });
+      }
+      
+      // Check if user is the owner of the submission
+      if (submission.userId !== req.user.id) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Löschen dieser Einreichung' });
+      }
+      
+      // Delete the submission
+      const success = await storage.deleteChallengeSubmission(id);
+      if (!success) {
+        return res.status(404).json({ message: 'Einreichung nicht gefunden' });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting submission:', error);
+      res.status(500).json({ message: 'Fehler beim Löschen der Einreichung' });
+    }
+  });
+  
+  // Dream Tag and Mood Operations
+  // Update tags for a dream
+  app.put('/api/dreams/:id/tags', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Ungültige Traum-ID' });
+      }
+      
+      // Get the dream
+      const dream = await storage.getDream(id);
+      if (!dream) {
+        return res.status(404).json({ message: 'Traum nicht gefunden' });
+      }
+      
+      // Check if user is the owner of the dream
+      if (dream.userId !== req.user.id) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Ändern dieses Traums' });
+      }
+      
+      // Validate tags
+      if (!Array.isArray(req.body.tags)) {
+        return res.status(400).json({ message: 'Tags müssen als Array übergeben werden' });
+      }
+      
+      // Update tags
+      const updatedDream = await storage.updateDreamTags(id, req.body.tags);
+      if (!updatedDream) {
+        return res.status(404).json({ message: 'Traum nicht gefunden' });
+      }
+      
+      res.json(updatedDream);
+    } catch (error) {
+      console.error('Error updating dream tags:', error);
+      res.status(500).json({ message: 'Fehler beim Aktualisieren der Tags' });
+    }
+  });
+  
+  // Update mood data for a dream
+  app.put('/api/dreams/:id/mood', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+      
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: 'Ungültige Traum-ID' });
+      }
+      
+      // Get the dream
+      const dream = await storage.getDream(id);
+      if (!dream) {
+        return res.status(404).json({ message: 'Traum nicht gefunden' });
+      }
+      
+      // Check if user is the owner of the dream
+      if (dream.userId !== req.user.id) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Ändern dieses Traums' });
+      }
+      
+      // Validate mood data
+      const moodData: MoodData = req.body;
+      
+      // Update mood data
+      const updatedDream = await storage.updateDreamMood(id, moodData);
+      if (!updatedDream) {
+        return res.status(404).json({ message: 'Traum nicht gefunden' });
+      }
+      
+      res.json(updatedDream);
+    } catch (error) {
+      console.error('Error updating dream mood data:', error);
+      res.status(500).json({ message: 'Fehler beim Aktualisieren der Stimmungsdaten' });
+    }
+  });
+  
+  // </Collaborative Dream Interpretation>
 
   return httpServer;
 }

@@ -518,3 +518,154 @@ export type InsertSymbolComparison = z.infer<typeof insertSymbolComparisonSchema
 
 export type UserSymbolFavorite = typeof userSymbolFavorites.$inferSelect;
 export type InsertUserSymbolFavorite = z.infer<typeof insertUserSymbolFavoriteSchema>;
+
+// Collaborative Dream Interpretation Community
+
+// Visibility options for shared dreams
+export const dreamVisibilityOptions = [
+  "private",      // Only visible to the owner
+  "community",    // Visible to all authenticated users
+  "public",       // Visible to everyone, even without login
+  "selected"      // Visible only to selected users
+] as const;
+
+export type DreamVisibility = typeof dreamVisibilityOptions[number];
+
+// Shared dream settings table
+export const sharedDreams = pgTable("shared_dreams", {
+  id: serial("id").primaryKey(),
+  dreamId: integer("dream_id").notNull(), // Reference to the original dream
+  userId: integer("user_id").notNull(), // The owner/creator of the dream
+  title: text("title").notNull(), // Can be different from original dream title
+  content: text("content").notNull(), // The dream content
+  anonymousShare: boolean("anonymous_share").notNull().default(false), // Whether to hide the author's identity
+  visibility: text("visibility").notNull().$type<DreamVisibility>().default("community"),
+  allowComments: boolean("allow_comments").notNull().default(true),
+  allowInterpretations: boolean("allow_interpretations").notNull().default(true),
+  includeAiAnalysis: boolean("include_ai_analysis").notNull().default(false), // Whether to show AI analysis
+  featuredInCommunity: boolean("featured_in_community").notNull().default(false), // Admin can feature dreams
+  viewCount: integer("view_count").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  tags: text("tags").array(),
+  imageUrl: text("image_url"), // Optional dream image
+});
+
+// Insert schema for shared dreams
+export const insertSharedDreamSchema = createInsertSchema(sharedDreams).omit({
+  id: true,
+  viewCount: true,
+  createdAt: true,
+  updatedAt: true,
+  featuredInCommunity: true,
+}).extend({
+  title: z.string().min(3, { message: "Titel muss mindestens 3 Zeichen lang sein" }),
+  content: z.string().min(10, { message: "Inhalt muss mindestens 10 Zeichen lang sein" }),
+  visibility: z.enum(dreamVisibilityOptions).default("community"),
+  tags: z.array(z.string()).optional(),
+});
+
+// Dream comments
+export const dreamComments = pgTable("dream_comments", {
+  id: serial("id").primaryKey(),
+  sharedDreamId: integer("shared_dream_id").notNull(),
+  userId: integer("user_id").notNull(),
+  content: text("content").notNull(),
+  isInterpretation: boolean("is_interpretation").notNull().default(false), // Whether this is an interpretation
+  likes: integer("likes").notNull().default(0),
+  parentCommentId: integer("parent_comment_id"), // For threaded replies
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert schema for dream comments
+export const insertDreamCommentSchema = createInsertSchema(dreamComments).omit({
+  id: true,
+  likes: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  content: z.string().min(3, { message: "Kommentar muss mindestens 3 Zeichen lang sein" }),
+  isInterpretation: z.boolean().default(false),
+  parentCommentId: z.number().optional(),
+});
+
+// Comment likes from users
+export const commentLikes = pgTable("comment_likes", {
+  id: serial("id").primaryKey(),
+  commentId: integer("comment_id").notNull(),
+  userId: integer("user_id").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Insert schema for comment likes
+export const insertCommentLikeSchema = createInsertSchema(commentLikes).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Dream interpretation challenges (for community engagement)
+export const dreamChallenges = pgTable("dream_challenges", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdBy: integer("created_by").notNull(), // Admin or moderator who created the challenge
+  prizes: text("prizes"), // Description of prizes if any
+  rules: text("rules").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert schema for dream challenges
+export const insertDreamChallengeSchema = createInsertSchema(dreamChallenges).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  title: z.string().min(3, { message: "Titel muss mindestens 3 Zeichen lang sein" }),
+  description: z.string().min(10, { message: "Beschreibung muss mindestens 10 Zeichen lang sein" }),
+  startDate: z.string().or(z.date()),
+  endDate: z.string().or(z.date()),
+  rules: z.string().min(10, { message: "Regeln müssen mindestens 10 Zeichen lang sein" }),
+});
+
+// Challenge submissions (dreams submitted to challenges)
+export const challengeSubmissions = pgTable("challenge_submissions", {
+  id: serial("id").primaryKey(),
+  challengeId: integer("challenge_id").notNull(),
+  sharedDreamId: integer("shared_dream_id").notNull(),
+  userId: integer("user_id").notNull(),
+  submissionDate: timestamp("submission_date").notNull().defaultNow(),
+  status: text("status").notNull().default("pending"), // pending, approved, rejected
+  notes: text("notes"), // Admin notes about the submission
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Insert schema for challenge submissions
+export const insertChallengeSubmissionSchema = createInsertSchema(challengeSubmissions).omit({
+  id: true,
+  submissionDate: true,
+  createdAt: true,
+}).extend({
+  status: z.string().default("pending"),
+  notes: z.string().optional(),
+});
+
+// Export types for collaborative dream features
+export type SharedDream = typeof sharedDreams.$inferSelect;
+export type InsertSharedDream = z.infer<typeof insertSharedDreamSchema>;
+
+export type DreamComment = typeof dreamComments.$inferSelect;
+export type InsertDreamComment = z.infer<typeof insertDreamCommentSchema>;
+
+export type CommentLike = typeof commentLikes.$inferSelect;
+export type InsertCommentLike = z.infer<typeof insertCommentLikeSchema>;
+
+export type DreamChallenge = typeof dreamChallenges.$inferSelect;
+export type InsertDreamChallenge = z.infer<typeof insertDreamChallengeSchema>;
+
+export type ChallengeSubmission = typeof challengeSubmissions.$inferSelect;
+export type InsertChallengeSubmission = z.infer<typeof insertChallengeSubmissionSchema>;
