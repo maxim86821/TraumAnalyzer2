@@ -7,13 +7,35 @@ import { apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "../hooks/use-toast";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "../components/ui/form";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
-import { CalendarIcon, PlusIcon, TagIcon, XIcon, SunIcon, MoonIcon, CloudIcon, CloudRainIcon, CloudSunIcon } from "lucide-react";
+import {
+  CalendarIcon,
+  PlusIcon,
+  TagIcon,
+  XIcon,
+  SunIcon,
+  MoonIcon,
+  CloudIcon,
+  CloudRainIcon,
+  CloudSunIcon,
+} from "lucide-react";
 import { format } from "date-fns";
 import { Calendar } from "../components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../components/ui/popover";
 import { Badge } from "../components/ui/badge";
 import { cn } from "../lib/utils";
 import DreamWritingPrompts from "./DreamWritingPrompts";
@@ -46,7 +68,11 @@ const TagsInput = ({ tags, onChange, placeholder, maxTags }) => {
     <div>
       <div className="flex flex-wrap gap-2 mb-2">
         {tags.map((tag) => (
-          <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+          <Badge
+            key={tag}
+            variant="secondary"
+            className="flex items-center gap-1"
+          >
             {tag}
             <Button
               type="button"
@@ -76,15 +102,14 @@ const TagsInput = ({ tags, onChange, placeholder, maxTags }) => {
   );
 };
 
-
 export default function DreamForm() {
   const [_, setLocation] = useLocation();
   const { toast } = useToast();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
-  const { isRecording, startRecording, stopRecording, audioURL } = useVoiceRecording();
-
+  const { isRecording, startRecording, stopRecording, audioURL } =
+    useVoiceRecording();
 
   // Initialize the form with default values
   const form = useForm<InsertDream>({
@@ -149,7 +174,8 @@ export default function DreamForm() {
       // Show success message
       toast({
         title: "Traum gespeichert",
-        description: "Dein Traum wurde erfolgreich gespeichert und wird analysiert.",
+        description:
+          "Dein Traum wurde erfolgreich gespeichert und wird analysiert.",
       });
 
       // Navigate to the dream detail page
@@ -158,7 +184,8 @@ export default function DreamForm() {
       console.error("Error creating dream:", error);
       toast({
         title: "Fehler",
-        description: "Der Traum konnte nicht gespeichert werden. Bitte versuche es erneut.",
+        description:
+          "Der Traum konnte nicht gespeichert werden. Bitte versuche es erneut.",
         variant: "destructive",
       });
     } finally {
@@ -170,7 +197,9 @@ export default function DreamForm() {
     <Card className="max-w-4xl mx-auto">
       <CardContent className="p-6">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-serif font-bold text-gray-800">Neuen Traum erfassen</h2>
+          <h2 className="text-2xl font-serif font-bold text-gray-800">
+            Neuen Traum erfassen
+          </h2>
         </div>
 
         <Form {...form}>
@@ -182,7 +211,10 @@ export default function DreamForm() {
                 <FormItem>
                   <FormLabel>Traumtitel</FormLabel>
                   <FormControl>
-                    <Input placeholder="Gib deinem Traum einen Titel" {...field} />
+                    <Input
+                      placeholder="Gib deinem Traum einen Titel"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -202,7 +234,7 @@ export default function DreamForm() {
                           variant={"outline"}
                           className={cn(
                             "pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
+                            !field.value && "text-muted-foreground",
                           )}
                         >
                           {field.value ? (
@@ -217,8 +249,12 @@ export default function DreamForm() {
                     <PopoverContent className="w-auto p-0" align="start">
                       <Calendar
                         mode="single"
-                        selected={field.value ? new Date(field.value) : undefined}
-                        onSelect={(date) => field.onChange(date ? format(date, "yyyy-MM-dd") : "")}
+                        selected={
+                          field.value ? new Date(field.value) : undefined
+                        }
+                        onSelect={(date) =>
+                          field.onChange(date ? format(date, "yyyy-MM-dd") : "")
+                        }
                         disabled={(date) =>
                           date > new Date() || date < new Date("1900-01-01")
                         }
@@ -241,7 +277,11 @@ export default function DreamForm() {
                     <DreamWritingPrompts
                       onSelectPrompt={(prompt) => {
                         const currentValue = field.value || "";
-                        field.onChange(currentValue ? `${currentValue}\n\n${prompt}` : prompt);
+                        field.onChange(
+                          currentValue
+                            ? `${currentValue}\n\n${prompt}`
+                            : prompt,
+                        );
                       }}
                       preferredThemes={tags.length > 0 ? tags : undefined}
                     />
@@ -254,8 +294,8 @@ export default function DreamForm() {
                     />
                   </FormControl>
                   <FormDescription>
-                    Gib so viele Details wie möglich an, damit die KI-Analyse genauer sein kann.
-                    Nutze die Schreibprompts für Inspiration.
+                    Gib so viele Details wie möglich an, damit die KI-Analyse
+                    genauer sein kann. Nutze die Schreibprompts für Inspiration.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -263,10 +303,16 @@ export default function DreamForm() {
             />
 
             <div>
-              <FormLabel className="block mb-2">Traumvisualisierung (optional)</FormLabel>
+              <FormLabel className="block mb-2">
+                Traumvisualisierung (optional)
+              </FormLabel>
               {imagePreview ? (
                 <div className="relative mt-2">
-                  <img src={imagePreview} alt="Vorschau" className="w-full max-h-56 object-cover rounded-md" />
+                  <img
+                    src={imagePreview}
+                    alt="Vorschau"
+                    className="w-full max-h-56 object-cover rounded-md"
+                  />
                   <Button
                     type="button"
                     variant="outline"
@@ -295,7 +341,10 @@ export default function DreamForm() {
                       />
                     </svg>
                     <div className="flex text-sm text-gray-600 justify-center">
-                      <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-dream-primary hover:text-dream-dark focus-within:outline-none">
+                      <label
+                        htmlFor="file-upload"
+                        className="relative cursor-pointer bg-white rounded-md font-medium text-dream-primary hover:text-dream-dark focus-within:outline-none"
+                      >
                         <span>Bild hochladen</span>
                         <input
                           id="file-upload"
@@ -308,7 +357,9 @@ export default function DreamForm() {
                       </label>
                       <p className="pl-1">oder per Drag & Drop</p>
                     </div>
-                    <p className="text-xs text-gray-500">PNG, JPG, GIF bis zu 10MB</p>
+                    <p className="text-xs text-gray-500">
+                      PNG, JPG, GIF bis zu 10MB
+                    </p>
                   </div>
                 </div>
               )}
@@ -316,8 +367,15 @@ export default function DreamForm() {
 
             <div className="space-y-6">
               <div>
-                <FormLabel className="block mb-2">Tags hinzufügen (optional)</FormLabel>
-                <TagsInput tags={tags} onChange={setTags} placeholder="Add a tag..." maxTags={10} />
+                <FormLabel className="block mb-2">
+                  Tags hinzufügen (optional)
+                </FormLabel>
+                <TagsInput
+                  tags={tags}
+                  onChange={setTags}
+                  placeholder="Add a tag..."
+                  maxTags={10}
+                />
               </div>
 
               <div className="border-t border-gray-100 pt-6">
@@ -347,8 +405,8 @@ export default function DreamForm() {
                                       ? value <= 3
                                         ? "bg-red-100 border-red-400 text-red-600"
                                         : value <= 7
-                                        ? "bg-amber-100 border-amber-400 text-amber-600"
-                                        : "bg-green-100 border-green-400 text-green-600"
+                                          ? "bg-amber-100 border-amber-400 text-amber-600"
+                                          : "bg-green-100 border-green-400 text-green-600"
                                       : ""
                                   }`}
                                   onClick={() => field.onChange(value)}
@@ -356,9 +414,11 @@ export default function DreamForm() {
                                   {value <= 3 && field.value === value && (
                                     <CloudRainIcon className="h-4 w-4" />
                                   )}
-                                  {value > 3 && value <= 7 && field.value === value && (
-                                    <CloudIcon className="h-4 w-4" />
-                                  )}
+                                  {value > 3 &&
+                                    value <= 7 &&
+                                    field.value === value && (
+                                      <CloudIcon className="h-4 w-4" />
+                                    )}
                                   {value > 7 && field.value === value && (
                                     <CloudSunIcon className="h-4 w-4" />
                                   )}
@@ -368,7 +428,8 @@ export default function DreamForm() {
                             </div>
                             <div className="flex justify-between text-xs text-gray-500 px-1">
                               <span className="flex items-center gap-1 text-red-600">
-                                <CloudRainIcon className="h-3 w-3" /> Schlecht (1-3)
+                                <CloudRainIcon className="h-3 w-3" /> Schlecht
+                                (1-3)
                               </span>
                               <span className="flex items-center gap-1 text-amber-600">
                                 <CloudIcon className="h-3 w-3" /> Neutral (4-7)
@@ -410,8 +471,8 @@ export default function DreamForm() {
                                       ? value <= 3
                                         ? "bg-red-100 border-red-400 text-red-600"
                                         : value <= 7
-                                        ? "bg-amber-100 border-amber-400 text-amber-600"
-                                        : "bg-green-100 border-green-400 text-green-600"
+                                          ? "bg-amber-100 border-amber-400 text-amber-600"
+                                          : "bg-green-100 border-green-400 text-green-600"
                                       : ""
                                   }`}
                                   onClick={() => field.onChange(value)}
@@ -419,9 +480,11 @@ export default function DreamForm() {
                                   {value <= 3 && field.value === value && (
                                     <CloudRainIcon className="h-4 w-4" />
                                   )}
-                                  {value > 3 && value <= 7 && field.value === value && (
-                                    <CloudIcon className="h-4 w-4" />
-                                  )}
+                                  {value > 3 &&
+                                    value <= 7 &&
+                                    field.value === value && (
+                                      <CloudIcon className="h-4 w-4" />
+                                    )}
                                   {value > 7 && field.value === value && (
                                     <SunIcon className="h-4 w-4" />
                                   )}
@@ -431,7 +494,8 @@ export default function DreamForm() {
                             </div>
                             <div className="flex justify-between text-xs text-gray-500 px-1">
                               <span className="flex items-center gap-1 text-red-600">
-                                <CloudRainIcon className="h-3 w-3" /> Schlecht (1-3)
+                                <CloudRainIcon className="h-3 w-3" /> Schlecht
+                                (1-3)
                               </span>
                               <span className="flex items-center gap-1 text-amber-600">
                                 <CloudIcon className="h-3 w-3" /> Neutral (4-7)
@@ -504,9 +568,15 @@ export default function DreamForm() {
                         stroke="currentColor"
                         strokeWidth={2}
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
                       </svg>
-                      <span className="font-medium">Traum speichern & analysieren</span>
+                      <span className="font-medium">
+                        Traum speichern & analysieren
+                      </span>
                     </>
                   )}
                 </Button>
