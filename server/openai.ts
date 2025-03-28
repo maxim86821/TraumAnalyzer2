@@ -275,10 +275,11 @@ export async function analyzeImage(base64Image: string): Promise<string> {
 }
 
 /**
- * Führt eine tiefe Musteranalyse über mehrere Träume hinweg durch
+ * Führt eine tiefe Musteranalyse über mehrere Träume und Journaleinträge hinweg durch
  * @param dreams Array von Traum-Objekten mit Inhalt, Datum und vorhandenen Analysen
+ * @param journalEntries Array von Journal-Objekten die für die Analyse freigegeben wurden
  * @param timeRange Zeitraum der Analyse (z.B. "30 Tage", "3 Monate")
- * @param userId ID des Benutzers, dessen Träume analysiert werden
+ * @param userId ID des Benutzers, dessen Daten analysiert werden
  * @returns Detaillierte Musteranalyse
  */
 export async function analyzePatterns(
@@ -293,12 +294,26 @@ export async function analyzePatterns(
     moodAfterWakeup?: number;
     moodNotes?: string;
   }>,
+  journalEntries: Array<{
+    id: number;
+    content: string;
+    title: string;
+    date: Date;
+    tags?: string[];
+    mood?: number;
+    includeInAnalysis?: boolean;
+  }> = [],
   timeRange: string = "30 Tage",
   userId: number
 ): Promise<DeepPatternResponse> {
   try {
-    if (!dreams || dreams.length < 3) {
-      throw new Error("Mindestens 3 Träume werden für eine Musteranalyse benötigt");
+    // Filtere Journaleinträge, die für die Analyse freigegeben wurden
+    const includedJournalEntries = journalEntries.filter(entry => entry.includeInAnalysis === true);
+    
+    // Prüfe, ob genügend Daten für die Analyse vorhanden sind
+    const totalEntries = dreams.length + includedJournalEntries.length;
+    if (totalEntries < 3) {
+      throw new Error("Mindestens 3 Einträge (Träume und/oder Journaleinträge) werden für eine Musteranalyse benötigt");
     }
 
     // Träume nach Datum sortieren (neueste zuerst)
@@ -318,6 +333,7 @@ export async function analyzePatterns(
       }
 
       return {
+        type: "dream",
         title: dream.title,
         date: dream.date.toISOString().split('T')[0],
         content: dream.content.substring(0, 300) + (dream.content.length > 300 ? '...' : ''),
@@ -331,9 +347,30 @@ export async function analyzePatterns(
       };
     });
     
-    // Zeitraumsdefinition
-    const oldestDreamDate = new Date(sortedDreams[sortedDreams.length - 1].date).toISOString().split('T')[0];
-    const newestDreamDate = new Date(sortedDreams[0].date).toISOString().split('T')[0];
+    // Journal-Einträge vorbereiten und hinzufügen
+    const journalSummaries = includedJournalEntries.map(entry => {
+      return {
+        type: "journal",
+        title: entry.title,
+        date: entry.date.toISOString().split('T')[0],
+        content: entry.content.substring(0, 300) + (entry.content.length > 300 ? '...' : ''),
+        tags: entry.tags || [],
+        mood: entry.mood
+      };
+    });
+    
+    // Alle Einträge kombinieren und nach Datum sortieren
+    const allEntries = [...dreamSummaries, ...journalSummaries].sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+    
+    // Zeitraumsdefinition aus allen Einträgen
+    const oldestDate = allEntries.length > 0 
+      ? new Date(allEntries[allEntries.length - 1].date).toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0];
+    const newestDate = allEntries.length > 0 
+      ? new Date(allEntries[0].date).toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0];
 
     // GPT-4-Anfrage für die Musteranalyse
     const response = await openai.chat.completions.create({
@@ -341,9 +378,9 @@ export async function analyzePatterns(
       messages: [
         {
           role: "system",
-          content: `Du bist ein fortgeschrittener Traumanalyst und Psychologe mit Expertise in der Erkennung von Mustern in Träumen über Zeit.
+          content: `Du bist ein fortgeschrittener Traumanalyst und Psychologe mit Expertise in der Erkennung von Mustern in Träumen und Journal-Einträgen über Zeit.
           
-          Analysiere die folgenden Traumaufzeichnungen eines Benutzers über ${timeRange} (von ${oldestDreamDate} bis ${newestDreamDate}) und identifiziere tiefere Muster, Themen, Symbole und emotionale Trends.
+          Analysiere die folgenden Aufzeichnungen eines Benutzers über ${timeRange} (von ${oldestDate} bis ${newestDate}) und identifiziere tiefere Muster, Themen, Symbole und emotionale Trends. Beachte, dass die Daten sowohl aus Traumaufzeichnungen als auch aus Journal-Einträgen bestehen, die der Benutzer zur Analyse freigegeben hat.
           
           Deine Analyse sollte detailliert, tiefgründig und hilfreich sein und zur persönlichen Reflexion und zum Wachstum anregen.
           
@@ -351,9 +388,13 @@ export async function analyzePatterns(
           
           {
             "overview": {
-              "summary": "Umfassende Zusammenfassung der Traumanalyse",
+              "summary": "Umfassende Zusammenfassung der Traum- und Journalanalyse",
               "timespan": "${timeRange}",
-              "dreamCount": ${dreams.length},
+              "entryCount": {
+                "dreams": ${dreams.length},
+                "journalEntries": ${includedJournalEntries.length},
+                "total": ${dreams.length + includedJournalEntries.length}
+              },
               "dominantMood": "Vorherrschende Stimmung basierend auf Stimmungswerten und Trauminhalt"
             },
             "recurringSymbols": [
@@ -424,7 +465,7 @@ export async function analyzePatterns(
         },
         {
           role: "user",
-          content: JSON.stringify(dreamSummaries)
+          content: JSON.stringify(allEntries)
         }
       ],
       response_format: { type: "json_object" },
