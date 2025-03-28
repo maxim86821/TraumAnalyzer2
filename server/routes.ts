@@ -7,7 +7,9 @@ import {
   insertDreamSchema, 
   insertAchievementSchema, 
   insertUserAchievementSchema, 
-  insertJournalEntrySchema
+  insertJournalEntrySchema,
+  InsertJournalEntry,
+  JournalEntry
 } from "@shared/schema";
 import { setupAuth, authenticateJWT } from "./auth";
 import express from "express";
@@ -837,25 +839,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Nicht authentifiziert' });
       }
       
-      // Validate the request body
-      const parseResult = insertJournalEntrySchema.safeParse(req.body);
-      if (!parseResult.success) {
+      // Überprüfe, ob die Pflichtfelder vorhanden sind
+      if (!req.body.title || !req.body.content) {
         return res.status(400).json({ 
-          message: 'Ungültige Journaldaten', 
-          errors: parseResult.error.errors 
+          message: 'Titel und Inhalt sind erforderlich',
         });
       }
       
-      // Set the user ID from the authenticated user
-      parseResult.data.userId = req.user.id;
-      
-      // Process tags if they're included
-      if (req.body.tags && Array.isArray(req.body.tags)) {
-        parseResult.data.tags = req.body.tags;
-      }
+      // Korrekt typisiertes Objekt mit erforderlichen und optionalen Feldern
+      const journalData: InsertJournalEntry = {
+        userId: req.user.id,
+        title: req.body.title,
+        content: req.body.content,
+        date: req.body.date ? new Date(req.body.date) : new Date(),
+        // Pflichtfelder mit Default-Werten
+        isPrivate: req.body.isPrivate !== undefined ? req.body.isPrivate : true,
+        includeInAnalysis: req.body.includeInAnalysis !== undefined ? req.body.includeInAnalysis : false,
+      };
+
+      // Optionale Felder nur hinzufügen, wenn sie vorhanden sind
+      if (req.body.tags && Array.isArray(req.body.tags)) journalData.tags = req.body.tags;
+      if (req.body.mood !== undefined) journalData.mood = req.body.mood;
+      if (req.body.imageUrl) journalData.imageUrl = req.body.imageUrl;
+      if (req.body.relatedDreamIds) journalData.relatedDreamIds = req.body.relatedDreamIds;
       
       // Create the journal entry
-      const newEntry = await storage.createJournalEntry(parseResult.data);
+      const newEntry = await storage.createJournalEntry(journalData);
       res.status(201).json(newEntry);
     } catch (error) {
       console.error('Error creating journal entry:', error);
@@ -882,14 +891,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: 'Keine Berechtigung zum Ändern dieses Eintrags' });
       }
       
+      // Überprüfe, ob die Pflichtfelder vorhanden sind
+      if (req.body.title === '' || req.body.content === '') {
+        return res.status(400).json({ 
+          message: 'Titel und Inhalt dürfen nicht leer sein',
+        });
+      }
+      
+      // Bereinige die Eingabedaten für das Update
+      const updateData: any = {};
+      
+      // Nur Felder aktualisieren, die tatsächlich gesendet wurden
+      if ('title' in req.body) updateData.title = req.body.title;
+      if ('content' in req.body) updateData.content = req.body.content;
+      if ('date' in req.body) updateData.date = new Date(req.body.date);
+      if ('mood' in req.body) updateData.mood = req.body.mood;
+      if ('isPrivate' in req.body) updateData.isPrivate = req.body.isPrivate;
+      if ('imageUrl' in req.body) updateData.imageUrl = req.body.imageUrl;
+      if ('includeInAnalysis' in req.body) updateData.includeInAnalysis = req.body.includeInAnalysis;
+      if ('relatedDreamIds' in req.body) updateData.relatedDreamIds = req.body.relatedDreamIds;
+      
       // Process tags if they're included
       if ('tags' in req.body) {
         // Ensure tags is always an array, even if empty
-        req.body.tags = Array.isArray(req.body.tags) ? req.body.tags : [];
+        updateData.tags = Array.isArray(req.body.tags) ? req.body.tags : [];
       }
       
       // Update the journal entry
-      const updatedEntry = await storage.updateJournalEntry(id, req.body);
+      const updatedEntry = await storage.updateJournalEntry(id, updateData);
       if (!updatedEntry) {
         return res.status(404).json({ message: 'Eintrag nicht gefunden' });
       }

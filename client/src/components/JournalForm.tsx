@@ -252,16 +252,18 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
         imageUrl = data.imageUrl;
       }
       
+      // Nur Titel und Content sind obligatorisch
       const journalData = {
         userId: user?.id, // Wichtig: userId muss für neue Einträge mitgegeben werden
         title,
         content,
-        tags,
-        mood,
         date: new Date(date),
-        isPrivate,
-        imageUrl,
-        includeInAnalysis,
+        // Füge optionale Felder nur hinzu, wenn sie definiert sind
+        ...(tags && tags.length > 0 ? { tags } : {}),
+        ...(mood !== undefined ? { mood } : {}),
+        ...(isPrivate !== undefined ? { isPrivate } : { isPrivate: true }),
+        ...(imageUrl ? { imageUrl } : {}),
+        ...(includeInAnalysis !== undefined ? { includeInAnalysis } : {}),
         ...(existingEntry?.relatedDreamIds ? { relatedDreamIds: existingEntry.relatedDreamIds } : {})
       };
 
@@ -312,7 +314,7 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="bg-white rounded-lg shadow-sm p-6 overflow-y-auto max-h-[90vh]">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <div className="flex items-center justify-between mb-2">
@@ -574,34 +576,36 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
           </div>
         </div>
 
-        <div className="flex justify-end space-x-2 pt-2">
-          {onCancel && (
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={onCancel}
-              disabled={isSubmitting}
-            >
-              Abbrechen
-            </Button>
-          )}
-          <Button 
-            type="submit" 
-            disabled={isSubmitting}
-            className="gap-2"
-          >
-            {isSubmitting ? (
-              <>
-                <span className="animate-spin">⏳</span>
-                Speichern...
-              </>
-            ) : (
-              <>
-                <BookOpenIcon className="h-4 w-4" />
-                {existingEntry ? "Aktualisieren" : "Speichern"}
-              </>
+        <div className="sticky bottom-0 bg-white py-3 border-t mt-6">
+          <div className="flex justify-end space-x-2">
+            {onCancel && (
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={onCancel}
+                disabled={isSubmitting}
+              >
+                Abbrechen
+              </Button>
             )}
-          </Button>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+              className="gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="animate-spin">⏳</span>
+                  Speichern...
+                </>
+              ) : (
+                <>
+                  <BookOpenIcon className="h-4 w-4" />
+                  {existingEntry ? "Aktualisieren" : "Speichern"}
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </form>
       

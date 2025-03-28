@@ -30,19 +30,26 @@ export async function generateJournalMoodImage(
     const uniqueWords = Array.from(new Set(words));
     const importantWords = uniqueWords.slice(0, 3); // Reduziert auf 3 wichtige Wörter
     
-    // Erstelle einen detaillierten Prompt basierend auf Journal und Eingaben
+    // Erstelle einen detaillierten Prompt basierend nur auf den wichtigsten Elementen:
+    // 1. Der Journaleintrag (obligatorisch)
+    // 2. Die Farbimpression (obligatorisch)
+    // 3. Der spontane Gedanke (obligatorisch)
+    // Alles andere ist optional
+    
     let promptBase = "Erstelle ein ausdrucksstarkes visuelles Kunstwerk im Stil einer Hochqualitäts-Illustration, das";
     promptBase += ` die emotionale Essenz dieses Journaleintrags einfängt:\n\n"${journalContent.substring(0, 200)}..."`;
     
-    // Füge Farbimpressionen und Gedanken hinzu
+    // Füge die obligatorischen Farbimpressionen und Gedanken hinzu
     promptBase += `\n\nDer Autor verbindet diese Gedanken mit der Farbe "${colorImpression}" und denkt dabei an "${spontaneousThought}".`;
     
-    // Füge Tags hinzu, wenn vorhanden
+    // Die folgenden Elemente sind alle optional und werden nur hinzugefügt, wenn sie vorhanden sind
+    
+    // Füge Tags hinzu, wenn vorhanden und nicht leer
     if (tags && tags.length > 0) {
       promptBase += `\n\nWichtige Themen: ${tags.join(", ")}`;
     }
     
-    // Füge Stimmungsinformation hinzu, wenn vorhanden
+    // Füge Stimmungsinformation hinzu, wenn vorhanden und definiert
     if (mood !== undefined && mood !== null) {
       const moodDescription = mood > 7 ? "sehr positiv" : 
                              mood > 5 ? "positiv" : 
@@ -51,7 +58,7 @@ export async function generateJournalMoodImage(
     }
     
     // Füge wichtige Wörter hinzu, wenn vorhanden
-    if (importantWords.length > 0) {
+    if (importantWords && importantWords.length > 0) {
       promptBase += `\n\nZentrale Konzepte: ${importantWords.join(", ")}`;
     }
     
