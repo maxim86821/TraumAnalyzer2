@@ -217,8 +217,8 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
       }
 
       // Refresh the dream data
-      queryClient.invalidateQueries([`/api/dreams/${dream.id}`]);
-      queryClient.invalidateQueries(["/api/dreams"]);
+      queryClient.invalidateQueries({ queryKey: [`/api/dreams/${dream.id}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dreams"] });
 
       toast({
         title: "Erfolg",
@@ -258,8 +258,8 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
       setIsImageModalOpen(true);
 
       // Refresh the dream data to get updated image
-      queryClient.invalidateQueries([`/api/dreams/${dream.id}`]);
-      queryClient.invalidateQueries(["/api/dreams"]);
+      queryClient.invalidateQueries({ queryKey: [`/api/dreams/${dream.id}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dreams"] });
 
       toast({
         title: "Erfolg",
@@ -299,7 +299,7 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
     try {
       await apiRequest("DELETE", `/api/dreams/${dream.id}`);
       
-      queryClient.invalidateQueries(["/api/dreams"]);
+      queryClient.invalidateQueries({ queryKey: ["/api/dreams"] });
       
       toast({
         title: "Erfolg",
@@ -327,7 +327,7 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
       const response = await apiRequest("POST", `/api/dreams/${dream.id}/analyze`, {});
       
       // Refresh the dream data to get the analysis
-      queryClient.invalidateQueries([`/api/dreams/${dream.id}`]);
+      queryClient.invalidateQueries({ queryKey: [`/api/dreams/${dream.id}`] });
       
       toast({
         title: "Erfolg",

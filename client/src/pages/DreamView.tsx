@@ -36,8 +36,15 @@ export default function DreamView() {
     // Stelle sicher, dass die Daten frisch abgerufen werden
     staleTime: 0,
     gcTime: 5 * 60 * 1000, // 5 Minuten Cache (renamed from cacheTime in React Query v5)
-    // Debugging Information
-    select: (data) => {
+    // Direkter API-Aufruf statt des Standard-Fetchers
+    queryFn: async () => {
+      // Direkter Fetch-Aufruf statt des Standard-Fetchers für mehr Kontrolle
+      const response = await fetch(`/api/dreams/${dreamId}`);
+      if (!response.ok) {
+        throw new Error('Fehler beim Laden des Traums');
+      }
+      const data = await response.json();
+      // Debugging Info
       console.log("Raw dream data from server:", {
         id: data?.id,
         content: data?.content ? data.content.substring(0, 20) + "..." : "No content",
