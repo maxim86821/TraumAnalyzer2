@@ -56,6 +56,7 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [analyzingDream, setAnalyzingDream] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (dream) {
@@ -299,6 +300,12 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
     }
   };
 
+  // Open image in modal
+  const openImageModal = (imageUrl: string) => {
+    setSelectedImage(imageUrl);
+    setIsImageModalOpen(true);
+  };
+
   // Close the image modal
   const closeImageModal = () => {
     setIsImageModalOpen(false);
@@ -539,135 +546,121 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
                   id="content"
                   value={content} 
                   onChange={(e) => setContent(e.target.value)} 
-                  placeholder="Beschreibe deinen Traum detailliert..." 
-                  rows={8}
-                  className="w-full"
+                  placeholder="Beschreibe deinen Traum..." 
+                  className="h-48 min-h-48 resize-y"
                 />
               </div>
               
               <div>
-                <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Stimmung vor dem Einschlafen (1-10)
+                </label>
+                <div className="flex items-center space-x-2">
+                  <Input 
+                    type="number" 
+                    min="1" 
+                    max="10"
+                    value={moodBeforeSleep || ''} 
+                    onChange={(e) => setMoodBeforeSleep(e.target.value ? parseInt(e.target.value) : null)} 
+                    className="w-24"
+                  />
+                  {moodBeforeSleep && <div className={`w-5 h-5 rounded-full bg-${moodBeforeSleep >= 7 ? 'green' : moodBeforeSleep >= 4 ? 'yellow' : 'red'}-${moodBeforeSleep >= 8 ? '500' : moodBeforeSleep >= 6 ? '400' : moodBeforeSleep >= 4 ? '300' : '500'}`}></div>}
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Stimmung nach dem Aufwachen (1-10)
+                </label>
+                <div className="flex items-center space-x-2">
+                  <Input 
+                    type="number" 
+                    min="1" 
+                    max="10"
+                    value={moodAfterWakeup || ''} 
+                    onChange={(e) => setMoodAfterWakeup(e.target.value ? parseInt(e.target.value) : null)} 
+                    className="w-24"
+                  />
+                  {moodAfterWakeup && <div className={`w-5 h-5 rounded-full bg-${moodAfterWakeup >= 7 ? 'green' : moodAfterWakeup >= 4 ? 'yellow' : 'red'}-${moodAfterWakeup >= 8 ? '500' : moodAfterWakeup >= 6 ? '400' : moodAfterWakeup >= 4 ? '300' : '500'}`}></div>}
+                </div>
+              </div>
+              
+              <div>
+                <label htmlFor="mood-notes" className="block text-sm font-medium text-gray-700 mb-1">
+                  Notizen zur Stimmung (optional)
+                </label>
+                <Textarea 
+                  id="mood-notes"
+                  value={moodNotes} 
+                  onChange={(e) => setMoodNotes(e.target.value)} 
+                  placeholder="Notizen zum Einschlafen oder Aufwachen..." 
+                  className="h-24 resize-y"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Tags
                 </label>
-                <div className="flex flex-wrap gap-2 mb-2">
+                <div className="flex flex-wrap items-center gap-2 mb-3">
                   {tags.map((tag, index) => (
-                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                    <Badge key={index} variant="secondary" className="px-2 py-1">
                       {tag}
-                      <XIcon 
-                        className="h-3 w-3 cursor-pointer hover:text-red-500" 
+                      <button 
+                        type="button" 
                         onClick={() => removeTag(tag)} 
-                      />
+                        className="ml-2 text-xs text-gray-400 hover:text-gray-600"
+                      >
+                        <XIcon className="h-3 w-3" />
+                      </button>
                     </Badge>
                   ))}
                 </div>
                 <div className="flex">
                   <Input 
-                    id="tags"
                     value={newTag} 
                     onChange={(e) => setNewTag(e.target.value)} 
-                    onKeyPress={handleTagKeyPress}
-                    placeholder="Neuen Tag hinzufügen..." 
-                    className="w-full"
+                    onKeyDown={handleTagKeyPress}
+                    placeholder="Neuer Tag..." 
+                    className="mr-2"
                   />
                   <Button 
                     type="button" 
-                    onClick={addTag} 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={addTag}
                     disabled={!newTag.trim()}
-                    className="ml-2 flex items-center"
-                    variant="outline"
                   >
-                    <PlusIcon className="h-4 w-4" />
-                    <span className="ml-1">Tag</span>
+                    <PlusIcon className="h-4 w-4 mr-1" />
+                    Hinzufügen
                   </Button>
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="moodBeforeSleep" className="block text-sm font-medium text-gray-700 mb-1">
-                    Stimmung vor dem Schlafen (1-10)
-                  </label>
-                  <Input 
-                    id="moodBeforeSleep"
-                    type="number" 
-                    min="1" 
-                    max="10" 
-                    value={moodBeforeSleep || ''} 
-                    onChange={(e) => setMoodBeforeSleep(e.target.value ? parseInt(e.target.value) : null)} 
-                    placeholder="1-10" 
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="moodAfterWakeup" className="block text-sm font-medium text-gray-700 mb-1">
-                    Stimmung nach dem Aufwachen (1-10)
-                  </label>
-                  <Input 
-                    id="moodAfterWakeup"
-                    type="number" 
-                    min="1" 
-                    max="10" 
-                    value={moodAfterWakeup || ''} 
-                    onChange={(e) => setMoodAfterWakeup(e.target.value ? parseInt(e.target.value) : null)} 
-                    placeholder="1-10" 
-                  />
-                </div>
-              </div>
-              
               <div>
-                <label htmlFor="moodNotes" className="block text-sm font-medium text-gray-700 mb-1">
-                  Stimmungsnotizen
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Traumbild
                 </label>
-                <Textarea 
-                  id="moodNotes"
-                  value={moodNotes} 
-                  onChange={(e) => setMoodNotes(e.target.value)} 
-                  placeholder="Zusätzliche Notizen zur Stimmung..." 
-                  rows={3}
-                  className="w-full"
-                />
-              </div>
-              
-              <div>
-                <label htmlFor="dreamImage" className="block text-sm font-medium text-gray-700 mb-1">
-                  Traumbild (optional)
-                </label>
-                {imagePreview ? (
-                  <div className="relative">
-                    <img 
-                      src={imagePreview} 
-                      alt="Preview" 
-                      className="max-h-60 rounded-md object-contain" 
-                    />
-                    <Button 
-                      variant="destructive" 
-                      size="sm" 
-                      onClick={cancelImageUpload}
-                      className="absolute top-2 right-2"
-                    >
-                      <XIcon className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
+                {!imagePreview && !dream.imageUrl && (
                   <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
                     <div className="space-y-1 text-center">
                       <CameraIcon className="mx-auto h-12 w-12 text-gray-400" />
                       <div className="flex text-sm text-gray-600">
                         <label
-                          htmlFor="dreamImage"
-                          className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none"
+                          htmlFor="image-upload"
+                          className="relative cursor-pointer rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none"
                         >
-                          <span>Bild hochladen</span>
+                          <span>Lade ein Bild hoch</span>
                           <input
-                            id="dreamImage"
-                            name="dreamImage"
+                            id="image-upload"
+                            name="image"
                             type="file"
+                            className="sr-only"
                             accept="image/*"
                             onChange={handleImageChange}
-                            className="sr-only"
                           />
                         </label>
-                        <p className="pl-1">oder hierher ziehen</p>
+                        <p className="pl-1">oder ziehe es hierher</p>
                       </div>
                       <p className="text-xs text-gray-500">
                         PNG, JPG, GIF bis zu 10MB
@@ -675,25 +668,71 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
                     </div>
                   </div>
                 )}
+                
+                {imagePreview && (
+                  <div className="relative mt-2">
+                    <img 
+                      src={imagePreview} 
+                      alt="Dream image preview" 
+                      className="w-full max-h-96 object-contain rounded-md border border-gray-200"
+                    />
+                    <Button 
+                      type="button" 
+                      variant="destructive" 
+                      size="sm" 
+                      className="absolute top-2 right-2 opacity-90 hover:opacity-100"
+                      onClick={cancelImageUpload}
+                    >
+                      <XIcon className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                
+                {!imagePreview && dream.imageUrl && (
+                  <div className="relative mt-2">
+                    <img 
+                      src={dream.imageUrl} 
+                      alt="Current dream image" 
+                      className="w-full max-h-96 object-contain rounded-md border border-gray-200"
+                    />
+                    <Button 
+                      type="button" 
+                      variant="default" 
+                      size="sm" 
+                      className="absolute top-2 right-2 opacity-90 hover:opacity-100 bg-black/50 hover:bg-black/70"
+                      onClick={() => {
+                        const input = document.getElementById('image-upload') as HTMLInputElement;
+                        if (input) input.click();
+                      }}
+                    >
+                      <PencilIcon className="h-4 w-4" />
+                    </Button>
+                    <input
+                      id="image-upload"
+                      name="image"
+                      type="file"
+                      className="sr-only"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           ) : (
-            <div>
-              {/* Dream content */}
-              <div className="prose prose-md max-w-none">
-                <p className="whitespace-pre-line text-gray-800">{dream.content}</p>
-              </div>
+            <div className="space-y-4">
+              <p className="whitespace-pre-wrap text-gray-800">{dream.content}</p>
               
               {/* Tags */}
               {dream.tags && dream.tags.length > 0 && (
                 <div className="mt-4">
-                  <div className="flex items-center text-sm text-gray-600 mb-2">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
                     <TagIcon className="h-4 w-4 mr-1" />
-                    <span>Tags:</span>
-                  </div>
+                    Tags
+                  </h3>
                   <div className="flex flex-wrap gap-2">
                     {dream.tags.map((tag, index) => (
-                      <Badge key={index} variant="secondary">
+                      <Badge key={index} variant="secondary" className="px-2 py-1">
                         {tag}
                       </Badge>
                     ))}
@@ -703,159 +742,91 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
               
               {/* Mood notes */}
               {dream.moodNotes && (
-                <div className="mt-4 bg-gray-50 p-4 rounded-md">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Stimmungsnotizen:</h4>
+                <div className="mt-4 p-3 bg-gray-50 rounded-md">
+                  <h3 className="text-sm font-medium text-gray-700 mb-1">Stimmungsnotizen:</h3>
                   <p className="text-sm text-gray-600">{dream.moodNotes}</p>
-                </div>
-              )}
-              
-              {/* Dream image */}
-              {dream.imageUrl && (
-                <div className="mt-6">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Traumbild:</h4>
-                  <div className="relative group">
-                    <img 
-                      src={dream.imageUrl} 
-                      alt="Traumbild" 
-                      className="rounded-lg shadow-md hover:shadow-xl transition-all duration-300 max-h-96 max-w-full object-contain cursor-pointer transform hover:scale-[1.01]" 
-                      onClick={() => {
-                        setNewImage(dream.imageUrl);
-                        setIsImageModalOpen(true);
-                      }}
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <div className="bg-black bg-opacity-50 rounded-full p-2">
-                        <ZoomIn className="h-6 w-6 text-white" />
-                      </div>
-                    </div>
-                  </div>
                 </div>
               )}
             </div>
           )}
         </div>
         
-        <div className="lg:w-1/3 bg-dream-light p-6 border-l border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-dream-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-            </svg>
-            KI-Analyse
-          </h3>
-          
-          {analysis ? (
-            'directText' in analysis ? (
-              // Fallback für direktText (wenn analyse nicht korrekt geparst wurde)
-              <div className="prose prose-sm">
-                <p className="text-gray-600">
-                  {analysis.directText || "Keine Details zur Analyse verfügbar."}
-                </p>
+        {/* Right sidebar - Image and Analysis */}
+        <div className="lg:w-1/3 bg-gray-50 p-6 border-t lg:border-t-0 lg:border-l border-gray-200">
+          {/* Dream image */}
+          {(dream.imageUrl || newImage) && (
+            <div className="mb-6">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Traumvisualisierung</h3>
+              <div 
+                className="relative overflow-hidden rounded-lg cursor-pointer transform transition-transform duration-300 hover:scale-[1.02] shadow-md"
+                onClick={() => openImageModal(newImage || dream.imageUrl || "")}
+              >
+                <img 
+                  src={newImage || dream.imageUrl || ""} 
+                  alt="Dream visualization" 
+                  className="w-full h-auto object-cover"
+                />
+                <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 flex items-center justify-center transition-opacity duration-300">
+                  <ZoomIn className="text-white opacity-0 hover:opacity-100 h-8 w-8" />
+                </div>
               </div>
-            ) : (
-              <>
-                {/* Themes section */}
-                <div className="mb-6">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Hauptthemen</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {analysis.themes && analysis.themes.map((theme: string, index: number) => {
-                      // Different background colors for variety
-                      const colorClasses = [
-                        "bg-dream-primary/10 text-dream-primary",
-                        "bg-blue-50 text-blue-600",
-                        "bg-yellow-50 text-yellow-600",
-                        "bg-green-50 text-green-600",
-                        "bg-purple-50 text-purple-600"
-                      ];
-                      const colorClass = colorClasses[index % colorClasses.length];
-                      
-                      return (
-                        <span 
-                          key={index} 
-                          className={`inline-block ${colorClass} text-sm px-3 py-1 rounded-full font-medium ai-analysis-tag hover:scale-105 transition-all`}
-                        >
+            </div>
+          )}
+          
+          {/* Dream analysis */}
+          {analysis && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                <Sparkles className="h-4 w-4 mr-1 text-dream-primary" />
+                Traumanalyse
+              </h3>
+              
+              {/* Analysis content */}
+              <div className="space-y-4">
+                {/* Themes */}
+                {analysis.themes && analysis.themes.length > 0 && (
+                  <div>
+                    <h4 className="text-xs uppercase text-gray-500 font-medium mb-1">Themen</h4>
+                    <div className="flex flex-wrap gap-1.5">
+                      {analysis.themes.map((theme: string, index: number) => (
+                        <Badge key={index} className="bg-dream-primary/10 text-dream-primary hover:bg-dream-primary/15 border-dream-primary/20">
                           {theme}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-                
-                {/* Emotions section */}
-                <div className="mb-6">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Emotionale Landschaft</h4>
-                  <div className="flex flex-col space-y-2">
-                    {analysis.emotions && analysis.emotions.map((emotion: { name: string, intensity: number }, index: number) => (
-                      <div key={index} className="flex items-center">
-                        <span className="text-sm text-gray-700 w-24">{emotion.name}:</span>
-                        <div className="flex-grow bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="bg-dream-accent h-2 rounded-full" 
-                            style={{ width: `${emotion.intensity * 100}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-xs text-gray-500 ml-2">{Math.round(emotion.intensity * 100)}%</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                {/* Symbols section */}
-                <div className="mb-6">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Symbolische Bedeutungen</h4>
-                  <ul className="text-sm text-gray-700 space-y-2">
-                    {analysis.symbols && analysis.symbols.map((symbol: { symbol: string, meaning: string }, index: number) => (
-                      <li key={index} className="flex flex-col">
-                        <span className="text-dream-primary font-medium">{symbol.symbol}:</span>
-                        <span className="ml-1">{symbol.meaning}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                
-                {/* Keywords section */}
-                {analysis.keywords && Array.isArray(analysis.keywords) && analysis.keywords.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Schlüsselwörter</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {analysis.keywords.map((keyword: string, index: number) => (
-                        <span 
-                          key={index} 
-                          className="inline-block bg-dream-dark/10 text-dream-dark text-sm px-3 py-1 rounded-full font-medium"
-                        >
-                          {keyword}
-                        </span>
+                        </Badge>
                       ))}
                     </div>
                   </div>
                 )}
                 
-                {/* Cultural references for keywords */}
-                {analysis.keywordReferences && Array.isArray(analysis.keywordReferences) && analysis.keywordReferences.length > 0 && (
-                  <div className="mb-6">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Kulturelle Referenzen</h4>
-                    <div className="space-y-4">
-                      {analysis.keywordReferences.map((ref: any, index: number) => (
-                        <div key={index} className="border-l-2 border-dream-primary pl-3">
-                          <div className="font-medium text-dream-primary">{ref.word}</div>
-                          <div className="text-sm text-gray-700 mb-1">{ref.meaning}</div>
-                          <div className="space-y-1">
-                            {ref.culturalReferences && Array.isArray(ref.culturalReferences) && ref.culturalReferences.map((culture: any, cIndex: number) => (
-                              <div key={cIndex} className="text-xs">
-                                <span className="font-medium text-gray-600">{culture.culture}:</span>{" "}
-                                <span className="text-gray-600">{culture.interpretation}</span>
-                              </div>
-                            ))}
+                {/* Emotions */}
+                {analysis.emotions && analysis.emotions.length > 0 && (
+                  <div>
+                    <h4 className="text-xs uppercase text-gray-500 font-medium mb-1">Emotionen</h4>
+                    <div className="space-y-1.5">
+                      {analysis.emotions.map((emotion: { name: string, intensity: number }, index: number) => (
+                        <div key={index} className="flex items-center">
+                          <span className="text-sm w-24 text-gray-700">{emotion.name}</span>
+                          <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-dream-primary rounded-full" 
+                              style={{ width: `${emotion.intensity * 100}%` }}
+                            ></div>
                           </div>
-                          {ref.url && (
-                            <a 
-                              href={ref.url} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
-                              className="text-xs text-dream-accent hover:underline mt-1 inline-block"
-                            >
-                              Mehr erfahren →
-                            </a>
-                          )}
+                          <span className="text-xs text-gray-500 ml-2">{Math.round(emotion.intensity * 100)}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Symbols */}
+                {analysis.symbols && analysis.symbols.length > 0 && (
+                  <div>
+                    <h4 className="text-xs uppercase text-gray-500 font-medium mb-1">Symbole</h4>
+                    <div className="space-y-2">
+                      {analysis.symbols.map((symbol: { symbol: string, meaning: string }, index: number) => (
+                        <div key={index} className="text-sm">
+                          <span className="font-medium text-dream-primary">{symbol.symbol}</span>
+                          <span className="text-gray-600"> - {symbol.meaning}</span>
                         </div>
                       ))}
                     </div>
@@ -864,64 +835,27 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
                 
                 {/* Interpretation */}
                 {analysis.interpretation && (
-                  <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 mb-6">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Zusammenfassende Deutung</h4>
-                    <p className="text-sm text-gray-600">
-                      {analysis.interpretation}
-                    </p>
+                  <div>
+                    <h4 className="text-xs uppercase text-gray-500 font-medium mb-1">Interpretation</h4>
+                    <p className="text-sm text-gray-800">{analysis.interpretation}</p>
                   </div>
                 )}
                 
                 {/* Quote */}
-                {analysis.quote && typeof analysis.quote === 'object' && analysis.quote.text && (
-                  <div className="mb-6">
-                    <blockquote className="text-sm italic text-gray-600 border-l-4 border-dream-accent pl-3 py-2">
-                      "{analysis.quote.text}"
-                      <footer className="text-xs text-gray-500 mt-1">— {analysis.quote.source || 'Unbekannt'}</footer>
-                    </blockquote>
-                  </div>
-                )}
-                
-                {/* Motivational Insight */}
-                {analysis.motivationalInsight && (
-                  <div className="mb-6">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Motivierender Gedanke</h4>
-                    <p className="text-sm italic text-gray-600">{analysis.motivationalInsight}</p>
-                  </div>
-                )}
-                
-                {/* Weekly Insight if available */}
-                {analysis.weeklyInsight && typeof analysis.weeklyInsight === 'object' && (
-                  <div className="bg-dream-light/50 p-4 rounded-lg border border-dream-primary/20 mt-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Wöchentliche Einsicht</h4>
-                    <p className="text-sm text-gray-600 mb-2">{analysis.weeklyInsight.summary}</p>
-                    
-                    {analysis.weeklyInsight.patterns && Array.isArray(analysis.weeklyInsight.patterns) && analysis.weeklyInsight.patterns.length > 0 && (
-                      <div className="mb-2">
-                        <h5 className="text-xs font-medium text-gray-700 mb-1">Erkannte Muster:</h5>
-                        <ul className="list-disc list-inside text-xs text-gray-600 space-y-1">
-                          {analysis.weeklyInsight.patterns.map((pattern: string, index: number) => (
-                            <li key={index}>{pattern}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    
-                    {analysis.weeklyInsight.recommendations && Array.isArray(analysis.weeklyInsight.recommendations) && analysis.weeklyInsight.recommendations.length > 0 && (
-                      <div>
-                        <h5 className="text-xs font-medium text-gray-700 mb-1">Empfehlungen:</h5>
-                        <ul className="list-disc list-inside text-xs text-gray-600 space-y-1">
-                          {analysis.weeklyInsight.recommendations.map((rec: string, index: number) => (
-                            <li key={index}>{rec}</li>
-                          ))}
-                        </ul>
-                      </div>
+                {analysis.quote && (
+                  <div className="mt-4 p-3 bg-dream-primary/5 rounded-md border-l-4 border-dream-primary/30 italic">
+                    <p className="text-sm text-gray-700">{analysis.quote.text}</p>
+                    {analysis.quote.source && (
+                      <p className="text-xs text-gray-500 mt-1 text-right">— {analysis.quote.source}</p>
                     )}
                   </div>
                 )}
-              </>
-            )
-          ) : (
+              </div>
+            </div>
+          )}
+          
+          {/* Show analysis loading state */}
+          {analyzingDream && (
             <div className="flex flex-col items-center justify-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-dream-primary"></div>
               <p className="mt-4 text-gray-600">Analyse wird verarbeitet...</p>
