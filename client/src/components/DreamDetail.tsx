@@ -33,8 +33,10 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
   // Parse the analysis JSON if it exists
   const analysis = dream.analysis ? JSON.parse(dream.analysis) : null;
 
-  // Format date in German
-  const formattedDate = format(new Date(dream.date), 'd. MMMM yyyy', { locale: de });
+  // Format date in German with safe fallback
+  const formattedDate = dream.date 
+    ? format(new Date(dream.date), 'd. MMMM yyyy', { locale: de })
+    : format(new Date(dream.createdAt || new Date()), 'd. MMMM yyyy', { locale: de });
 
   // Handle image selection
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
