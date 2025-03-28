@@ -13,6 +13,7 @@ import JournalPage from "@/pages/JournalPage";
 import SymbolLibraryPage from "@/pages/SymbolLibraryPage";
 import ProfilePage from "@/pages/ProfilePage";
 import DreamGalleryPage from "@/pages/DreamGalleryPage";
+import CommunityPage from "@/pages/CommunityPage";
 import AuthPage from "@/pages/auth-page";
 import Layout from "@/components/Layout";
 import { AuthProvider } from "./hooks/use-auth";
@@ -55,6 +56,7 @@ function Router() {
           <ProfilePage />
         </Layout>
       )} />
+      <ProtectedRoute path="/community" component={() => <CommunityPage />} />
       <Route path="/auth" component={AuthPage} />
       {/* Fallback to 404 */}
       <Route component={NotFound} />
