@@ -16,9 +16,7 @@ const AssistantPage = () => {
           <p className="mb-8 text-muted-foreground text-center max-w-md">
             Um den KI-Assistenten nutzen zu können, müssen Sie angemeldet sein.
           </p>
-          <Button onClick={() => setLocation("/auth")}>
-            Zur Anmeldung
-          </Button>
+          <Button onClick={() => setLocation("/auth")}>Zur Anmeldung</Button>
         </div>
       </Layout>
     );

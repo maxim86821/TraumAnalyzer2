@@ -1,10 +1,11 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 export function useVoiceRecording() {
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(
+    null,
+  );
 
   const startRecording = async () => {
     try {
@@ -14,7 +15,7 @@ export function useVoiceRecording() {
 
       recorder.ondataavailable = (e) => chunks.push(e.data);
       recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/webm' });
+        const blob = new Blob(chunks, { type: "audio/webm" });
         setAudioBlob(blob);
       };
 
@@ -22,17 +23,17 @@ export function useVoiceRecording() {
       recorder.start();
       setIsRecording(true);
     } catch (err) {
-      console.error('Error accessing microphone:', err);
+      console.error("Error accessing microphone:", err);
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
       mediaRecorder.stop();
       setIsRecording(false);
-      
+
       // Stop all tracks
-      mediaRecorder.stream.getTracks().forEach(track => track.stop());
+      mediaRecorder.stream.getTracks().forEach((track) => track.stop());
     }
   };
 
@@ -40,6 +41,6 @@ export function useVoiceRecording() {
     isRecording,
     audioBlob,
     startRecording,
-    stopRecording
+    stopRecording,
   };
 }

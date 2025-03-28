@@ -1,14 +1,34 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Send, ArrowLeft, Plus, Archive, RotateCcw } from "lucide-react";
+import {
+  Loader2,
+  Send,
+  ArrowLeft,
+  Plus,
+  Archive,
+  RotateCcw,
+} from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -48,38 +68,42 @@ interface ChatResponse {
 }
 
 interface RelatedContentProps {
-  type: 'dream' | 'journal' | null;
+  type: "dream" | "journal" | null;
   id: number | null;
-  onChange: (type: 'dream' | 'journal' | null, id: number | null) => void;
+  onChange: (type: "dream" | "journal" | null, id: number | null) => void;
 }
 
 // Component to select related content (dream or journal entry)
-const RelatedContentSelector: React.FC<RelatedContentProps> = ({ type, id, onChange }) => {
+const RelatedContentSelector: React.FC<RelatedContentProps> = ({
+  type,
+  id,
+  onChange,
+}) => {
   const { user } = useAuth();
-  
+
   // Fetch user's dreams for the dropdown
   const { data: dreams = [] } = useQuery({
-    queryKey: ['/api/dreams'],
+    queryKey: ["/api/dreams"],
     enabled: !!user,
   });
-  
+
   // Fetch user's journal entries for the dropdown
   const { data: journalEntries = [] } = useQuery({
-    queryKey: ['/api/journal'],
+    queryKey: ["/api/journal"],
     enabled: !!user,
   });
-  
+
   const handleTypeChange = (newType: string) => {
-    onChange(newType as 'dream' | 'journal' | null, null);
+    onChange(newType as "dream" | "journal" | null, null);
   };
-  
+
   const handleContentChange = (contentId: string) => {
     onChange(type, parseInt(contentId));
   };
-  
+
   return (
     <div className="flex items-center gap-2 mb-4">
-      <Select value={type || 'none'} onValueChange={handleTypeChange}>
+      <Select value={type || "none"} onValueChange={handleTypeChange}>
         <SelectTrigger className="w-[150px]">
           <SelectValue placeholder="Inhalt auswählen" />
         </SelectTrigger>
@@ -89,23 +113,34 @@ const RelatedContentSelector: React.FC<RelatedContentProps> = ({ type, id, onCha
           <SelectItem value="journal">Tagebucheintrag</SelectItem>
         </SelectContent>
       </Select>
-      
+
       {type && (
-        <Select value={id?.toString() || ''} onValueChange={handleContentChange}>
+        <Select
+          value={id?.toString() || ""}
+          onValueChange={handleContentChange}
+        >
           <SelectTrigger className="w-[250px]">
-            <SelectValue placeholder={type === 'dream' ? "Traum auswählen" : "Eintrag auswählen"} />
+            <SelectValue
+              placeholder={
+                type === "dream" ? "Traum auswählen" : "Eintrag auswählen"
+              }
+            />
           </SelectTrigger>
           <SelectContent>
-            {type === 'dream' && dreams && dreams.map((dream: any) => (
-              <SelectItem key={dream.id} value={dream.id.toString()}>
-                {dream.title}
-              </SelectItem>
-            ))}
-            {type === 'journal' && journalEntries && journalEntries.map((entry: any) => (
-              <SelectItem key={entry.id} value={entry.id.toString()}>
-                {entry.title}
-              </SelectItem>
-            ))}
+            {type === "dream" &&
+              dreams &&
+              dreams.map((dream: any) => (
+                <SelectItem key={dream.id} value={dream.id.toString()}>
+                  {dream.title}
+                </SelectItem>
+              ))}
+            {type === "journal" &&
+              journalEntries &&
+              journalEntries.map((entry: any) => (
+                <SelectItem key={entry.id} value={entry.id.toString()}>
+                  {entry.title}
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
       )}
@@ -119,35 +154,45 @@ const AIAssistant: React.FC = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const messageEndRef = useRef<HTMLDivElement>(null);
-  
-  const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
-  const [inputMessage, setInputMessage] = useState('');
+
+  const [activeConversationId, setActiveConversationId] = useState<
+    number | null
+  >(null);
+  const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [relatedContentType, setRelatedContentType] = useState<'dream' | 'journal' | null>(null);
+  const [relatedContentType, setRelatedContentType] = useState<
+    "dream" | "journal" | null
+  >(null);
   const [relatedContentId, setRelatedContentId] = useState<number | null>(null);
   const [showSidebar, setShowSidebar] = useState(true);
-  
+
   // Fetch user's conversations
-  const { data: conversations = [], isLoading: isLoadingConversations } = useQuery({
-    queryKey: ['/api/assistant/conversations'],
-    enabled: !!user,
-  });
-  
+  const { data: conversations = [], isLoading: isLoadingConversations } =
+    useQuery({
+      queryKey: ["/api/assistant/conversations"],
+      enabled: !!user,
+    });
+
   // Fetch messages for the active conversation
-  const { data: conversationData = { conversation: null, messages: [] }, isLoading: isLoadingMessages } = useQuery({
-    queryKey: ['/api/assistant/conversations', activeConversationId],
+  const {
+    data: conversationData = { conversation: null, messages: [] },
+    isLoading: isLoadingMessages,
+  } = useQuery({
+    queryKey: ["/api/assistant/conversations", activeConversationId],
     enabled: !!activeConversationId,
   });
-  
+
   // Create a new conversation
   const createConversationMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/assistant/conversations');
+      const response = await apiRequest("POST", "/api/assistant/conversations");
       const responseData = await response.json();
       return responseData;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/assistant/conversations'] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/assistant/conversations"],
+      });
       setActiveConversationId(data.id);
     },
     onError: (error) => {
@@ -156,18 +201,30 @@ const AIAssistant: React.FC = () => {
         description: "Unterhaltung konnte nicht erstellt werden",
         variant: "destructive",
       });
-    }
+    },
   });
-  
+
   // Update a conversation (e.g., to archive it)
   const updateConversationMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number, data: Partial<Conversation> }) => { 
-      const response = await apiRequest('PATCH', `/api/assistant/conversations/${id}`, data);
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: Partial<Conversation>;
+    }) => {
+      const response = await apiRequest(
+        "PATCH",
+        `/api/assistant/conversations/${id}`,
+        data,
+      );
       const responseData = await response.json();
       return responseData;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/assistant/conversations'] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/assistant/conversations"],
+      });
     },
     onError: (error) => {
       toast({
@@ -175,18 +232,23 @@ const AIAssistant: React.FC = () => {
         description: "Unterhaltung konnte nicht aktualisiert werden",
         variant: "destructive",
       });
-    }
+    },
   });
-  
+
   // Delete a conversation
   const deleteConversationMutation = useMutation({
     mutationFn: async (id: number) => {
-      const response = await apiRequest('DELETE', `/api/assistant/conversations/${id}`);
+      const response = await apiRequest(
+        "DELETE",
+        `/api/assistant/conversations/${id}`,
+      );
       const responseData = await response.json();
       return responseData;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/assistant/conversations'] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/assistant/conversations"],
+      });
       setActiveConversationId(null);
     },
     onError: (error) => {
@@ -195,28 +257,36 @@ const AIAssistant: React.FC = () => {
         description: "Unterhaltung konnte nicht gelöscht werden",
         variant: "destructive",
       });
-    }
+    },
   });
-  
+
   // Send a message to the AI assistant
   const sendMessageMutation = useMutation<ChatResponse, Error, ChatRequest>({
     mutationFn: async (chatRequest: ChatRequest) => {
-      const response = await apiRequest('POST', '/api/assistant/chat', chatRequest);
+      const response = await apiRequest(
+        "POST",
+        "/api/assistant/chat",
+        chatRequest,
+      );
       const responseData = await response.json();
       return responseData as ChatResponse;
     },
     onSuccess: (data: ChatResponse) => {
-      setInputMessage('');
+      setInputMessage("");
       setIsLoading(false);
-      
+
       // If this was a new conversation, set its ID as active
       if (data.conversationId !== activeConversationId) {
         setActiveConversationId(data.conversationId);
       }
-      
+
       // Refresh the conversations list and current conversation
-      queryClient.invalidateQueries({ queryKey: ['/api/assistant/conversations'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/assistant/conversations', data.conversationId] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/assistant/conversations"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/assistant/conversations", data.conversationId],
+      });
     },
     onError: (error) => {
       setIsLoading(false);
@@ -225,83 +295,88 @@ const AIAssistant: React.FC = () => {
         description: "Nachricht konnte nicht gesendet werden",
         variant: "destructive",
       });
-    }
+    },
   });
-  
+
   // Scroll to the bottom when new messages arrive
   useEffect(() => {
-    messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [conversationData]);
-  
+
   // Handle sending a message
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
-    
+
     setIsLoading(true);
-    
+
     const chatRequest: ChatRequest = {
       message: inputMessage,
       conversationId: activeConversationId || undefined,
     };
-    
+
     // Add related content if selected
-    if (relatedContentType === 'dream' && relatedContentId) {
+    if (relatedContentType === "dream" && relatedContentId) {
       chatRequest.relatedDreamId = relatedContentId;
-    } else if (relatedContentType === 'journal' && relatedContentId) {
+    } else if (relatedContentType === "journal" && relatedContentId) {
       chatRequest.relatedJournalId = relatedContentId;
     }
-    
+
     sendMessageMutation.mutate(chatRequest);
   };
-  
+
   // Handle key press (send on Enter, newline on Shift+Enter)
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
   };
-  
+
   // Handle related content selection
-  const handleRelatedContentChange = (type: 'dream' | 'journal' | null, id: number | null) => {
+  const handleRelatedContentChange = (
+    type: "dream" | "journal" | null,
+    id: number | null,
+  ) => {
     setRelatedContentType(type);
     setRelatedContentId(id);
   };
-  
+
   // Create a new conversation
   const handleNewConversation = () => {
     createConversationMutation.mutate();
   };
-  
+
   // Toggle archiving a conversation
   const handleArchiveConversation = (conversation: Conversation) => {
     updateConversationMutation.mutate({
       id: conversation.id,
-      data: { isArchived: !conversation.isArchived }
+      data: { isArchived: !conversation.isArchived },
     });
   };
-  
+
   // Format the timestamp for display
   const formatTimestamp = (timestamp: string | Date) => {
     const date = new Date(timestamp);
-    return new Intl.DateTimeFormat('de-DE', { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
+    return new Intl.DateTimeFormat("de-DE", {
+      hour: "2-digit",
+      minute: "2-digit",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
     }).format(date);
   };
-  
+
   // Get all non-archived conversations
-  const activeConversations = conversations?.filter((c: Conversation) => !c.isArchived) || [];
-  
+  const activeConversations =
+    conversations?.filter((c: Conversation) => !c.isArchived) || [];
+
   // Get all archived conversations
-  const archivedConversations = conversations?.filter((c: Conversation) => c.isArchived) || [];
-  
+  const archivedConversations =
+    conversations?.filter((c: Conversation) => c.isArchived) || [];
+
   // Get messages for the active conversation
   const messages = conversationData?.messages || [];
-  
+
   return (
     <div className="flex h-[calc(100vh-64px)]">
       {/* Sidebar with conversations */}
@@ -313,7 +388,7 @@ const AIAssistant: React.FC = () => {
               <Plus className="h-4 w-4" />
             </Button>
           </div>
-          
+
           <ScrollArea className="flex-1">
             <div className="p-2">
               {isLoadingConversations ? (
@@ -322,51 +397,76 @@ const AIAssistant: React.FC = () => {
                 </div>
               ) : (
                 <>
-                  {activeConversations.length === 0 && archivedConversations.length === 0 ? (
+                  {activeConversations.length === 0 &&
+                  archivedConversations.length === 0 ? (
                     <div className="text-center p-4 text-muted-foreground">
                       <p>Keine Unterhaltungen gefunden</p>
-                      <p className="text-sm">Starten Sie eine neue Unterhaltung</p>
+                      <p className="text-sm">
+                        Starten Sie eine neue Unterhaltung
+                      </p>
                     </div>
                   ) : (
                     <>
                       <div className="space-y-1">
-                        {activeConversations.map((conversation: Conversation) => (
-                          <Button
-                            key={conversation.id}
-                            variant={activeConversationId === conversation.id ? "secondary" : "ghost"}
-                            className="w-full justify-start text-left h-auto py-2 overflow-hidden"
-                            onClick={() => setActiveConversationId(conversation.id)}
-                          >
-                            <div className="truncate pr-2">
-                              {conversation.title}
-                              <p className="text-xs text-muted-foreground truncate">
-                                {new Date(conversation.updatedAt).toLocaleDateString()}
-                              </p>
-                            </div>
-                          </Button>
-                        ))}
+                        {activeConversations.map(
+                          (conversation: Conversation) => (
+                            <Button
+                              key={conversation.id}
+                              variant={
+                                activeConversationId === conversation.id
+                                  ? "secondary"
+                                  : "ghost"
+                              }
+                              className="w-full justify-start text-left h-auto py-2 overflow-hidden"
+                              onClick={() =>
+                                setActiveConversationId(conversation.id)
+                              }
+                            >
+                              <div className="truncate pr-2">
+                                {conversation.title}
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {new Date(
+                                    conversation.updatedAt,
+                                  ).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </Button>
+                          ),
+                        )}
                       </div>
-                      
+
                       {archivedConversations.length > 0 && (
                         <>
                           <Separator className="my-2" />
-                          <p className="text-xs text-muted-foreground px-2 py-1">Archivierte Unterhaltungen</p>
+                          <p className="text-xs text-muted-foreground px-2 py-1">
+                            Archivierte Unterhaltungen
+                          </p>
                           <div className="space-y-1">
-                            {archivedConversations.map((conversation: Conversation) => (
-                              <Button
-                                key={conversation.id}
-                                variant={activeConversationId === conversation.id ? "secondary" : "ghost"}
-                                className="w-full justify-start text-left h-auto py-2 opacity-60 overflow-hidden"
-                                onClick={() => setActiveConversationId(conversation.id)}
-                              >
-                                <div className="truncate pr-2">
-                                  {conversation.title}
-                                  <p className="text-xs text-muted-foreground truncate">
-                                    {new Date(conversation.updatedAt).toLocaleDateString()}
-                                  </p>
-                                </div>
-                              </Button>
-                            ))}
+                            {archivedConversations.map(
+                              (conversation: Conversation) => (
+                                <Button
+                                  key={conversation.id}
+                                  variant={
+                                    activeConversationId === conversation.id
+                                      ? "secondary"
+                                      : "ghost"
+                                  }
+                                  className="w-full justify-start text-left h-auto py-2 opacity-60 overflow-hidden"
+                                  onClick={() =>
+                                    setActiveConversationId(conversation.id)
+                                  }
+                                >
+                                  <div className="truncate pr-2">
+                                    {conversation.title}
+                                    <p className="text-xs text-muted-foreground truncate">
+                                      {new Date(
+                                        conversation.updatedAt,
+                                      ).toLocaleDateString()}
+                                    </p>
+                                  </div>
+                                </Button>
+                              ),
+                            )}
                           </div>
                         </>
                       )}
@@ -378,47 +478,55 @@ const AIAssistant: React.FC = () => {
           </ScrollArea>
         </div>
       )}
-      
+
       {/* Main chat area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <div className="border-b p-4 flex justify-between items-center">
           <div className="flex items-center">
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="lg:hidden mr-2"
               onClick={() => setShowSidebar(!showSidebar)}
             >
-              {showSidebar ? <ArrowLeft className="h-4 w-4" /> : <span className="w-4"></span>}
-            </Button>
-            
-            <h2 className="font-semibold">
-              {activeConversationId ? (
-                conversationData?.conversation?.title || "Unterhaltung"
+              {showSidebar ? (
+                <ArrowLeft className="h-4 w-4" />
               ) : (
-                "Traumdeutungs-Assistent"
+                <span className="w-4"></span>
               )}
+            </Button>
+
+            <h2 className="font-semibold">
+              {activeConversationId
+                ? conversationData?.conversation?.title || "Unterhaltung"
+                : "Traumdeutungs-Assistent"}
             </h2>
           </div>
-          
+
           {activeConversationId && conversationData?.conversation && (
             <div className="flex gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => handleArchiveConversation(conversationData.conversation)}
+                onClick={() =>
+                  handleArchiveConversation(conversationData.conversation)
+                }
               >
                 {conversationData.conversation.isArchived ? (
-                  <><RotateCcw className="h-4 w-4 mr-2" /> Wiederherstellen</>
+                  <>
+                    <RotateCcw className="h-4 w-4 mr-2" /> Wiederherstellen
+                  </>
                 ) : (
-                  <><Archive className="h-4 w-4 mr-2" /> Archivieren</>
+                  <>
+                    <Archive className="h-4 w-4 mr-2" /> Archivieren
+                  </>
                 )}
               </Button>
             </div>
           )}
         </div>
-        
+
         {/* Empty state */}
         {!activeConversationId && (
           <div className="flex-1 flex flex-col items-center justify-center p-6">
@@ -426,7 +534,9 @@ const AIAssistant: React.FC = () => {
               <CardHeader>
                 <CardTitle>KI-Traumdeutungs-Assistent</CardTitle>
                 <CardDescription>
-                  Stellen Sie Fragen zu Ihren Träumen, lassen Sie sie analysieren oder erfahren Sie mehr über Traumsymbole und deren Bedeutung.
+                  Stellen Sie Fragen zu Ihren Träumen, lassen Sie sie
+                  analysieren oder erfahren Sie mehr über Traumsymbole und deren
+                  Bedeutung.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -447,7 +557,7 @@ const AIAssistant: React.FC = () => {
             </Card>
           </div>
         )}
-        
+
         {/* Messages area */}
         {activeConversationId && (
           <ScrollArea className="flex-1 p-4">
@@ -461,21 +571,23 @@ const AIAssistant: React.FC = () => {
                   <div
                     key={message.id}
                     className={`flex ${
-                      message.role === 'user' ? 'justify-end' : 'justify-start'
+                      message.role === "user" ? "justify-end" : "justify-start"
                     }`}
                   >
                     <div
                       className={`rounded-lg p-4 max-w-[80%] ${
-                        message.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted'
+                        message.role === "user"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted"
                       }`}
                     >
-                      <div className="whitespace-pre-wrap">{message.content}</div>
+                      <div className="whitespace-pre-wrap">
+                        {message.content}
+                      </div>
                       <div className="text-xs mt-1 opacity-70 text-right">
                         {formatTimestamp(message.timestamp)}
                       </div>
-                      
+
                       {/* Show badges for related content */}
                       {(message.relatedDreamId || message.relatedJournalId) && (
                         <div className="mt-2 flex gap-1 justify-end">
@@ -495,7 +607,7 @@ const AIAssistant: React.FC = () => {
             )}
           </ScrollArea>
         )}
-        
+
         {/* Input area */}
         {activeConversationId && (
           <div className="border-t p-4">
@@ -504,7 +616,7 @@ const AIAssistant: React.FC = () => {
               id={relatedContentId}
               onChange={handleRelatedContentChange}
             />
-            
+
             <div className="flex gap-2">
               <Textarea
                 placeholder="Schreiben Sie eine Nachricht..."

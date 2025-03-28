@@ -18,60 +18,67 @@ export async function generateJournalMoodImage(
   colorImpression: string,
   spontaneousThought: string,
   tags?: string[] | null,
-  mood?: number | null
-): Promise<{ imageUrl: string, description: string }> {
+  mood?: number | null,
+): Promise<{ imageUrl: string; description: string }> {
   try {
     // Extrahiere wichtige Schlüsselwörter aus dem Journalinhalt
-    const words = journalContent.split(/\s+/)
-      .filter(w => w.length > 4)
-      .map(w => w.toLowerCase().replace(/[^\wäöüß]/g, ''))
+    const words = journalContent
+      .split(/\s+/)
+      .filter((w) => w.length > 4)
+      .map((w) => w.toLowerCase().replace(/[^\wäöüß]/g, ""))
       .slice(0, 30);
-    
+
     const uniqueWords = Array.from(new Set(words));
     const importantWords = uniqueWords.slice(0, 3); // Reduziert auf 3 wichtige Wörter
-    
+
     // Erstelle einen detaillierten Prompt basierend nur auf den wichtigsten Elementen:
     // 1. Der Journaleintrag (obligatorisch)
     // 2. Die Farbimpression (obligatorisch)
     // 3. Der spontane Gedanke (obligatorisch)
     // Alles andere ist optional
-    
-    let promptBase = "Erstelle ein ausdrucksstarkes visuelles Kunstwerk im Stil einer Hochqualitäts-Illustration, das";
+
+    let promptBase =
+      "Erstelle ein ausdrucksstarkes visuelles Kunstwerk im Stil einer Hochqualitäts-Illustration, das";
     promptBase += ` die emotionale Essenz dieses Journaleintrags einfängt:\n\n"${journalContent.substring(0, 200)}..."`;
-    
+
     // Füge die obligatorischen Farbimpressionen und Gedanken hinzu
     promptBase += `\n\nDer Autor verbindet diese Gedanken mit der Farbe "${colorImpression}" und denkt dabei an "${spontaneousThought}".`;
-    
+
     // Die folgenden Elemente sind alle optional und werden nur hinzugefügt, wenn sie vorhanden sind
-    
+
     // Füge Tags hinzu, wenn vorhanden und nicht leer
     if (tags && tags.length > 0) {
       promptBase += `\n\nWichtige Themen: ${tags.join(", ")}`;
     }
-    
+
     // Füge Stimmungsinformation hinzu, wenn vorhanden und definiert
     if (mood !== undefined && mood !== null) {
-      const moodDescription = mood > 7 ? "sehr positiv" : 
-                             mood > 5 ? "positiv" : 
-                             mood > 3 ? "neutral" : "negativ";
+      const moodDescription =
+        mood > 7
+          ? "sehr positiv"
+          : mood > 5
+            ? "positiv"
+            : mood > 3
+              ? "neutral"
+              : "negativ";
       promptBase += `\n\nDie Stimmung ist ${moodDescription} (${mood}/10).`;
     }
-    
+
     // Füge wichtige Wörter hinzu, wenn vorhanden
     if (importantWords && importantWords.length > 0) {
       promptBase += `\n\nZentrale Konzepte: ${importantWords.join(", ")}`;
     }
-    
+
     // Kunstrichtung und Stilanweisungen
     promptBase += `\n\nDas Bild soll konkrete, erkennbare Elemente enthalten, keine abstrakten Formen oder Farbflächen.`;
     promptBase += `\n\nVisualisiere besonders: die Hauptemotion und den Kerngedanken aus dem Journal über symbolische Darstellungen.`;
     promptBase += `\n\nVerwende lebendige ${colorImpression} Farbtöne mit hohem Kontrast und erkennbaren Naturelementen wie Landschaften oder atmosphärischen Elementen.`;
-    
+
     // WICHTIG: Keine Textinhalte im Bild
     promptBase += `\n\nWICHTIG: Das Bild darf KEINE Textinhalte, Wörter, Buchstaben oder Schriftzüge enthalten - erstelle es ausschließlich mit visuellen Elementen wie Farben, Formen und symbolischen Objekten.`;
-    
+
     console.log("Generiere Bild mit angepasstem Prompt ohne Textinhalte");
-    
+
     // Generiere ein Bild mit DALL-E 3
     const response = await openai.images.generate({
       model: "dall-e-3",
@@ -81,28 +88,30 @@ export async function generateJournalMoodImage(
       quality: "standard",
       style: "vivid",
     });
-    
+
     // Generiere eine beschreibende Interpretation des Bildes
     const descriptionResponse = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
           role: "system",
-          content: "Du bist ein Kunstinterpreter, der Bilder in einer poetischen, emotionalen Sprache beschreibt. Erstelle eine kurze (max. 3 Sätze), aber ausdrucksstarke Beschreibung eines Kunstwerks basierend auf dem Prompt, der zur Erstellung verwendet wurde."
+          content:
+            "Du bist ein Kunstinterpreter, der Bilder in einer poetischen, emotionalen Sprache beschreibt. Erstelle eine kurze (max. 3 Sätze), aber ausdrucksstarke Beschreibung eines Kunstwerks basierend auf dem Prompt, der zur Erstellung verwendet wurde.",
         },
         {
           role: "user",
-          content: `Basierend auf diesem Prompt wurde ein Bild erstellt:\n\n${promptBase}\n\nSchreibe eine kurze, poetische Beschreibung des resultierenden Bildes (nur 2-3 Sätze).`
-        }
-      ]
+          content: `Basierend auf diesem Prompt wurde ein Bild erstellt:\n\n${promptBase}\n\nSchreibe eine kurze, poetische Beschreibung des resultierenden Bildes (nur 2-3 Sätze).`,
+        },
+      ],
     });
-    
-    const description = descriptionResponse.choices[0]?.message.content || 
+
+    const description =
+      descriptionResponse.choices[0]?.message.content ||
       `Ein stimmungsvolles Kunstwerk in ${colorImpression}-Tönen, inspiriert von Gedanken zu "${spontaneousThought}".`;
-    
+
     return {
       imageUrl: response.data[0]?.url || "",
-      description
+      description,
     };
   } catch (error) {
     console.error("Error generating image:", error);
@@ -119,43 +128,48 @@ export async function generateJournalMoodImage(
  * @returns URL to the generated image
  */
 export async function generateDreamImage(
-  dreamContent: string, 
+  dreamContent: string,
   analysis?: AnalysisResponse | null,
   tags?: string[] | null,
-  mood?: { beforeSleep?: number | null, afterWakeup?: number | null, notes?: string | null } | null
+  mood?: {
+    beforeSleep?: number | null;
+    afterWakeup?: number | null;
+    notes?: string | null;
+  } | null,
 ): Promise<string> {
   try {
     // Create a detailed prompt based on the dream content and analysis
-    let promptBase = "Eine traumhafte Illustration basierend auf folgendem Traum:\n\n";
-    
+    let promptBase =
+      "Eine traumhafte Illustration basierend auf folgendem Traum:\n\n";
+
     // Add a short version of the dream content
     promptBase += dreamContent.substring(0, 300);
-    
+
     // Add analysis information if available
     if (analysis) {
       promptBase += "\n\nHauptthemen: " + analysis.themes.join(", ");
-      
+
       // Add key emotions
       if (analysis.emotions && analysis.emotions.length > 0) {
         const topEmotions = analysis.emotions
           .sort((a, b) => b.intensity - a.intensity)
           .slice(0, 3)
-          .map(e => e.name);
+          .map((e) => e.name);
         promptBase += "\nEmotionen: " + topEmotions.join(", ");
       }
-      
+
       // Add key symbols
       if (analysis.symbols && analysis.symbols.length > 0) {
-        const topSymbols = analysis.symbols.slice(0, 3).map(s => s.symbol);
+        const topSymbols = analysis.symbols.slice(0, 3).map((s) => s.symbol);
         promptBase += "\nSymbole: " + topSymbols.join(", ");
       }
     }
-    
+
     // Add tags if available
     if (tags && tags.length > 0) {
       promptBase += "\n\nTags: " + tags.join(", ");
     }
-    
+
     // Add mood information if available to adjust the tone
     if (mood) {
       if (mood.beforeSleep && mood.beforeSleep <= 3) {
@@ -163,22 +177,24 @@ export async function generateDreamImage(
       } else if (mood.beforeSleep && mood.beforeSleep >= 8) {
         promptBase += "\n\nDer Traum begann mit einer sehr positiven Stimmung.";
       }
-      
+
       if (mood.afterWakeup && mood.afterWakeup <= 3) {
         promptBase += "\n\nDer Traum hinterließ ein negatives Gefühl.";
       } else if (mood.afterWakeup && mood.afterWakeup >= 8) {
         promptBase += "\n\nDer Traum hinterließ ein positives Gefühl.";
       }
     }
-    
+
     // Add style directions
-    promptBase += "\n\nStil: Traumartig, surreal, mit fließenden Übergängen und symbolischer Bedeutung. Eine Mischung aus realistischen und fantastischen Elementen.";
-    
+    promptBase +=
+      "\n\nStil: Traumartig, surreal, mit fließenden Übergängen und symbolischer Bedeutung. Eine Mischung aus realistischen und fantastischen Elementen.";
+
     // WICHTIG: Keine Textinhalte im Bild
-    promptBase += "\n\nWICHTIG: Das Bild darf KEINE Textinhalte, Wörter, Buchstaben oder Schriftzüge enthalten - erstelle es ausschließlich mit visuellen Elementen wie Farben, Formen und symbolischen Objekten.";
-    
+    promptBase +=
+      "\n\nWICHTIG: Das Bild darf KEINE Textinhalte, Wörter, Buchstaben oder Schriftzüge enthalten - erstelle es ausschließlich mit visuellen Elementen wie Farben, Formen und symbolischen Objekten.";
+
     console.log("Generating image with prompt:", promptBase);
-    
+
     // Call the OpenAI DALL-E API to generate the image
     const response = await openai.images.generate({
       model: "dall-e-3",
@@ -188,16 +204,18 @@ export async function generateDreamImage(
       quality: "standard",
       style: "vivid",
     });
-    
+
     const imageUrl = response.data[0].url;
     if (!imageUrl) {
       throw new Error("No image URL in response");
     }
-    
+
     return imageUrl;
   } catch (error) {
     console.error("Error generating dream image:", error);
-    throw new Error("Failed to generate dream image: " + (error as Error).message);
+    throw new Error(
+      "Failed to generate dream image: " + (error as Error).message,
+    );
   }
 }
 
@@ -206,34 +224,44 @@ export async function generateDreamImage(
  * @param dreamContent The text content of the dream
  * @returns Analysis response with themes, emotions, symbols, and interpretation
  */
-export async function analyzeDream(dreamContent: string, previousDreams?: Array<{ content: string; date: Date; analysis?: string | null }>): Promise<AnalysisResponse> {
+export async function analyzeDream(
+  dreamContent: string,
+  previousDreams?: Array<{
+    content: string;
+    date: Date;
+    analysis?: string | null;
+  }>,
+): Promise<AnalysisResponse> {
   try {
     if (!dreamContent || dreamContent.trim().length < 10) {
       // Fallback für leere oder zu kurze Trauminhalte
       return {
         themes: ["Undefinierter Traum"],
         emotions: [{ name: "Neutral", intensity: 0.5 }],
-        symbols: [{ symbol: "Leerer Raum", meaning: "Stille oder Unklarheit im Traum" }],
-        interpretation: "Der Trauminhalt ist zu kurz oder unklar für eine vollständige Analyse. Versuche, mehr Details über deinen Traum hinzuzufügen, um eine tiefere Interpretation zu erhalten.",
-        keywords: ["undefiniert"]
+        symbols: [
+          { symbol: "Leerer Raum", meaning: "Stille oder Unklarheit im Traum" },
+        ],
+        interpretation:
+          "Der Trauminhalt ist zu kurz oder unklar für eine vollständige Analyse. Versuche, mehr Details über deinen Traum hinzuzufügen, um eine tiefere Interpretation zu erhalten.",
+        keywords: ["undefiniert"],
       };
     }
-    
+
     // Erstelle einen Kontext aus früheren Träumen, falls vorhanden
     let previousDreamsContext = "";
     if (previousDreams && previousDreams.length > 0) {
       previousDreamsContext = `\n\nHier sind die letzten ${previousDreams.length} Träume des Benutzers (vom neuesten zum ältesten):\n`;
-      
+
       previousDreams.forEach((dream, index) => {
-        const formattedDate = dream.date.toISOString().split('T')[0];
-        previousDreamsContext += `\nTraum vom ${formattedDate}:\n${dream.content.substring(0, 150)}${dream.content.length > 150 ? '...' : ''}`;
-        
+        const formattedDate = dream.date.toISOString().split("T")[0];
+        previousDreamsContext += `\nTraum vom ${formattedDate}:\n${dream.content.substring(0, 150)}${dream.content.length > 150 ? "..." : ""}`;
+
         // Wenn verfügbar, füge die vorherige Analyse hinzu
         if (dream.analysis) {
           try {
             const parsedAnalysis = JSON.parse(dream.analysis);
             if (parsedAnalysis.themes) {
-              previousDreamsContext += `\nHauptthemen: ${parsedAnalysis.themes.join(', ')}`;
+              previousDreamsContext += `\nHauptthemen: ${parsedAnalysis.themes.join(", ")}`;
             }
           } catch (e) {
             // Ignoriere Parsing-Fehler für frühere Analysen
@@ -293,49 +321,67 @@ export async function analyzeDream(dreamContent: string, previousDreams?: Array<
             "summary": "Eine Zusammenfassung der Muster und Themen in den jüngsten Träumen",
             "patterns": ["Muster1", "Muster2", ...], // Erkannte wiederkehrende Muster
             "recommendations": ["Empfehlung1", "Empfehlung2", ...] // Praktische Empfehlungen basierend auf den Traummustern
-          }`
+          }`,
         },
         {
           role: "user",
-          content: dreamContent + previousDreamsContext
-        }
+          content: dreamContent + previousDreamsContext,
+        },
       ],
-      response_format: { type: "json_object" }
+      response_format: { type: "json_object" },
     });
 
     // Parse and validate the response
     console.log("OpenAI response received, parsing...");
     const content = response.choices[0].message.content || "{}";
-    
+
     try {
       const result = JSON.parse(content);
-      
+
       // Perform basic validation of the response structure with fallbacks
       const validatedResult: AnalysisResponse = {
-        themes: Array.isArray(result.themes) ? result.themes : ["Unklares Thema"],
-        emotions: Array.isArray(result.emotions) ? result.emotions : [{ name: "Neutral", intensity: 0.5 }],
-        symbols: Array.isArray(result.symbols) ? result.symbols : [{ symbol: "Unklar", meaning: "Konnte nicht erkannt werden" }],
-        interpretation: result.interpretation || "Keine Interpretation verfügbar.",
-        keywords: Array.isArray(result.keywords) ? result.keywords : ["unbekannt"],
+        themes: Array.isArray(result.themes)
+          ? result.themes
+          : ["Unklares Thema"],
+        emotions: Array.isArray(result.emotions)
+          ? result.emotions
+          : [{ name: "Neutral", intensity: 0.5 }],
+        symbols: Array.isArray(result.symbols)
+          ? result.symbols
+          : [{ symbol: "Unklar", meaning: "Konnte nicht erkannt werden" }],
+        interpretation:
+          result.interpretation || "Keine Interpretation verfügbar.",
+        keywords: Array.isArray(result.keywords)
+          ? result.keywords
+          : ["unbekannt"],
         keywordReferences: result.keywordReferences,
         quote: result.quote,
         motivationalInsight: result.motivationalInsight,
-        weeklyInsight: result.weeklyInsight
+        weeklyInsight: result.weeklyInsight,
       };
-      
+
       console.log("Validation complete, returning analysis");
       return validatedResult;
     } catch (parseError) {
       console.error("Error parsing OpenAI response:", parseError);
-      console.log("OpenAI raw response content:", content.substring(0, 200) + "...");
-      
+      console.log(
+        "OpenAI raw response content:",
+        content.substring(0, 200) + "...",
+      );
+
       // Fallback für JSON-Parsing-Fehler
       return {
         themes: ["Analyse-Fehler"],
         emotions: [{ name: "Neutral", intensity: 0.5 }],
-        symbols: [{ symbol: "Technischer Fehler", meaning: "Die AI-Analyse konnte nicht verarbeitet werden" }],
-        interpretation: "Es gab einen technischen Fehler bei der Analyse deines Traums. Bitte versuche es später noch einmal.",
-        keywords: ["fehler"]
+        symbols: [
+          {
+            symbol: "Technischer Fehler",
+            meaning: "Die AI-Analyse konnte nicht verarbeitet werden",
+          },
+        ],
+        interpretation:
+          "Es gab einen technischen Fehler bei der Analyse deines Traums. Bitte versuche es später noch einmal.",
+        keywords: ["fehler"],
       };
     }
   } catch (error) {
@@ -353,38 +399,43 @@ export async function analyzeDream(dreamContent: string, previousDreams?: Array<
  */
 export async function generateDreamWritingPrompts(
   userId: number,
-  previousDreams?: Array<{ 
-    content: string; 
-    date: Date; 
+  previousDreams?: Array<{
+    content: string;
+    date: Date;
     analysis?: string | null;
     tags?: string[] | null;
   }>,
-  preferredThemes?: string[]
+  preferredThemes?: string[],
 ): Promise<string[]> {
   try {
     // Default themes if none are provided
-    const themes = preferredThemes || ["general", "emotional", "symbolic", "recurring"];
-    
+    const themes = preferredThemes || [
+      "general",
+      "emotional",
+      "symbolic",
+      "recurring",
+    ];
+
     // Create context from previous dreams if available
     let dreamsContext = "";
     if (previousDreams && previousDreams.length > 0) {
       dreamsContext = `\n\nHier sind die letzten ${previousDreams.length} Träume des Benutzers:\n`;
-      
+
       previousDreams.forEach((dream, index) => {
-        const formattedDate = dream.date.toISOString().split('T')[0];
-        dreamsContext += `\nTraum vom ${formattedDate}:\n${dream.content.substring(0, 150)}${dream.content.length > 150 ? '...' : ''}`;
-        
+        const formattedDate = dream.date.toISOString().split("T")[0];
+        dreamsContext += `\nTraum vom ${formattedDate}:\n${dream.content.substring(0, 150)}${dream.content.length > 150 ? "..." : ""}`;
+
         // Add tags if available
         if (dream.tags && dream.tags.length > 0) {
-          dreamsContext += `\nTags: ${dream.tags.join(', ')}`;
+          dreamsContext += `\nTags: ${dream.tags.join(", ")}`;
         }
-        
+
         // Add analysis themes if available
         if (dream.analysis) {
           try {
             const parsedAnalysis = JSON.parse(dream.analysis);
             if (parsedAnalysis.themes) {
-              dreamsContext += `\nHauptthemen: ${parsedAnalysis.themes.join(', ')}`;
+              dreamsContext += `\nHauptthemen: ${parsedAnalysis.themes.join(", ")}`;
             }
           } catch (e) {
             // Ignore parsing errors
@@ -392,7 +443,7 @@ export async function generateDreamWritingPrompts(
         }
       });
     }
-    
+
     // Generate personalized prompts using GPT-4
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -411,24 +462,24 @@ export async function generateDreamWritingPrompts(
           5. Eine Länge von 1-2 Sätzen haben
           6. Deutsch als Sprache verwenden
           
-          Format: Gib die Prompts als JSON-Array zurück, mit genau 5 Strings.`
+          Format: Gib die Prompts als JSON-Array zurück, mit genau 5 Strings.`,
         },
         {
           role: "user",
           content: `Erstelle bitte 5 personalisierte Schreibprompts für mein Traumtagebuch.${dreamsContext}
           
-          Ich interessiere mich besonders für Themen wie: ${themes.join(', ')}.`
-        }
+          Ich interessiere mich besonders für Themen wie: ${themes.join(", ")}.`,
+        },
       ],
-      response_format: { type: "json_object" }
+      response_format: { type: "json_object" },
     });
-    
+
     // Parse the response
     const content = response.choices[0].message.content || "{}";
-    
+
     try {
       const result = JSON.parse(content);
-      
+
       // Extract prompts from the response
       if (Array.isArray(result.prompts) && result.prompts.length > 0) {
         return result.prompts.slice(0, 5); // Ensure we have at most 5 prompts
@@ -439,24 +490,29 @@ export async function generateDreamWritingPrompts(
           "Welche Symbole oder wiederkehrenden Elemente sind dir in deinem Traum aufgefallen?",
           "Wenn dein Traum eine Botschaft für dich hätte, was würde sie sein?",
           "Beschreibe die Umgebung deines Traums im Detail und wie sie dich fühlen ließ.",
-          "Gibt es Verbindungen zwischen diesem Traum und früheren Träumen, die du hattest?"
+          "Gibt es Verbindungen zwischen diesem Traum und früheren Träumen, die du hattest?",
         ];
       }
     } catch (parseError) {
-      console.error("Error parsing OpenAI response for dream prompts:", parseError);
-      
+      console.error(
+        "Error parsing OpenAI response for dream prompts:",
+        parseError,
+      );
+
       // Fallback prompts
       return [
         "Beschreibe die intensivsten Emotionen in deinem Traum und wie sie mit deinem aktuellen Leben zusammenhängen könnten.",
         "Welche Symbole oder wiederkehrenden Elemente sind dir in deinem Traum aufgefallen?",
         "Wenn dein Traum eine Botschaft für dich hätte, was würde sie sein?",
         "Beschreibe die Umgebung deines Traums im Detail und wie sie dich fühlen ließ.",
-        "Gibt es Verbindungen zwischen diesem Traum und früheren Träumen, die du hattest?"
+        "Gibt es Verbindungen zwischen diesem Traum und früheren Träumen, die du hattest?",
       ];
     }
   } catch (error) {
     console.error("Error generating dream writing prompts:", error);
-    throw new Error("Failed to generate dream writing prompts: " + (error as Error).message);
+    throw new Error(
+      "Failed to generate dream writing prompts: " + (error as Error).message,
+    );
   }
 }
 
@@ -472,28 +528,31 @@ export async function analyzeImage(base64Image: string): Promise<string> {
       messages: [
         {
           role: "system",
-          content: "Du bist ein Traumsymbolik-Experte, der traumartige Bilder analysiert. Gib tiefere psychologische Einsichten zu den Symbolen und möglichen Bedeutungen im Traum. Beachte kulturelle und archetypische Symbolik."
+          content:
+            "Du bist ein Traumsymbolik-Experte, der traumartige Bilder analysiert. Gib tiefere psychologische Einsichten zu den Symbolen und möglichen Bedeutungen im Traum. Beachte kulturelle und archetypische Symbolik.",
         },
         {
           role: "user",
           content: [
             {
               type: "text",
-              text: "Beschreibe dieses Bild im Kontext eines Traums. Was könnte es symbolisieren? Erwähne mögliche emotionale Bedeutungen und wie diese Symbole in Träumen interpretiert werden können. Antworte auf Deutsch mit etwa 150-200 Wörtern."
+              text: "Beschreibe dieses Bild im Kontext eines Traums. Was könnte es symbolisieren? Erwähne mögliche emotionale Bedeutungen und wie diese Symbole in Träumen interpretiert werden können. Antworte auf Deutsch mit etwa 150-200 Wörtern.",
             },
             {
               type: "image_url",
               image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`
-              }
-            }
+                url: `data:image/jpeg;base64,${base64Image}`,
+              },
+            },
           ],
         },
       ],
       max_tokens: 800,
     });
 
-    return visionResponse.choices[0].message.content || "Keine Analyse verfügbar";
+    return (
+      visionResponse.choices[0].message.content || "Keine Analyse verfügbar"
+    );
   } catch (error) {
     console.error("Error analyzing image:", error);
     throw new Error("Failed to analyze image: " + (error as Error).message);
@@ -530,25 +589,29 @@ export async function analyzePatterns(
     includeInAnalysis?: boolean;
   }> = [],
   timeRange: string = "30 Tage",
-  userId: number
+  userId: number,
 ): Promise<DeepPatternResponse> {
   try {
     // Filtere Journaleinträge, die für die Analyse freigegeben wurden
-    const includedJournalEntries = journalEntries.filter(entry => entry.includeInAnalysis === true);
-    
+    const includedJournalEntries = journalEntries.filter(
+      (entry) => entry.includeInAnalysis === true,
+    );
+
     // Prüfe, ob genügend Daten für die Analyse vorhanden sind
     const totalEntries = dreams.length + includedJournalEntries.length;
     if (totalEntries < 3) {
-      throw new Error("Mindestens 3 Einträge (Träume und/oder Journaleinträge) werden für eine Musteranalyse benötigt");
+      throw new Error(
+        "Mindestens 3 Einträge (Träume und/oder Journaleinträge) werden für eine Musteranalyse benötigt",
+      );
     }
 
     // Träume nach Datum sortieren (neueste zuerst)
-    const sortedDreams = [...dreams].sort((a, b) => 
-      new Date(b.date).getTime() - new Date(a.date).getTime()
+    const sortedDreams = [...dreams].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
     );
 
     // Vorbereiten der Trauminformationen für die Analyse
-    const dreamSummaries = sortedDreams.map(dream => {
+    const dreamSummaries = sortedDreams.map((dream) => {
       let analysis = null;
       if (dream.analysis) {
         try {
@@ -561,42 +624,50 @@ export async function analyzePatterns(
       return {
         type: "dream",
         title: dream.title,
-        date: dream.date.toISOString().split('T')[0],
-        content: dream.content.substring(0, 300) + (dream.content.length > 300 ? '...' : ''),
+        date: dream.date.toISOString().split("T")[0],
+        content:
+          dream.content.substring(0, 300) +
+          (dream.content.length > 300 ? "..." : ""),
         themes: analysis?.themes || [],
         emotions: analysis?.emotions || [],
         symbols: analysis?.symbols || [],
         tags: dream.tags || [],
         moodBeforeSleep: dream.moodBeforeSleep,
         moodAfterWakeup: dream.moodAfterWakeup,
-        moodNotes: dream.moodNotes
+        moodNotes: dream.moodNotes,
       };
     });
-    
+
     // Journal-Einträge vorbereiten und hinzufügen
-    const journalSummaries = includedJournalEntries.map(entry => {
+    const journalSummaries = includedJournalEntries.map((entry) => {
       return {
         type: "journal",
         title: entry.title,
-        date: entry.date.toISOString().split('T')[0],
-        content: entry.content.substring(0, 300) + (entry.content.length > 300 ? '...' : ''),
+        date: entry.date.toISOString().split("T")[0],
+        content:
+          entry.content.substring(0, 300) +
+          (entry.content.length > 300 ? "..." : ""),
         tags: entry.tags || [],
-        mood: entry.mood
+        mood: entry.mood,
       };
     });
-    
+
     // Alle Einträge kombinieren und nach Datum sortieren
-    const allEntries = [...dreamSummaries, ...journalSummaries].sort((a, b) => 
-      new Date(b.date).getTime() - new Date(a.date).getTime()
+    const allEntries = [...dreamSummaries, ...journalSummaries].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
     );
-    
+
     // Zeitraumsdefinition aus allen Einträgen
-    const oldestDate = allEntries.length > 0 
-      ? new Date(allEntries[allEntries.length - 1].date).toISOString().split('T')[0]
-      : new Date().toISOString().split('T')[0];
-    const newestDate = allEntries.length > 0 
-      ? new Date(allEntries[0].date).toISOString().split('T')[0]
-      : new Date().toISOString().split('T')[0];
+    const oldestDate =
+      allEntries.length > 0
+        ? new Date(allEntries[allEntries.length - 1].date)
+            .toISOString()
+            .split("T")[0]
+        : new Date().toISOString().split("T")[0];
+    const newestDate =
+      allEntries.length > 0
+        ? new Date(allEntries[0].date).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0];
 
     // GPT-4-Anfrage für die Musteranalyse
     const response = await openai.chat.completions.create({
@@ -687,30 +758,37 @@ export async function analyzePatterns(
               "general": ["Allgemeine Empfehlung 1", "Allgemeine Empfehlung 2"],
               "actionable": ["Konkrete Handlung 1", "Konkrete Handlung 2"]
             }
-          }`
+          }`,
         },
         {
           role: "user",
-          content: JSON.stringify(allEntries)
-        }
+          content: JSON.stringify(allEntries),
+        },
       ],
       response_format: { type: "json_object" },
-      max_tokens: 4096
+      max_tokens: 4096,
     });
 
     // Parse and validate the response
     const content = response.choices[0].message.content || "{}";
     const result = JSON.parse(content);
-    
+
     // Basic validation
-    if (!result.overview || !result.recurringSymbols || !result.dominantThemes || 
-        !result.emotionalPatterns || !result.recommendations) {
+    if (
+      !result.overview ||
+      !result.recurringSymbols ||
+      !result.dominantThemes ||
+      !result.emotionalPatterns ||
+      !result.recommendations
+    ) {
       throw new Error("Ungültiges Antwortformat von OpenAI");
     }
-    
+
     return result as DeepPatternResponse;
   } catch (error) {
     console.error("Error analyzing dream patterns:", error);
-    throw new Error("Fehler bei der Musteranalyse: " + (error as Error).message);
+    throw new Error(
+      "Fehler bei der Musteranalyse: " + (error as Error).message,
+    );
   }
 }

@@ -1,20 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { BarChart, LineChart, PieChart, Sparkles, ImageIcon } from "lucide-react";
+import {
+  BarChart,
+  LineChart,
+  PieChart,
+  Sparkles,
+  ImageIcon,
+} from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { 
+import {
   DeepPatternResponse,
   PatternSymbol,
   PatternTheme,
   PatternEmotion,
-  LifeAreaInsight
+  LifeAreaInsight,
 } from "@shared/schema";
 
 // Farben für die Grafiken und Elemente
@@ -43,13 +49,18 @@ export default function DreamPatternAnalysis() {
   const fetchPatternAnalysis = async () => {
     setIsLoading(true);
     try {
-      const response = await apiRequest('GET', `/api/dreams/patterns/analyze?timeRange=${encodeURIComponent(timeRange)}`);
-      
+      const response = await apiRequest(
+        "GET",
+        `/api/dreams/patterns/analyze?timeRange=${encodeURIComponent(timeRange)}`,
+      );
+
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.details || errorData.message || "Fehler bei der Anfrage");
+        throw new Error(
+          errorData.details || errorData.message || "Fehler bei der Anfrage",
+        );
       }
-      
+
       const data = await response.json();
       setAnalysis(data);
     } catch (error) {
@@ -97,29 +108,30 @@ export default function DreamPatternAnalysis() {
     if (trend === "falling") return "↘";
     return "→";
   };
-  
+
   // Positives Stimmungsbild generieren
   const generatePositiveMoodImage = async () => {
     if (!analysis) return;
-    
+
     setIsGeneratingMoodImage(true);
-    
+
     try {
       // In einer tatsächlichen Implementierung würden wir hier die API aufrufen
       // Beispiel: Auswahl der positiven Aspekte aus der Analyse
       const positiveThemes = analysis.dominantThemes
-        .filter(theme => theme.emotionalTone.includes("positiv"))
-        .map(theme => theme.theme);
-      
+        .filter((theme) => theme.emotionalTone.includes("positiv"))
+        .map((theme) => theme.theme);
+
       const positiveEmotions = analysis.emotionalPatterns
-        .filter(emotion => 
-          emotion.trend === "rising" || 
-          emotion.emotion.toLowerCase().includes("freude") ||
-          emotion.emotion.toLowerCase().includes("glück") ||
-          emotion.emotion.toLowerCase().includes("hoffnung")
+        .filter(
+          (emotion) =>
+            emotion.trend === "rising" ||
+            emotion.emotion.toLowerCase().includes("freude") ||
+            emotion.emotion.toLowerCase().includes("glück") ||
+            emotion.emotion.toLowerCase().includes("hoffnung"),
         )
-        .map(emotion => emotion.emotion);
-      
+        .map((emotion) => emotion.emotion);
+
       // Simulierte Bildgenerierung (würde durch API-Aufruf ersetzt)
       setTimeout(() => {
         // Erzeuge eine zufällige Farbe für das SVG
@@ -131,7 +143,7 @@ export default function DreamPatternAnalysis() {
           "#E2F0CB", // Pastellgelb
         ];
         const randomColor = colors[Math.floor(Math.random() * colors.length)];
-        
+
         // Erstelle ein einfaches SVG
         const svgContent = `
         <svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
@@ -142,44 +154,49 @@ export default function DreamPatternAnalysis() {
           <circle cx="250" cy="250" r="50" fill="${randomColor}" opacity="0.4" />
           <circle cx="550" cy="350" r="70" fill="${randomColor}" opacity="0.4" />
         </svg>`;
-        
+
         const dataUrl = `data:image/svg+xml;base64,${btoa(svgContent)}`;
         setMoodImageUrl(dataUrl);
-        
+
         // Erzeuge eine kunstvoll formulierte Beschreibung basierend auf positiven Aspekten
         const descriptionStart = [
           "Diese harmonische Komposition spiegelt ",
           "Dieses ausdrucksstarke Bild verkörpert ",
           "Die sanften Farbabstufungen reflektieren ",
-          "Diese künstlerische Darstellung zeigt "
+          "Diese künstlerische Darstellung zeigt ",
         ];
-        
+
         const descriptionMiddle = [
           `die aufstrebenden Emotionen von ${positiveEmotions.join(" und ")}`,
           `die positiven Themen ${positiveThemes.join(" und ")}`,
-          `eine Reise durch ${positiveThemes[0] || "positive Gedankenwelten"}`
+          `eine Reise durch ${positiveThemes[0] || "positive Gedankenwelten"}`,
         ];
-        
+
         const descriptionEnd = [
           ", umhüllt von einem Gefühl der Leichtigkeit und des inneren Friedens.",
           ", eingebettet in eine Atmosphäre der Hoffnung und des Aufbruchs.",
           ", die dich daran erinnert, dass Wachstum und Veränderung natürliche Teile des Lebens sind.",
-          ", die das Potenzial für persönliche Entwicklung und Selbsterkenntnis symbolisiert."
+          ", die das Potenzial für persönliche Entwicklung und Selbsterkenntnis symbolisiert.",
         ];
-        
-        const randomStart = descriptionStart[Math.floor(Math.random() * descriptionStart.length)];
-        const randomMiddle = descriptionMiddle[Math.floor(Math.random() * descriptionMiddle.length)];
-        const randomEnd = descriptionEnd[Math.floor(Math.random() * descriptionEnd.length)];
-        
+
+        const randomStart =
+          descriptionStart[Math.floor(Math.random() * descriptionStart.length)];
+        const randomMiddle =
+          descriptionMiddle[
+            Math.floor(Math.random() * descriptionMiddle.length)
+          ];
+        const randomEnd =
+          descriptionEnd[Math.floor(Math.random() * descriptionEnd.length)];
+
         setMoodImageDescription(randomStart + randomMiddle + randomEnd);
         setIsGeneratingMoodImage(false);
-        
+
         toast({
           title: "Stimmungsbild erstellt",
-          description: "Dein positives Stimmungsbild wurde erfolgreich generiert.",
+          description:
+            "Dein positives Stimmungsbild wurde erfolgreich generiert.",
         });
       }, 2000);
-      
     } catch (error) {
       console.error("Error generating mood image:", error);
       toast({
@@ -196,7 +213,10 @@ export default function DreamPatternAnalysis() {
       <div className="flex flex-col items-center justify-center min-h-[400px]">
         <Loader2 className="h-12 w-12 animate-spin text-dream-primary mb-4" />
         <p className="text-lg text-gray-600">Analysiere Traummuster...</p>
-        <p className="text-sm text-gray-500 mt-2">Dieser Vorgang kann einige Momente dauern, da komplexe AI-Analysen durchgeführt werden.</p>
+        <p className="text-sm text-gray-500 mt-2">
+          Dieser Vorgang kann einige Momente dauern, da komplexe AI-Analysen
+          durchgeführt werden.
+        </p>
       </div>
     );
   }
@@ -205,33 +225,40 @@ export default function DreamPatternAnalysis() {
     return (
       <div className="space-y-8">
         <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-2xl font-bold text-dream-dark mb-4">Traummuster-Analyse</h2>
+          <h2 className="text-2xl font-bold text-dream-dark mb-4">
+            Traummuster-Analyse
+          </h2>
           <p className="text-gray-600 mb-6">
-            Entdecke tiefere Muster in deinen Traumaufzeichnungen mit dieser erweiterten KI-Analyse. 
-            Die Analyse identifiziert wiederkehrende Symbole, emotionale Muster und thematische Verbindungen 
-            über einen bestimmten Zeitraum.
+            Entdecke tiefere Muster in deinen Traumaufzeichnungen mit dieser
+            erweiterten KI-Analyse. Die Analyse identifiziert wiederkehrende
+            Symbole, emotionale Muster und thematische Verbindungen über einen
+            bestimmten Zeitraum.
           </p>
-          
+
           <div className="flex flex-col md:flex-row gap-4 mb-6">
             <div className="flex-1">
-              <h3 className="text-lg font-medium text-gray-800 mb-2">Zeitraum wählen</h3>
+              <h3 className="text-lg font-medium text-gray-800 mb-2">
+                Zeitraum wählen
+              </h3>
               <div className="flex flex-wrap gap-2">
-                {["7 Tage", "30 Tage", "3 Monate", "6 Monate", "Alle Zeit"].map((range) => (
-                  <Badge
-                    key={range}
-                    variant={timeRange === range ? "default" : "outline"}
-                    className={`px-4 py-2 cursor-pointer ${timeRange === range ? "bg-dream-primary" : ""}`}
-                    onClick={() => handleTimeRangeChange(range)}
-                  >
-                    {range}
-                  </Badge>
-                ))}
+                {["7 Tage", "30 Tage", "3 Monate", "6 Monate", "Alle Zeit"].map(
+                  (range) => (
+                    <Badge
+                      key={range}
+                      variant={timeRange === range ? "default" : "outline"}
+                      className={`px-4 py-2 cursor-pointer ${timeRange === range ? "bg-dream-primary" : ""}`}
+                      onClick={() => handleTimeRangeChange(range)}
+                    >
+                      {range}
+                    </Badge>
+                  ),
+                )}
               </div>
             </div>
           </div>
-          
-          <Button 
-            onClick={fetchPatternAnalysis} 
+
+          <Button
+            onClick={fetchPatternAnalysis}
             className="bg-dream-primary hover:bg-dream-dark text-white"
           >
             Musteranalyse starten
@@ -250,11 +277,12 @@ export default function DreamPatternAnalysis() {
           <div>
             <h2 className="text-2xl font-bold mb-2">Traummuster-Analyse</h2>
             <p className="text-white/80">
-              Zeitraum: {analysis.overview.timespan} • {analysis.overview.dreamCount} Träume analysiert
+              Zeitraum: {analysis.overview.timespan} •{" "}
+              {analysis.overview.dreamCount} Träume analysiert
             </p>
           </div>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="border-white text-white hover:bg-white/20 hover:text-white"
             onClick={() => setAnalysis(null)}
           >
@@ -282,24 +310,34 @@ export default function DreamPatternAnalysis() {
         {/* Übersichts-Tab */}
         <TabsContent value="uebersicht" className="space-y-6">
           <Card className="p-6">
-            <h3 className="text-xl font-bold text-dream-dark mb-4">Überblick</h3>
+            <h3 className="text-xl font-bold text-dream-dark mb-4">
+              Überblick
+            </h3>
             <p className="text-gray-700 whitespace-pre-line mb-6">
               {analysis.overview.summary}
             </p>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Vorherrschende Stimmung</h4>
-                <p className="text-lg font-semibold text-dream-primary">{analysis.overview.dominantMood}</p>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">
+                  Vorherrschende Stimmung
+                </h4>
+                <p className="text-lg font-semibold text-dream-primary">
+                  {analysis.overview.dominantMood}
+                </p>
               </div>
-              
+
               <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Zeitraum</h4>
-                <p className="text-lg font-semibold text-dream-primary">{analysis.overview.timespan}</p>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">
+                  Zeitraum
+                </h4>
+                <p className="text-lg font-semibold text-dream-primary">
+                  {analysis.overview.timespan}
+                </p>
               </div>
             </div>
           </Card>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Symbole */}
             <Card className="p-6">
@@ -309,20 +347,26 @@ export default function DreamPatternAnalysis() {
                 </div>
                 <h3 className="text-lg font-bold text-gray-800">Top Symbole</h3>
               </div>
-              
+
               <ul className="space-y-3">
                 {analysis.recurringSymbols.slice(0, 3).map((symbol, index) => (
                   <li key={index} className="flex items-center justify-between">
-                    <span className="text-gray-700 font-medium">{symbol.symbol}</span>
+                    <span className="text-gray-700 font-medium">
+                      {symbol.symbol}
+                    </span>
                     <div className="flex items-center">
-                      <span className="text-sm text-gray-500 mr-2">{symbol.frequency}%</span>
-                      <div className={`w-2 h-2 rounded-full ${getFrequencyColor(symbol.frequency)}`}></div>
+                      <span className="text-sm text-gray-500 mr-2">
+                        {symbol.frequency}%
+                      </span>
+                      <div
+                        className={`w-2 h-2 rounded-full ${getFrequencyColor(symbol.frequency)}`}
+                      ></div>
                     </div>
                   </li>
                 ))}
               </ul>
             </Card>
-            
+
             {/* Themen */}
             <Card className="p-6">
               <div className="flex items-center mb-4">
@@ -331,59 +375,78 @@ export default function DreamPatternAnalysis() {
                 </div>
                 <h3 className="text-lg font-bold text-gray-800">Top Themen</h3>
               </div>
-              
+
               <ul className="space-y-3">
                 {analysis.dominantThemes.slice(0, 3).map((theme, index) => (
                   <li key={index} className="flex items-center justify-between">
-                    <span className="text-gray-700 font-medium">{theme.theme}</span>
+                    <span className="text-gray-700 font-medium">
+                      {theme.theme}
+                    </span>
                     <div className="flex items-center">
-                      <span className="text-sm text-gray-500 mr-2">{theme.frequency}%</span>
-                      <div className={`w-2 h-2 rounded-full ${getEmotionalToneColor(theme.emotionalTone)}`}></div>
+                      <span className="text-sm text-gray-500 mr-2">
+                        {theme.frequency}%
+                      </span>
+                      <div
+                        className={`w-2 h-2 rounded-full ${getEmotionalToneColor(theme.emotionalTone)}`}
+                      ></div>
                     </div>
                   </li>
                 ))}
               </ul>
             </Card>
-            
+
             {/* Emotionen */}
             <Card className="p-6">
               <div className="flex items-center mb-4">
                 <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center mr-3">
                   <LineChart className="h-6 w-6 text-amber-600" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-800">Top Emotionen</h3>
+                <h3 className="text-lg font-bold text-gray-800">
+                  Top Emotionen
+                </h3>
               </div>
-              
+
               <ul className="space-y-3">
-                {analysis.emotionalPatterns.slice(0, 3).map((emotion, index) => (
-                  <li key={index} className="flex items-center justify-between">
-                    <span className="text-gray-700 font-medium">{emotion.emotion}</span>
-                    <div className="flex items-center">
-                      <span className={`text-sm ${getTrendColor(emotion.trend)} mr-1`}>
-                        {getTrendIcon(emotion.trend)}
+                {analysis.emotionalPatterns
+                  .slice(0, 3)
+                  .map((emotion, index) => (
+                    <li
+                      key={index}
+                      className="flex items-center justify-between"
+                    >
+                      <span className="text-gray-700 font-medium">
+                        {emotion.emotion}
                       </span>
-                      <span className="text-sm text-gray-500">
-                        {Math.round(emotion.averageIntensity * 100)}%
-                      </span>
-                    </div>
-                  </li>
-                ))}
+                      <div className="flex items-center">
+                        <span
+                          className={`text-sm ${getTrendColor(emotion.trend)} mr-1`}
+                        >
+                          {getTrendIcon(emotion.trend)}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {Math.round(emotion.averageIntensity * 100)}%
+                        </span>
+                      </div>
+                    </li>
+                  ))}
               </ul>
             </Card>
           </div>
-          
+
           {/* Wortfrequenz */}
           <Card className="p-6">
-            <h3 className="text-xl font-bold text-dream-dark mb-4">Häufige Wörter</h3>
+            <h3 className="text-xl font-bold text-dream-dark mb-4">
+              Häufige Wörter
+            </h3>
             <div className="flex flex-wrap gap-2">
               {analysis.wordFrequency.map((word, index) => (
-                <Badge 
-                  key={index} 
-                  variant="secondary" 
+                <Badge
+                  key={index}
+                  variant="secondary"
                   className="px-4 py-2 text-lg font-semibold"
-                  style={{ 
-                    fontSize: `${Math.min(1.5 + (word.count / 10), 2.5)}rem`,
-                    opacity: 0.6 + (word.count / 30)
+                  style={{
+                    fontSize: `${Math.min(1.5 + word.count / 10, 2.5)}rem`,
+                    opacity: 0.6 + word.count / 30,
                   }}
                 >
                   {word.word}
@@ -391,26 +454,30 @@ export default function DreamPatternAnalysis() {
               ))}
             </div>
           </Card>
-          
+
           {/* Empfehlungen */}
           <Card className="p-6">
-            <h3 className="text-xl font-bold text-dream-dark mb-4">Empfehlungen</h3>
-            
+            <h3 className="text-xl font-bold text-dream-dark mb-4">
+              Empfehlungen
+            </h3>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <h4 className="text-lg font-semibold text-gray-700 mb-3">
                   Allgemeine Einsichten
                 </h4>
                 <ul className="space-y-2">
-                  {analysis.recommendations.general.map((recommendation, index) => (
-                    <li key={index} className="flex items-start">
-                      <span className="text-dream-primary mr-2">•</span>
-                      <span className="text-gray-700">{recommendation}</span>
-                    </li>
-                  ))}
+                  {analysis.recommendations.general.map(
+                    (recommendation, index) => (
+                      <li key={index} className="flex items-start">
+                        <span className="text-dream-primary mr-2">•</span>
+                        <span className="text-gray-700">{recommendation}</span>
+                      </li>
+                    ),
+                  )}
                 </ul>
               </div>
-              
+
               <div>
                 <h4 className="text-lg font-semibold text-gray-700 mb-3">
                   Handlungsvorschläge
@@ -431,32 +498,47 @@ export default function DreamPatternAnalysis() {
         {/* Symbole-Tab */}
         <TabsContent value="symbole" className="space-y-6">
           <Card className="p-6">
-            <h3 className="text-xl font-bold text-dream-dark mb-6">Wiederkehrende Symbole</h3>
-            
+            <h3 className="text-xl font-bold text-dream-dark mb-6">
+              Wiederkehrende Symbole
+            </h3>
+
             <div className="space-y-8">
               {analysis.recurringSymbols.map((symbol, index) => (
-                <div key={index} className="border-b border-gray-200 pb-6 last:border-none last:pb-0">
+                <div
+                  key={index}
+                  className="border-b border-gray-200 pb-6 last:border-none last:pb-0"
+                >
                   <div className="flex flex-col md:flex-row md:items-center justify-between mb-4">
                     <h4 className="text-lg font-semibold text-dream-primary">
                       {symbol.symbol}
                     </h4>
-                    <Badge className={`${getFrequencyColor(symbol.frequency)} px-3 py-1 self-start md:self-auto mt-1 md:mt-0`}>
+                    <Badge
+                      className={`${getFrequencyColor(symbol.frequency)} px-3 py-1 self-start md:self-auto mt-1 md:mt-0`}
+                    >
                       Häufigkeit: {symbol.frequency}%
                     </Badge>
                   </div>
-                  
+
                   <p className="text-gray-700 mb-3">{symbol.description}</p>
-                  
+
                   <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                    <h5 className="font-medium text-gray-700 mb-2">Mögliche Bedeutung</h5>
+                    <h5 className="font-medium text-gray-700 mb-2">
+                      Mögliche Bedeutung
+                    </h5>
                     <p className="text-gray-600">{symbol.possibleMeaning}</p>
                   </div>
-                  
+
                   <div>
-                    <h5 className="font-medium text-gray-700 mb-2">Erscheint in Kontexten:</h5>
+                    <h5 className="font-medium text-gray-700 mb-2">
+                      Erscheint in Kontexten:
+                    </h5>
                     <div className="flex flex-wrap gap-2">
                       {symbol.contexts.map((context, cIdx) => (
-                        <Badge key={cIdx} variant="outline" className="bg-gray-50">
+                        <Badge
+                          key={cIdx}
+                          variant="outline"
+                          className="bg-gray-50"
+                        >
                           {context}
                         </Badge>
                       ))}
@@ -471,17 +553,25 @@ export default function DreamPatternAnalysis() {
         {/* Themen-Tab */}
         <TabsContent value="themen" className="space-y-6">
           <Card className="p-6">
-            <h3 className="text-xl font-bold text-dream-dark mb-6">Dominante Themen</h3>
-            
+            <h3 className="text-xl font-bold text-dream-dark mb-6">
+              Dominante Themen
+            </h3>
+
             <div className="space-y-8">
               {analysis.dominantThemes.map((theme, index) => (
-                <div key={index} className="border-b border-gray-200 pb-6 last:border-none last:pb-0">
+                <div
+                  key={index}
+                  className="border-b border-gray-200 pb-6 last:border-none last:pb-0"
+                >
                   <div className="flex flex-col md:flex-row md:items-center justify-between mb-4">
                     <h4 className="text-lg font-semibold text-dream-primary">
                       {theme.theme}
                     </h4>
                     <div className="flex items-center gap-2 self-start md:self-auto mt-1 md:mt-0">
-                      <Badge variant="outline" className={`${getEmotionalToneColor(theme.emotionalTone)} border-0 text-white`}>
+                      <Badge
+                        variant="outline"
+                        className={`${getEmotionalToneColor(theme.emotionalTone)} border-0 text-white`}
+                      >
                         {theme.emotionalTone}
                       </Badge>
                       <Badge variant="secondary">
@@ -489,14 +579,20 @@ export default function DreamPatternAnalysis() {
                       </Badge>
                     </div>
                   </div>
-                  
+
                   <p className="text-gray-700 mb-3">{theme.description}</p>
-                  
+
                   <div>
-                    <h5 className="font-medium text-gray-700 mb-2">Verbundene Symbole:</h5>
+                    <h5 className="font-medium text-gray-700 mb-2">
+                      Verbundene Symbole:
+                    </h5>
                     <div className="flex flex-wrap gap-2">
                       {theme.relatedSymbols.map((symbol, sIdx) => (
-                        <Badge key={sIdx} variant="outline" className="bg-gray-50">
+                        <Badge
+                          key={sIdx}
+                          variant="outline"
+                          className="bg-gray-50"
+                        >
                           {symbol}
                         </Badge>
                       ))}
@@ -511,19 +607,29 @@ export default function DreamPatternAnalysis() {
         {/* Emotionen-Tab */}
         <TabsContent value="emotionen" className="space-y-6">
           <Card className="p-6">
-            <h3 className="text-xl font-bold text-dream-dark mb-6">Emotionale Muster</h3>
-            
+            <h3 className="text-xl font-bold text-dream-dark mb-6">
+              Emotionale Muster
+            </h3>
+
             <div className="space-y-8">
               {analysis.emotionalPatterns.map((emotion, index) => (
-                <div key={index} className="border-b border-gray-200 pb-6 last:border-none last:pb-0">
+                <div
+                  key={index}
+                  className="border-b border-gray-200 pb-6 last:border-none last:pb-0"
+                >
                   <div className="flex flex-col md:flex-row md:items-center justify-between mb-4">
                     <h4 className="text-lg font-semibold text-dream-primary">
                       {emotion.emotion}
                     </h4>
                     <div className="flex items-center gap-2 self-start md:self-auto mt-1 md:mt-0">
-                      <Badge className={`${getTrendColor(emotion.trend)} bg-opacity-10 border-0`}>
-                        {emotion.trend === "rising" ? "Steigend" : emotion.trend === "falling" ? "Fallend" : "Stabil"}
-                        {" "}
+                      <Badge
+                        className={`${getTrendColor(emotion.trend)} bg-opacity-10 border-0`}
+                      >
+                        {emotion.trend === "rising"
+                          ? "Steigend"
+                          : emotion.trend === "falling"
+                            ? "Fallend"
+                            : "Stabil"}{" "}
                         {getTrendIcon(emotion.trend)}
                       </Badge>
                       <Badge variant="secondary">
@@ -531,12 +637,14 @@ export default function DreamPatternAnalysis() {
                       </Badge>
                     </div>
                   </div>
-                  
+
                   <div className="mb-4">
-                    <h5 className="font-medium text-gray-700 mb-2">Durchschnittliche Intensität:</h5>
+                    <h5 className="font-medium text-gray-700 mb-2">
+                      Durchschnittliche Intensität:
+                    </h5>
                     <div className="w-full bg-gray-200 rounded-full h-2.5">
-                      <div 
-                        className="bg-dream-accent h-2.5 rounded-full" 
+                      <div
+                        className="bg-dream-accent h-2.5 rounded-full"
                         style={{ width: `${emotion.averageIntensity * 100}%` }}
                       ></div>
                     </div>
@@ -548,12 +656,18 @@ export default function DreamPatternAnalysis() {
                       <span className="text-xs text-gray-500">Hoch</span>
                     </div>
                   </div>
-                  
+
                   <div>
-                    <h5 className="font-medium text-gray-700 mb-2">Verbunden mit Themen:</h5>
+                    <h5 className="font-medium text-gray-700 mb-2">
+                      Verbunden mit Themen:
+                    </h5>
                     <div className="flex flex-wrap gap-2">
                       {emotion.associatedThemes.map((theme, tIdx) => (
-                        <Badge key={tIdx} variant="outline" className="bg-gray-50">
+                        <Badge
+                          key={tIdx}
+                          variant="outline"
+                          className="bg-gray-50"
+                        >
                           {theme}
                         </Badge>
                       ))}
@@ -568,18 +682,25 @@ export default function DreamPatternAnalysis() {
         {/* Einsichten-Tab */}
         <TabsContent value="einsichten" className="space-y-6">
           <Card className="p-6">
-            <h3 className="text-xl font-bold text-dream-dark mb-6">Lebensbereiche</h3>
-            
+            <h3 className="text-xl font-bold text-dream-dark mb-6">
+              Lebensbereiche
+            </h3>
+
             <div className="space-y-8">
               {analysis.lifeAreaInsights.map((insight, index) => (
-                <div key={index} className="border-b border-gray-200 pb-6 last:border-none last:pb-0">
+                <div
+                  key={index}
+                  className="border-b border-gray-200 pb-6 last:border-none last:pb-0"
+                >
                   <h4 className="text-lg font-semibold text-dream-primary mb-4">
                     {insight.area}
                   </h4>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                     <div>
-                      <h5 className="font-medium text-gray-700 mb-2">Stärken:</h5>
+                      <h5 className="font-medium text-gray-700 mb-2">
+                        Stärken:
+                      </h5>
                       <ul className="space-y-1">
                         {insight.strengths.map((strength, sIdx) => (
                           <li key={sIdx} className="flex items-start">
@@ -589,9 +710,11 @@ export default function DreamPatternAnalysis() {
                         ))}
                       </ul>
                     </div>
-                    
+
                     <div>
-                      <h5 className="font-medium text-gray-700 mb-2">Herausforderungen:</h5>
+                      <h5 className="font-medium text-gray-700 mb-2">
+                        Herausforderungen:
+                      </h5>
                       <ul className="space-y-1">
                         {insight.challenges.map((challenge, cIdx) => (
                           <li key={cIdx} className="flex items-start">
@@ -602,20 +725,28 @@ export default function DreamPatternAnalysis() {
                       </ul>
                     </div>
                   </div>
-                  
+
                   <div className="mb-4">
-                    <h5 className="font-medium text-gray-700 mb-2">Zugehörige Symbole:</h5>
+                    <h5 className="font-medium text-gray-700 mb-2">
+                      Zugehörige Symbole:
+                    </h5>
                     <div className="flex flex-wrap gap-2">
                       {insight.relatedSymbols.map((symbol, rIdx) => (
-                        <Badge key={rIdx} variant="outline" className="bg-gray-50">
+                        <Badge
+                          key={rIdx}
+                          variant="outline"
+                          className="bg-gray-50"
+                        >
                           {symbol}
                         </Badge>
                       ))}
                     </div>
                   </div>
-                  
+
                   <div>
-                    <h5 className="font-medium text-gray-700 mb-2">Vorschläge:</h5>
+                    <h5 className="font-medium text-gray-700 mb-2">
+                      Vorschläge:
+                    </h5>
                     <ul className="space-y-1">
                       {insight.suggestions.map((suggestion, sgIdx) => (
                         <li key={sgIdx} className="flex items-start">
@@ -629,18 +760,20 @@ export default function DreamPatternAnalysis() {
               ))}
             </div>
           </Card>
-          
+
           <Card className="p-6">
-            <h3 className="text-xl font-bold text-dream-dark mb-4">Persönliches Wachstum</h3>
-            
+            <h3 className="text-xl font-bold text-dream-dark mb-4">
+              Persönliches Wachstum
+            </h3>
+
             <div className="mb-6">
               <h4 className="text-lg font-semibold text-gray-700 mb-3">
                 Potentielle Wachstumsbereiche
               </h4>
               <div className="flex flex-wrap gap-2">
                 {analysis.personalGrowth.potentialAreas.map((area, index) => (
-                  <Badge 
-                    key={index} 
+                  <Badge
+                    key={index}
                     className="px-4 py-2 bg-dream-primary/10 text-dream-primary"
                   >
                     {area}
@@ -648,51 +781,70 @@ export default function DreamPatternAnalysis() {
                 ))}
               </div>
             </div>
-            
+
             <div>
               <h4 className="text-lg font-semibold text-gray-700 mb-3">
                 Vorschläge für persönliches Wachstum
               </h4>
               <ul className="space-y-2">
-                {analysis.personalGrowth.suggestions.map((suggestion, index) => (
-                  <li key={index} className="flex items-start">
-                    <span className="text-dream-accent mr-2">•</span>
-                    <span className="text-gray-700">{suggestion}</span>
-                  </li>
-                ))}
+                {analysis.personalGrowth.suggestions.map(
+                  (suggestion, index) => (
+                    <li key={index} className="flex items-start">
+                      <span className="text-dream-accent mr-2">•</span>
+                      <span className="text-gray-700">{suggestion}</span>
+                    </li>
+                  ),
+                )}
               </ul>
             </div>
           </Card>
-          
+
           <Card className="p-6">
-            <h3 className="text-xl font-bold text-dream-dark mb-4">Zeitliche Entwicklung</h3>
-            
+            <h3 className="text-xl font-bold text-dream-dark mb-4">
+              Zeitliche Entwicklung
+            </h3>
+
             <div className="space-y-6">
               {analysis.timeline.periods.map((period, index) => (
-                <div key={index} className="border-l-4 border-dream-primary pl-4 py-2">
+                <div
+                  key={index}
+                  className="border-l-4 border-dream-primary pl-4 py-2"
+                >
                   <h4 className="text-lg font-semibold text-gray-800 mb-2">
                     {period.timeframe}
                   </h4>
-                  
+
                   <p className="text-gray-700 mb-3">{period.summary}</p>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <h5 className="text-sm font-medium text-gray-600 mb-1">Dominante Themen:</h5>
+                      <h5 className="text-sm font-medium text-gray-600 mb-1">
+                        Dominante Themen:
+                      </h5>
                       <div className="flex flex-wrap gap-1">
                         {period.dominantThemes.map((theme, tIdx) => (
-                          <Badge key={tIdx} variant="outline" className="bg-gray-50 text-xs">
+                          <Badge
+                            key={tIdx}
+                            variant="outline"
+                            className="bg-gray-50 text-xs"
+                          >
                             {theme}
                           </Badge>
                         ))}
                       </div>
                     </div>
-                    
+
                     <div>
-                      <h5 className="text-sm font-medium text-gray-600 mb-1">Dominante Emotionen:</h5>
+                      <h5 className="text-sm font-medium text-gray-600 mb-1">
+                        Dominante Emotionen:
+                      </h5>
                       <div className="flex flex-wrap gap-1">
                         {period.dominantEmotions.map((emotion, eIdx) => (
-                          <Badge key={eIdx} variant="outline" className="bg-gray-50 text-xs">
+                          <Badge
+                            key={eIdx}
+                            variant="outline"
+                            className="bg-gray-50 text-xs"
+                          >
                             {emotion}
                           </Badge>
                         ))}
@@ -708,17 +860,20 @@ export default function DreamPatternAnalysis() {
         {/* Stimmungsbild-Tab */}
         <TabsContent value="stimmungsbild" className="space-y-6">
           <Card className="p-6">
-            <h3 className="text-xl font-bold text-dream-dark mb-4">Positives Stimmungsbild</h3>
-            
+            <h3 className="text-xl font-bold text-dream-dark mb-4">
+              Positives Stimmungsbild
+            </h3>
+
             <p className="text-gray-700 mb-6">
-              Entdecke die positiven Aspekte deiner Traumanalyse in einem inspirierenden Bild. 
-              Dieses Stimmungsbild hebt die aufbauenden Themen und Emotionen hervor und unterstützt dich 
-              dabei, die positiven Aspekte deiner Erfahrungen zu visualisieren.
+              Entdecke die positiven Aspekte deiner Traumanalyse in einem
+              inspirierenden Bild. Dieses Stimmungsbild hebt die aufbauenden
+              Themen und Emotionen hervor und unterstützt dich dabei, die
+              positiven Aspekte deiner Erfahrungen zu visualisieren.
             </p>
-            
+
             {!moodImageUrl ? (
               <div className="flex flex-col items-center justify-center p-8 text-center">
-                <Button 
+                <Button
                   onClick={generatePositiveMoodImage}
                   disabled={isGeneratingMoodImage}
                   className="bg-dream-primary hover:bg-dream-dark text-white mb-4 gap-2"
@@ -736,15 +891,16 @@ export default function DreamPatternAnalysis() {
                   )}
                 </Button>
                 <p className="text-sm text-gray-500">
-                  Das Bild wird basierend auf den positiven Aspekten deiner Traumanalyse erstellt.
+                  Das Bild wird basierend auf den positiven Aspekten deiner
+                  Traumanalyse erstellt.
                 </p>
               </div>
             ) : (
               <div className="space-y-6">
                 <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden shadow-lg">
-                  <img 
-                    src={moodImageUrl} 
-                    alt="Positives Stimmungsbild" 
+                  <img
+                    src={moodImageUrl}
+                    alt="Positives Stimmungsbild"
                     className="object-cover w-full h-full"
                   />
                   <Button
@@ -757,7 +913,7 @@ export default function DreamPatternAnalysis() {
                     Neu generieren
                   </Button>
                 </div>
-                
+
                 {moodImageDescription && (
                   <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
                     <h4 className="text-lg font-semibold text-dream-primary mb-2">
@@ -768,7 +924,7 @@ export default function DreamPatternAnalysis() {
                     </p>
                   </div>
                 )}
-                
+
                 <div className="bg-dream-primary/10 p-6 rounded-lg">
                   <h4 className="text-lg font-semibold text-dream-primary mb-2">
                     Wie du dieses Bild nutzen kannst
@@ -776,15 +932,24 @@ export default function DreamPatternAnalysis() {
                   <ul className="space-y-2">
                     <li className="flex items-start">
                       <span className="text-dream-primary mr-2">•</span>
-                      <span className="text-gray-700">Verwende es als Hintergrundbild auf deinem Gerät, um dich an die positiven Aspekte zu erinnern.</span>
+                      <span className="text-gray-700">
+                        Verwende es als Hintergrundbild auf deinem Gerät, um
+                        dich an die positiven Aspekte zu erinnern.
+                      </span>
                     </li>
                     <li className="flex items-start">
                       <span className="text-dream-primary mr-2">•</span>
-                      <span className="text-gray-700">Speichere es in deinem Journal als visuelle Erinnerung an deine Stimmung und Gefühle.</span>
+                      <span className="text-gray-700">
+                        Speichere es in deinem Journal als visuelle Erinnerung
+                        an deine Stimmung und Gefühle.
+                      </span>
                     </li>
                     <li className="flex items-start">
                       <span className="text-dream-primary mr-2">•</span>
-                      <span className="text-gray-700">Betrachte es als Inspirationsquelle für Momente, in denen du Motivation brauchst.</span>
+                      <span className="text-gray-700">
+                        Betrachte es als Inspirationsquelle für Momente, in
+                        denen du Motivation brauchst.
+                      </span>
                     </li>
                   </ul>
                 </div>

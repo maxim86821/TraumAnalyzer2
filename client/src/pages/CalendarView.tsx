@@ -13,61 +13,65 @@ import { CalendarIcon, ArrowLeftIcon, MoonIcon } from "lucide-react";
 export default function CalendarView() {
   const [_, setLocation] = useLocation();
   const [selectedDay, setSelectedDay] = useState<Date | undefined>(undefined);
-  
+
   // Fetch dreams from the API
   const { data: dreams, isLoading } = useQuery<Dream[]>({
-    queryKey: ['/api/dreams'],
+    queryKey: ["/api/dreams"],
   });
 
   // Holen wir uns die Tage, an denen Träume aufgetreten sind
   const getOccurredDates = () => {
     if (!dreams || dreams.length === 0) return [];
-    
+
     // Datenobjekte aus den Traumdaten extrahieren
-    return dreams.map(dream => {
-      // Sicherstellen, dass wir gültige Datumsobjekte haben (verarbeitet sowohl Date als auch ISO-String)
-      const dreamDate = typeof dream.date === 'string' 
-        ? parseISO(dream.date) 
-        : new Date(dream.date);
-        
-      return isValid(dreamDate) ? dreamDate : null;
-    }).filter(Boolean) as Date[];
+    return dreams
+      .map((dream) => {
+        // Sicherstellen, dass wir gültige Datumsobjekte haben (verarbeitet sowohl Date als auch ISO-String)
+        const dreamDate =
+          typeof dream.date === "string"
+            ? parseISO(dream.date)
+            : new Date(dream.date);
+
+        return isValid(dreamDate) ? dreamDate : null;
+      })
+      .filter(Boolean) as Date[];
   };
-  
+
   // Träume für den ausgewählten Tag filtern
   const getSelectedDayDreams = () => {
     if (!selectedDay || !dreams) return [];
-    
-    return dreams.filter(dream => {
-      const dreamDate = typeof dream.date === 'string' 
-        ? parseISO(dream.date) 
-        : new Date(dream.date);
-        
+
+    return dreams.filter((dream) => {
+      const dreamDate =
+        typeof dream.date === "string"
+          ? parseISO(dream.date)
+          : new Date(dream.date);
+
       return isValid(dreamDate) && isSameDay(dreamDate, selectedDay);
     });
   };
-  
+
   // Traum-Termine für den Kalender
   const dreamDates = getOccurredDates();
   const selectedDayDreams = getSelectedDayDreams();
-  
+
   // Anpassung für den Kalender - Tage mit Träumen markieren
   const modifiers = {
     dreamDay: dreamDates,
   };
-  
+
   // Styling für den Kalender
   const modifiersStyles = {
     dreamDay: {
-      backgroundColor: 'rgba(139, 92, 246, 0.15)',
-      borderRadius: '100%',
-      color: '#8B5CF6'
-    }
+      backgroundColor: "rgba(139, 92, 246, 0.15)",
+      borderRadius: "100%",
+      color: "#8B5CF6",
+    },
   };
 
   // Funktion zum Formatieren des Datums in deutschem Format
   const formatDate = (date: Date) => {
-    return format(date, 'd. MMMM yyyy', { locale: de });
+    return format(date, "d. MMMM yyyy", { locale: de });
   };
 
   if (isLoading) {
@@ -86,8 +90,8 @@ export default function CalendarView() {
           <CalendarIcon className="mr-2 h-6 w-6 text-dream-primary" />
           Traumkalender
         </h1>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           size="sm"
           onClick={() => setLocation("/")}
           className="flex items-center"
@@ -96,7 +100,7 @@ export default function CalendarView() {
           Zurück zur Übersicht
         </Button>
       </div>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Kalender */}
         <div className="lg:col-span-2">
@@ -121,7 +125,7 @@ export default function CalendarView() {
             </CardContent>
           </Card>
         </div>
-        
+
         {/* Träume des ausgewählten Tages */}
         <div>
           <Card className="overflow-hidden bg-white shadow-md h-full">
@@ -131,28 +135,41 @@ export default function CalendarView() {
                   <h2 className="text-lg font-semibold mb-4">
                     Träume am {formatDate(selectedDay)}
                   </h2>
-                  
+
                   {selectedDayDreams.length > 0 ? (
                     <div className="space-y-4">
                       {selectedDayDreams.map((dream) => (
-                        <div 
-                          key={dream.id} 
+                        <div
+                          key={dream.id}
                           className="p-4 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
                           onClick={() => setLocation(`/dreams/${dream.id}`)}
                         >
                           <div className="flex items-start justify-between">
-                            <h3 className="font-medium text-gray-800">{dream.title}</h3>
-                            <Badge variant="outline" className="bg-dream-light text-dream-primary">
+                            <h3 className="font-medium text-gray-800">
+                              {dream.title}
+                            </h3>
+                            <Badge
+                              variant="outline"
+                              className="bg-dream-light text-dream-primary"
+                            >
                               <MoonIcon className="h-3 w-3 mr-1" />
-                              {dream.moodAfterWakeup ? `${dream.moodAfterWakeup}/10` : 'Keine Stimmung'}
+                              {dream.moodAfterWakeup
+                                ? `${dream.moodAfterWakeup}/10`
+                                : "Keine Stimmung"}
                             </Badge>
                           </div>
-                          <p className="text-sm text-gray-600 mt-2 line-clamp-2">{dream.content}</p>
-                          
+                          <p className="text-sm text-gray-600 mt-2 line-clamp-2">
+                            {dream.content}
+                          </p>
+
                           {dream.tags && dream.tags.length > 0 && (
                             <div className="mt-3 flex flex-wrap gap-1">
                               {dream.tags.map((tag, idx) => (
-                                <Badge key={idx} variant="secondary" className="text-xs">
+                                <Badge
+                                  key={idx}
+                                  variant="secondary"
+                                  className="text-xs"
+                                >
                                   {tag}
                                 </Badge>
                               ))}
@@ -171,42 +188,58 @@ export default function CalendarView() {
               ) : (
                 <div className="text-center py-20 text-gray-500">
                   <CalendarIcon className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-                  <p>Wähle ein Datum im Kalender aus, um die Traumeinträge zu sehen</p>
+                  <p>
+                    Wähle ein Datum im Kalender aus, um die Traumeinträge zu
+                    sehen
+                  </p>
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
       </div>
-      
+
       {/* Statistik */}
       <div className="mt-6">
         <Card className="overflow-hidden bg-white shadow-md">
           <CardContent className="p-6">
             <h2 className="text-lg font-semibold mb-4">Traumstatistik</h2>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="p-4 bg-dream-light rounded-lg">
-                <h3 className="text-sm font-medium text-dream-primary mb-1">Gesamtzahl der Träume</h3>
-                <p className="text-2xl font-bold text-dream-dark">{dreams?.length || 0}</p>
+                <h3 className="text-sm font-medium text-dream-primary mb-1">
+                  Gesamtzahl der Träume
+                </h3>
+                <p className="text-2xl font-bold text-dream-dark">
+                  {dreams?.length || 0}
+                </p>
               </div>
-              
+
               <div className="p-4 bg-blue-50 rounded-lg">
-                <h3 className="text-sm font-medium text-blue-600 mb-1">Tage mit Träumen</h3>
-                <p className="text-2xl font-bold text-blue-700">{dreamDates.length}</p>
+                <h3 className="text-sm font-medium text-blue-600 mb-1">
+                  Tage mit Träumen
+                </h3>
+                <p className="text-2xl font-bold text-blue-700">
+                  {dreamDates.length}
+                </p>
               </div>
-              
+
               <div className="p-4 bg-emerald-50 rounded-lg">
-                <h3 className="text-sm font-medium text-emerald-600 mb-1">Aktueller Monat</h3>
+                <h3 className="text-sm font-medium text-emerald-600 mb-1">
+                  Aktueller Monat
+                </h3>
                 <p className="text-2xl font-bold text-emerald-700">
-                  {dreams?.filter(dream => {
-                    const dreamDate = typeof dream.date === 'string' 
-                      ? parseISO(dream.date) 
-                      : new Date(dream.date);
-                      
-                    return isValid(dreamDate) && 
-                      dreamDate.getMonth() === new Date().getMonth() && 
-                      dreamDate.getFullYear() === new Date().getFullYear();
+                  {dreams?.filter((dream) => {
+                    const dreamDate =
+                      typeof dream.date === "string"
+                        ? parseISO(dream.date)
+                        : new Date(dream.date);
+
+                    return (
+                      isValid(dreamDate) &&
+                      dreamDate.getMonth() === new Date().getMonth() &&
+                      dreamDate.getFullYear() === new Date().getFullYear()
+                    );
                   }).length || 0}
                 </p>
               </div>

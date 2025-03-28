@@ -5,30 +5,41 @@ import Layout from "../components/Layout";
 import JournalForm from "../components/JournalForm";
 import JournalEntry from "../components/JournalEntry";
 import { Button } from "../components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "../components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  PlusIcon, 
-  BookOpenIcon, 
-  SearchIcon, 
-  FilterIcon, 
-  XIcon, 
+import {
+  PlusIcon,
+  BookOpenIcon,
+  SearchIcon,
+  FilterIcon,
+  XIcon,
   CalendarIcon,
   SortAscIcon,
-  TagIcon
+  TagIcon,
 } from "lucide-react";
 import { Badge } from "../components/ui/badge";
 
 export default function JournalPage() {
   const [showNewEntryForm, setShowNewEntryForm] = useState(false);
-  const [editingEntry, setEditingEntry] = useState<JournalEntryType | null>(null);
+  const [editingEntry, setEditingEntry] = useState<JournalEntryType | null>(
+    null,
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
 
   // Fetch journal entries
-  const { data: journalEntries = [], isLoading, isError } = useQuery({
+  const {
+    data: journalEntries = [],
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["/api/journal"],
     queryFn: async () => {
       const response = await fetch("/api/journal");
@@ -44,7 +55,7 @@ export default function JournalPage() {
     const allTags = new Set<string>();
     journalEntries.forEach((entry: JournalEntryType) => {
       if (entry.tags && Array.isArray(entry.tags)) {
-        entry.tags.forEach(tag => allTags.add(tag));
+        entry.tags.forEach((tag) => allTags.add(tag));
       }
     });
     return Array.from(allTags);
@@ -54,14 +65,15 @@ export default function JournalPage() {
   const filteredEntries = journalEntries
     .filter((entry: JournalEntryType) => {
       // Text search
-      const matchesSearch = searchQuery === "" || 
+      const matchesSearch =
+        searchQuery === "" ||
         entry.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         entry.content.toLowerCase().includes(searchQuery.toLowerCase());
-      
+
       // Tag filter
-      const matchesTag = !selectedTag || 
-        (entry.tags && entry.tags.includes(selectedTag));
-      
+      const matchesTag =
+        !selectedTag || (entry.tags && entry.tags.includes(selectedTag));
+
       return matchesSearch && matchesTag;
     })
     .sort((a: JournalEntryType, b: JournalEntryType) => {
@@ -96,8 +108,8 @@ export default function JournalPage() {
               <BookOpenIcon className="mr-2 h-6 w-6 text-primary" />
               Mein Journal
             </h1>
-            
-            <Button 
+
+            <Button
               onClick={() => {
                 setEditingEntry(null);
                 setShowNewEntryForm(true);
@@ -109,7 +121,8 @@ export default function JournalPage() {
             </Button>
           </div>
           <p className="text-gray-600 mt-2">
-            Führe dein persönliches Journal für Gedanken, Ziele und tägliche Reflexionen, parallel zu deinem Traumtagebuch.
+            Führe dein persönliches Journal für Gedanken, Ziele und tägliche
+            Reflexionen, parallel zu deinem Traumtagebuch.
           </p>
         </header>
 
@@ -137,8 +150,8 @@ export default function JournalPage() {
           </div>
 
           <div className="flex space-x-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={toggleSortOrder}
               className="flex items-center gap-1"
@@ -146,7 +159,7 @@ export default function JournalPage() {
               <SortAscIcon className="h-4 w-4" />
               {sortOrder === "desc" ? "Neueste zuerst" : "Älteste zuerst"}
             </Button>
-            
+
             {selectedTag && (
               <Badge className="gap-1 items-center h-9 px-3">
                 <TagIcon className="h-3 w-3" />
@@ -159,10 +172,10 @@ export default function JournalPage() {
                 </button>
               </Badge>
             )}
-            
+
             {(searchQuery || selectedTag) && (
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
                 onClick={clearFilters}
                 className="flex items-center gap-1 h-9"
@@ -182,11 +195,13 @@ export default function JournalPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               {extractTags().map((tag) => (
-                <Badge 
-                  key={tag} 
+                <Badge
+                  key={tag}
                   variant={selectedTag === tag ? "default" : "outline"}
                   className="cursor-pointer"
-                  onClick={() => setSelectedTag(tag === selectedTag ? null : tag)}
+                  onClick={() =>
+                    setSelectedTag(tag === selectedTag ? null : tag)
+                  }
                 >
                   {tag}
                 </Badge>
@@ -203,8 +218,10 @@ export default function JournalPage() {
         ) : isError ? (
           // Error state
           <div className="py-8 text-center">
-            <p className="text-red-500">Fehler beim Laden der Journaleinträge</p>
-            <Button 
+            <p className="text-red-500">
+              Fehler beim Laden der Journaleinträge
+            </p>
+            <Button
               onClick={() => window.location.reload()}
               variant="outline"
               className="mt-2"
@@ -217,19 +234,19 @@ export default function JournalPage() {
           <div className="py-12 text-center bg-gray-50 rounded-lg border border-gray-200">
             {searchQuery || selectedTag ? (
               <div>
-                <p className="text-gray-500 mb-3">Keine Einträge gefunden, die deinen Filtern entsprechen.</p>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={clearFilters}
-                >
+                <p className="text-gray-500 mb-3">
+                  Keine Einträge gefunden, die deinen Filtern entsprechen.
+                </p>
+                <Button variant="outline" size="sm" onClick={clearFilters}>
                   Filter zurücksetzen
                 </Button>
               </div>
             ) : (
               <div>
-                <p className="text-gray-500 mb-3">Du hast noch keine Journaleinträge erstellt.</p>
-                <Button 
+                <p className="text-gray-500 mb-3">
+                  Du hast noch keine Journaleinträge erstellt.
+                </p>
+                <Button
                   onClick={() => {
                     setEditingEntry(null);
                     setShowNewEntryForm(true);
@@ -244,11 +261,7 @@ export default function JournalPage() {
           // Journal entries
           <div className="space-y-4">
             {filteredEntries.map((entry: JournalEntryType) => (
-              <JournalEntry 
-                key={entry.id} 
-                entry={entry} 
-                onEdit={handleEdit} 
-              />
+              <JournalEntry key={entry.id} entry={entry} onEdit={handleEdit} />
             ))}
           </div>
         )}
@@ -259,11 +272,13 @@ export default function JournalPage() {
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {editingEntry ? "Journaleintrag bearbeiten" : "Neuer Journaleintrag"}
+              {editingEntry
+                ? "Journaleintrag bearbeiten"
+                : "Neuer Journaleintrag"}
             </DialogTitle>
           </DialogHeader>
-          <JournalForm 
-            existingEntry={editingEntry || undefined} 
+          <JournalForm
+            existingEntry={editingEntry || undefined}
             onSuccess={() => {
               setShowNewEntryForm(false);
               setEditingEntry(null);

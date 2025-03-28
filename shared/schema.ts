@@ -1,4 +1,13 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json, varchar } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  serial,
+  integer,
+  boolean,
+  timestamp,
+  json,
+  varchar,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -11,14 +20,20 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-}).extend({
-  // Add validation rules
-  username: z.string().min(3, { message: "Benutzername muss mindestens 3 Zeichen lang sein" }),
-  password: z.string().min(6, { message: "Passwort muss mindestens 6 Zeichen lang sein" }),
-});
+export const insertUserSchema = createInsertSchema(users)
+  .pick({
+    username: true,
+    password: true,
+  })
+  .extend({
+    // Add validation rules
+    username: z
+      .string()
+      .min(3, { message: "Benutzername muss mindestens 3 Zeichen lang sein" }),
+    password: z
+      .string()
+      .min(6, { message: "Passwort muss mindestens 6 Zeichen lang sein" }),
+  });
 
 export const dreams = pgTable("dreams", {
   id: serial("id").primaryKey(),
@@ -45,29 +60,37 @@ export const dreamAnalysis = pgTable("dream_analysis", {
 });
 
 // Dream insert schema
-export const insertDreamSchema = createInsertSchema(dreams).omit({
-  id: true,
-  createdAt: true,
-  analysis: true,
-}).extend({
-  // Ensure the title is at least 3 characters long
-  title: z.string().min(3, { message: "Titel muss mindestens 3 Zeichen lang sein" }),
-  // Ensure the content is at least 10 characters long
-  content: z.string().min(10, { message: "Trauminhalt muss mindestens 10 Zeichen lang sein" }),
-  // Date is required
-  date: z.string().or(z.date()),
-  // Tags are optional
-  tags: z.array(z.string()).optional(),
-  // Mood values are optional but must be between 1-10 if provided
-  moodBeforeSleep: z.number().min(1).max(10).optional(),
-  moodAfterWakeup: z.number().min(1).max(10).optional(),
-  moodNotes: z.string().optional(),
-});
+export const insertDreamSchema = createInsertSchema(dreams)
+  .omit({
+    id: true,
+    createdAt: true,
+    analysis: true,
+  })
+  .extend({
+    // Ensure the title is at least 3 characters long
+    title: z
+      .string()
+      .min(3, { message: "Titel muss mindestens 3 Zeichen lang sein" }),
+    // Ensure the content is at least 10 characters long
+    content: z
+      .string()
+      .min(10, { message: "Trauminhalt muss mindestens 10 Zeichen lang sein" }),
+    // Date is required
+    date: z.string().or(z.date()),
+    // Tags are optional
+    tags: z.array(z.string()).optional(),
+    // Mood values are optional but must be between 1-10 if provided
+    moodBeforeSleep: z.number().min(1).max(10).optional(),
+    moodAfterWakeup: z.number().min(1).max(10).optional(),
+    moodNotes: z.string().optional(),
+  });
 
 // Dream analysis schema
-export const insertDreamAnalysisSchema = createInsertSchema(dreamAnalysis).omit({
-  id: true,
-});
+export const insertDreamAnalysisSchema = createInsertSchema(dreamAnalysis).omit(
+  {
+    id: true,
+  },
+);
 
 // Type definitions
 export type User = typeof users.$inferSelect;
@@ -171,7 +194,7 @@ export interface DeepPatternResponse {
       dominantThemes: string[];
       dominantEmotions: string[];
       summary: string;
-    }[]
+    }[];
   };
   recommendations: {
     general: string[]; // Allgemeine Empfehlungen
@@ -182,24 +205,24 @@ export interface DeepPatternResponse {
 // Achievement-System und Gamification
 
 export const achievementCategories = [
-  "beginner",      // Anfänger-Erfolge
-  "consistency",   // Konsequenz-Erfolge
-  "exploration",   // Erkundungs-Erfolge
-  "insight",       // Einsicht-Erfolge
-  "mastery",       // Meister-Erfolge
-  "special"        // Besondere Erfolge
+  "beginner", // Anfänger-Erfolge
+  "consistency", // Konsequenz-Erfolge
+  "exploration", // Erkundungs-Erfolge
+  "insight", // Einsicht-Erfolge
+  "mastery", // Meister-Erfolge
+  "special", // Besondere Erfolge
 ] as const;
 
-export type AchievementCategory = typeof achievementCategories[number];
+export type AchievementCategory = (typeof achievementCategories)[number];
 
 export const achievementDifficulties = [
-  "bronze",   // Leicht zu erreichen
-  "silver",   // Mäßig schwer zu erreichen
-  "gold",     // Schwer zu erreichen
-  "platinum"  // Sehr schwer zu erreichen
+  "bronze", // Leicht zu erreichen
+  "silver", // Mäßig schwer zu erreichen
+  "gold", // Schwer zu erreichen
+  "platinum", // Sehr schwer zu erreichen
 ] as const;
 
-export type AchievementDifficulty = typeof achievementDifficulties[number];
+export type AchievementDifficulty = (typeof achievementDifficulties)[number];
 
 // Achievement-Definitionen
 export const achievements = pgTable("achievements", {
@@ -230,7 +253,9 @@ export const insertAchievementSchema = createInsertSchema(achievements).omit({
 });
 
 // Benutzer-Achievement-Schema für's Einfügen
-export const insertUserAchievementSchema = createInsertSchema(userAchievements).omit({
+export const insertUserAchievementSchema = createInsertSchema(
+  userAchievements,
+).omit({
   id: true,
   unlockedAt: true,
 });
@@ -244,26 +269,26 @@ export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;
 
 // Kriterien für Achievements
 export interface AchievementCriteria {
-  type: 
-    | "dreamCount"          // Basierend auf Anzahl der Träume
-    | "streakDays"          // Basierend auf Anzahl aufeinanderfolgender Tage
-    | "tagCount"            // Basierend auf Anzahl verwendeter Tags
-    | "imageCount"          // Basierend auf Anzahl hochgeladener Bilder
-    | "analysisCount"       // Basierend auf Anzahl der Analysen
-    | "patternCount"        // Basierend auf Anzahl der Musteranalysen
-    | "moodTracking"        // Basierend auf Stimmungstracking
-    | "dreamLength"         // Basierend auf Länge der Traumeinträge
-    | "specialTag"          // Basierend auf speziellen Tags
-    | "combinedCriteria";   // Kombination mehrerer Kriterien
-  threshold: number;        // Schwellenwert für Erfüllung
+  type:
+    | "dreamCount" // Basierend auf Anzahl der Träume
+    | "streakDays" // Basierend auf Anzahl aufeinanderfolgender Tage
+    | "tagCount" // Basierend auf Anzahl verwendeter Tags
+    | "imageCount" // Basierend auf Anzahl hochgeladener Bilder
+    | "analysisCount" // Basierend auf Anzahl der Analysen
+    | "patternCount" // Basierend auf Anzahl der Musteranalysen
+    | "moodTracking" // Basierend auf Stimmungstracking
+    | "dreamLength" // Basierend auf Länge der Traumeinträge
+    | "specialTag" // Basierend auf speziellen Tags
+    | "combinedCriteria"; // Kombination mehrerer Kriterien
+  threshold: number; // Schwellenwert für Erfüllung
   additionalParams?: Record<string, any>; // Zusätzliche Parameter für bestimmte Kriterien
 }
 
 // Fortschritt für Achievements
 export interface AchievementProgress {
-  currentValue: number;    // Aktueller Wert
-  requiredValue: number;   // Erforderlicher Wert
-  lastUpdated: string;     // Zeitpunkt der letzten Aktualisierung
+  currentValue: number; // Aktueller Wert
+  requiredValue: number; // Erforderlicher Wert
+  lastUpdated: string; // Zeitpunkt der letzten Aktualisierung
   details?: Record<string, any>; // Zusätzliche Details
 }
 
@@ -282,17 +307,17 @@ export interface AchievementNotification {
 
 // Content-Typen für die Content-Rubrik
 export const contentTypes = [
-  "article",      // Artikel
-  "video",        // Video
-  "link",         // Externe Verlinkung
-  "quote",        // Zitat
-  "image",        // Bild
-  "infographic",  // Infografik
-  "audio",        // Audio/Podcast
-  "exercise"      // Übung
+  "article", // Artikel
+  "video", // Video
+  "link", // Externe Verlinkung
+  "quote", // Zitat
+  "image", // Bild
+  "infographic", // Infografik
+  "audio", // Audio/Podcast
+  "exercise", // Übung
 ] as const;
 
-export type ContentType = typeof contentTypes[number];
+export type ContentType = (typeof contentTypes)[number];
 
 // Journal-Einträge
 export const journalEntries = pgTable("journal_entries", {
@@ -312,21 +337,27 @@ export const journalEntries = pgTable("journal_entries", {
 });
 
 // Insert-Schema für Journal-Einträge
-export const insertJournalEntrySchema = createInsertSchema(journalEntries).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-}).extend({
-  title: z.string().min(3, { message: "Titel muss mindestens 3 Zeichen lang sein" }),
-  content: z.string().min(10, { message: "Inhalt muss mindestens 10 Zeichen lang sein" }),
-  mood: z.number().min(1).max(10).optional(),
-  tags: z.array(z.string()).optional(),
-  isPrivate: z.boolean().default(true),
-  imageUrl: z.string().optional(),
-  includeInAnalysis: z.boolean().default(false),
-  date: z.string().or(z.date()),
-  relatedDreamIds: z.array(z.number()).optional(),
-});
+export const insertJournalEntrySchema = createInsertSchema(journalEntries)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({
+    title: z
+      .string()
+      .min(3, { message: "Titel muss mindestens 3 Zeichen lang sein" }),
+    content: z
+      .string()
+      .min(10, { message: "Inhalt muss mindestens 10 Zeichen lang sein" }),
+    mood: z.number().min(1).max(10).optional(),
+    tags: z.array(z.string()).optional(),
+    isPrivate: z.boolean().default(true),
+    imageUrl: z.string().optional(),
+    includeInAnalysis: z.boolean().default(false),
+    date: z.string().or(z.date()),
+    relatedDreamIds: z.array(z.number()).optional(),
+  });
 
 // Content-Einträge für die Content-Rubrik "Was ist Träumen?"
 export const dreamContentEntries = pgTable("dream_content_entries", {
@@ -334,7 +365,9 @@ export const dreamContentEntries = pgTable("dream_content_entries", {
   title: text("title").notNull(),
   summary: text("summary").notNull(),
   content: text("content").notNull(),
-  contentType: varchar("content_type", { length: 20 }).notNull().$type<ContentType>(),
+  contentType: varchar("content_type", { length: 20 })
+    .notNull()
+    .$type<ContentType>(),
   url: text("url"), // URL für externes Material (Videos, Links)
   imageUrl: text("image_url"), // Bild-URL
   tags: text("tags").array(),
@@ -348,24 +381,34 @@ export const dreamContentEntries = pgTable("dream_content_entries", {
 });
 
 // Insert-Schema für Content-Einträge
-export const insertDreamContentEntrySchema = createInsertSchema(dreamContentEntries).omit({
-  id: true,
-  viewCount: true,
-  createdAt: true,
-  updatedAt: true,
-}).extend({
-  title: z.string().min(3, { message: "Titel muss mindestens 3 Zeichen lang sein" }),
-  summary: z.string().min(10, { message: "Zusammenfassung muss mindestens 10 Zeichen lang sein" }),
-  content: z.string().min(50, { message: "Inhalt muss mindestens 50 Zeichen lang sein" }),
-  contentType: z.enum(contentTypes),
-  url: z.string().url().optional(),
-  imageUrl: z.string().optional(),
-  tags: z.array(z.string()).optional(),
-  authorId: z.number().optional(),
-  isFeatured: z.boolean().default(false),
-  isPublished: z.boolean().default(false),
-  relatedContentIds: z.array(z.number()).optional(),
-});
+export const insertDreamContentEntrySchema = createInsertSchema(
+  dreamContentEntries,
+)
+  .omit({
+    id: true,
+    viewCount: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({
+    title: z
+      .string()
+      .min(3, { message: "Titel muss mindestens 3 Zeichen lang sein" }),
+    summary: z.string().min(10, {
+      message: "Zusammenfassung muss mindestens 10 Zeichen lang sein",
+    }),
+    content: z
+      .string()
+      .min(50, { message: "Inhalt muss mindestens 50 Zeichen lang sein" }),
+    contentType: z.enum(contentTypes),
+    url: z.string().url().optional(),
+    imageUrl: z.string().optional(),
+    tags: z.array(z.string()).optional(),
+    authorId: z.number().optional(),
+    isFeatured: z.boolean().default(false),
+    isPublished: z.boolean().default(false),
+    relatedContentIds: z.array(z.number()).optional(),
+  });
 
 // Kommentare für Content-Einträge
 export const contentComments = pgTable("content_comments", {
@@ -378,20 +421,26 @@ export const contentComments = pgTable("content_comments", {
 });
 
 // Insert-Schema für Kommentare
-export const insertContentCommentSchema = createInsertSchema(contentComments).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-}).extend({
-  text: z.string().min(3, { message: "Kommentar muss mindestens 3 Zeichen lang sein" }),
-});
+export const insertContentCommentSchema = createInsertSchema(contentComments)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({
+    text: z
+      .string()
+      .min(3, { message: "Kommentar muss mindestens 3 Zeichen lang sein" }),
+  });
 
 // Typ-Definitionen
 export type JournalEntry = typeof journalEntries.$inferSelect;
 export type InsertJournalEntry = z.infer<typeof insertJournalEntrySchema>;
 
 export type DreamContentEntry = typeof dreamContentEntries.$inferSelect;
-export type InsertDreamContentEntry = z.infer<typeof insertDreamContentEntrySchema>;
+export type InsertDreamContentEntry = z.infer<
+  typeof insertDreamContentEntrySchema
+>;
 
 export type ContentComment = typeof contentComments.$inferSelect;
 export type InsertContentComment = z.infer<typeof insertContentCommentSchema>;
@@ -411,14 +460,20 @@ export const cultures = pgTable("cultures", {
 });
 
 // Insert-Schema für Kulturen
-export const insertCultureSchema = createInsertSchema(cultures).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-}).extend({
-  name: z.string().min(2, { message: "Name muss mindestens 2 Zeichen lang sein" }),
-  description: z.string().min(10, { message: "Beschreibung muss mindestens 10 Zeichen lang sein" }),
-});
+export const insertCultureSchema = createInsertSchema(cultures)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({
+    name: z
+      .string()
+      .min(2, { message: "Name muss mindestens 2 Zeichen lang sein" }),
+    description: z.string().min(10, {
+      message: "Beschreibung muss mindestens 10 Zeichen lang sein",
+    }),
+  });
 
 // Traumsymbol-Tabelle
 export const dreamSymbols = pgTable("dream_symbols", {
@@ -434,39 +489,54 @@ export const dreamSymbols = pgTable("dream_symbols", {
 });
 
 // Insert-Schema für Traumsymbole
-export const insertDreamSymbolSchema = createInsertSchema(dreamSymbols).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-}).extend({
-  name: z.string().min(2, { message: "Name muss mindestens 2 Zeichen lang sein" }),
-  generalMeaning: z.string().min(10, { message: "Bedeutung muss mindestens 10 Zeichen lang sein" }),
-  category: z.string().min(2, { message: "Kategorie muss angegeben werden" }),
-  tags: z.array(z.string()).optional(),
-  popularity: z.number().min(0).max(100).default(50),
-});
+export const insertDreamSymbolSchema = createInsertSchema(dreamSymbols)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({
+    name: z
+      .string()
+      .min(2, { message: "Name muss mindestens 2 Zeichen lang sein" }),
+    generalMeaning: z
+      .string()
+      .min(10, { message: "Bedeutung muss mindestens 10 Zeichen lang sein" }),
+    category: z.string().min(2, { message: "Kategorie muss angegeben werden" }),
+    tags: z.array(z.string()).optional(),
+    popularity: z.number().min(0).max(100).default(50),
+  });
 
 // Kulturspezifische Symbolinterpretationen
-export const culturalSymbolInterpretations = pgTable("cultural_symbol_interpretations", {
-  id: serial("id").primaryKey(),
-  symbolId: integer("symbol_id").notNull(), // Referenz zum Traumsymbol
-  cultureId: integer("culture_id").notNull(), // Referenz zur Kultur
-  interpretation: text("interpretation").notNull(), // Kulturspezifische Interpretation
-  examples: text("examples"), // Beispiele aus dieser Kultur
-  literaryReferences: text("literary_references"), // Literarische Quellen
-  additionalInfo: text("additional_info"), // Zusätzliche Informationen
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+export const culturalSymbolInterpretations = pgTable(
+  "cultural_symbol_interpretations",
+  {
+    id: serial("id").primaryKey(),
+    symbolId: integer("symbol_id").notNull(), // Referenz zum Traumsymbol
+    cultureId: integer("culture_id").notNull(), // Referenz zur Kultur
+    interpretation: text("interpretation").notNull(), // Kulturspezifische Interpretation
+    examples: text("examples"), // Beispiele aus dieser Kultur
+    literaryReferences: text("literary_references"), // Literarische Quellen
+    additionalInfo: text("additional_info"), // Zusätzliche Informationen
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+);
 
 // Insert-Schema für kulturelle Symbolinterpretationen
-export const insertCulturalInterpretationSchema = createInsertSchema(culturalSymbolInterpretations).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-}).extend({
-  interpretation: z.string().min(10, { message: "Interpretation muss mindestens 10 Zeichen lang sein" }),
-});
+export const insertCulturalInterpretationSchema = createInsertSchema(
+  culturalSymbolInterpretations,
+)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({
+    interpretation: z.string().min(10, {
+      message: "Interpretation muss mindestens 10 Zeichen lang sein",
+    }),
+  });
 
 // Symbol-Vergleiche (zum Vergleichen desselben Symbols in verschiedenen Kulturen)
 export const symbolComparisons = pgTable("symbol_comparisons", {
@@ -479,14 +549,22 @@ export const symbolComparisons = pgTable("symbol_comparisons", {
 });
 
 // Insert-Schema für Symbol-Vergleiche
-export const insertSymbolComparisonSchema = createInsertSchema(symbolComparisons).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-}).extend({
-  title: z.string().min(3, { message: "Titel muss mindestens 3 Zeichen lang sein" }),
-  content: z.string().min(50, { message: "Inhalt muss mindestens 50 Zeichen lang sein" }),
-});
+export const insertSymbolComparisonSchema = createInsertSchema(
+  symbolComparisons,
+)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({
+    title: z
+      .string()
+      .min(3, { message: "Titel muss mindestens 3 Zeichen lang sein" }),
+    content: z
+      .string()
+      .min(50, { message: "Inhalt muss mindestens 50 Zeichen lang sein" }),
+  });
 
 // Benutzer-Favoriten für Traumsymbole
 export const userSymbolFavorites = pgTable("user_symbol_favorites", {
@@ -498,7 +576,9 @@ export const userSymbolFavorites = pgTable("user_symbol_favorites", {
 });
 
 // Insert-Schema für Benutzer-Favoriten
-export const insertUserSymbolFavoriteSchema = createInsertSchema(userSymbolFavorites).omit({
+export const insertUserSymbolFavoriteSchema = createInsertSchema(
+  userSymbolFavorites,
+).omit({
   id: true,
   createdAt: true,
 });
@@ -510,26 +590,33 @@ export type InsertCulture = z.infer<typeof insertCultureSchema>;
 export type DreamSymbol = typeof dreamSymbols.$inferSelect;
 export type InsertDreamSymbol = z.infer<typeof insertDreamSymbolSchema>;
 
-export type CulturalSymbolInterpretation = typeof culturalSymbolInterpretations.$inferSelect;
-export type InsertCulturalSymbolInterpretation = z.infer<typeof insertCulturalInterpretationSchema>;
+export type CulturalSymbolInterpretation =
+  typeof culturalSymbolInterpretations.$inferSelect;
+export type InsertCulturalSymbolInterpretation = z.infer<
+  typeof insertCulturalInterpretationSchema
+>;
 
 export type SymbolComparison = typeof symbolComparisons.$inferSelect;
-export type InsertSymbolComparison = z.infer<typeof insertSymbolComparisonSchema>;
+export type InsertSymbolComparison = z.infer<
+  typeof insertSymbolComparisonSchema
+>;
 
 export type UserSymbolFavorite = typeof userSymbolFavorites.$inferSelect;
-export type InsertUserSymbolFavorite = z.infer<typeof insertUserSymbolFavoriteSchema>;
+export type InsertUserSymbolFavorite = z.infer<
+  typeof insertUserSymbolFavoriteSchema
+>;
 
 // Collaborative Dream Interpretation Community
 
 // Visibility options for shared dreams
 export const dreamVisibilityOptions = [
-  "private",      // Only visible to the owner
-  "community",    // Visible to all authenticated users
-  "public",       // Visible to everyone, even without login
-  "selected"      // Visible only to selected users
+  "private", // Only visible to the owner
+  "community", // Visible to all authenticated users
+  "public", // Visible to everyone, even without login
+  "selected", // Visible only to selected users
 ] as const;
 
-export type DreamVisibility = typeof dreamVisibilityOptions[number];
+export type DreamVisibility = (typeof dreamVisibilityOptions)[number];
 
 // Shared dream settings table
 export const sharedDreams = pgTable("shared_dreams", {
@@ -539,11 +626,18 @@ export const sharedDreams = pgTable("shared_dreams", {
   title: text("title").notNull(), // Can be different from original dream title
   content: text("content").notNull(), // The dream content
   anonymousShare: boolean("anonymous_share").notNull().default(false), // Whether to hide the author's identity
-  visibility: text("visibility").notNull().$type<DreamVisibility>().default("community"),
+  visibility: text("visibility")
+    .notNull()
+    .$type<DreamVisibility>()
+    .default("community"),
   allowComments: boolean("allow_comments").notNull().default(true),
-  allowInterpretations: boolean("allow_interpretations").notNull().default(true),
+  allowInterpretations: boolean("allow_interpretations")
+    .notNull()
+    .default(true),
   includeAiAnalysis: boolean("include_ai_analysis").notNull().default(false), // Whether to show AI analysis
-  featuredInCommunity: boolean("featured_in_community").notNull().default(false), // Admin can feature dreams
+  featuredInCommunity: boolean("featured_in_community")
+    .notNull()
+    .default(false), // Admin can feature dreams
   viewCount: integer("view_count").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -552,18 +646,24 @@ export const sharedDreams = pgTable("shared_dreams", {
 });
 
 // Insert schema for shared dreams
-export const insertSharedDreamSchema = createInsertSchema(sharedDreams).omit({
-  id: true,
-  viewCount: true,
-  createdAt: true,
-  updatedAt: true,
-  featuredInCommunity: true,
-}).extend({
-  title: z.string().min(3, { message: "Titel muss mindestens 3 Zeichen lang sein" }),
-  content: z.string().min(10, { message: "Inhalt muss mindestens 10 Zeichen lang sein" }),
-  visibility: z.enum(dreamVisibilityOptions).default("community"),
-  tags: z.array(z.string()).optional(),
-});
+export const insertSharedDreamSchema = createInsertSchema(sharedDreams)
+  .omit({
+    id: true,
+    viewCount: true,
+    createdAt: true,
+    updatedAt: true,
+    featuredInCommunity: true,
+  })
+  .extend({
+    title: z
+      .string()
+      .min(3, { message: "Titel muss mindestens 3 Zeichen lang sein" }),
+    content: z
+      .string()
+      .min(10, { message: "Inhalt muss mindestens 10 Zeichen lang sein" }),
+    visibility: z.enum(dreamVisibilityOptions).default("community"),
+    tags: z.array(z.string()).optional(),
+  });
 
 // Dream comments
 export const dreamComments = pgTable("dream_comments", {
@@ -579,16 +679,20 @@ export const dreamComments = pgTable("dream_comments", {
 });
 
 // Insert schema for dream comments
-export const insertDreamCommentSchema = createInsertSchema(dreamComments).omit({
-  id: true,
-  likes: true,
-  createdAt: true,
-  updatedAt: true,
-}).extend({
-  content: z.string().min(3, { message: "Kommentar muss mindestens 3 Zeichen lang sein" }),
-  isInterpretation: z.boolean().default(false),
-  parentCommentId: z.number().optional(),
-});
+export const insertDreamCommentSchema = createInsertSchema(dreamComments)
+  .omit({
+    id: true,
+    likes: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({
+    content: z
+      .string()
+      .min(3, { message: "Kommentar muss mindestens 3 Zeichen lang sein" }),
+    isInterpretation: z.boolean().default(false),
+    parentCommentId: z.number().optional(),
+  });
 
 // Comment likes from users
 export const commentLikes = pgTable("comment_likes", {
@@ -620,17 +724,25 @@ export const dreamChallenges = pgTable("dream_challenges", {
 });
 
 // Insert schema for dream challenges
-export const insertDreamChallengeSchema = createInsertSchema(dreamChallenges).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-}).extend({
-  title: z.string().min(3, { message: "Titel muss mindestens 3 Zeichen lang sein" }),
-  description: z.string().min(10, { message: "Beschreibung muss mindestens 10 Zeichen lang sein" }),
-  startDate: z.string().or(z.date()),
-  endDate: z.string().or(z.date()),
-  rules: z.string().min(10, { message: "Regeln müssen mindestens 10 Zeichen lang sein" }),
-});
+export const insertDreamChallengeSchema = createInsertSchema(dreamChallenges)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({
+    title: z
+      .string()
+      .min(3, { message: "Titel muss mindestens 3 Zeichen lang sein" }),
+    description: z.string().min(10, {
+      message: "Beschreibung muss mindestens 10 Zeichen lang sein",
+    }),
+    startDate: z.string().or(z.date()),
+    endDate: z.string().or(z.date()),
+    rules: z
+      .string()
+      .min(10, { message: "Regeln müssen mindestens 10 Zeichen lang sein" }),
+  });
 
 // Challenge submissions (dreams submitted to challenges)
 export const challengeSubmissions = pgTable("challenge_submissions", {
@@ -645,14 +757,18 @@ export const challengeSubmissions = pgTable("challenge_submissions", {
 });
 
 // Insert schema for challenge submissions
-export const insertChallengeSubmissionSchema = createInsertSchema(challengeSubmissions).omit({
-  id: true,
-  submissionDate: true,
-  createdAt: true,
-}).extend({
-  status: z.string().default("pending"),
-  notes: z.string().optional(),
-});
+export const insertChallengeSubmissionSchema = createInsertSchema(
+  challengeSubmissions,
+)
+  .omit({
+    id: true,
+    submissionDate: true,
+    createdAt: true,
+  })
+  .extend({
+    status: z.string().default("pending"),
+    notes: z.string().optional(),
+  });
 
 // Export types for collaborative dream features
 export type SharedDream = typeof sharedDreams.$inferSelect;
@@ -668,7 +784,9 @@ export type DreamChallenge = typeof dreamChallenges.$inferSelect;
 export type InsertDreamChallenge = z.infer<typeof insertDreamChallengeSchema>;
 
 export type ChallengeSubmission = typeof challengeSubmissions.$inferSelect;
-export type InsertChallengeSubmission = z.infer<typeof insertChallengeSubmissionSchema>;
+export type InsertChallengeSubmission = z.infer<
+  typeof insertChallengeSubmissionSchema
+>;
 
 // AI Assistant Chat Features
 
@@ -684,14 +802,18 @@ export const assistantConversations = pgTable("assistant_conversations", {
 });
 
 // Insert schema for assistant conversations
-export const insertAssistantConversationSchema = createInsertSchema(assistantConversations).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  summary: true,
-}).extend({
-  title: z.string().default("Neue Unterhaltung"),
-});
+export const insertAssistantConversationSchema = createInsertSchema(
+  assistantConversations,
+)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+    summary: true,
+  })
+  .extend({
+    title: z.string().default("Neue Unterhaltung"),
+  });
 
 // Messages in a conversation
 export const assistantMessages = pgTable("assistant_messages", {
@@ -706,24 +828,32 @@ export const assistantMessages = pgTable("assistant_messages", {
 });
 
 // Insert schema for assistant messages
-export const insertAssistantMessageSchema = createInsertSchema(assistantMessages).omit({
-  id: true,
-  timestamp: true,
-}).extend({
-  content: z.string().min(1, { message: "Nachricht darf nicht leer sein" }),
-  role: z.enum(["user", "assistant"]),
-  relatedDreamId: z.number().optional(),
-  relatedJournalId: z.number().optional(),
-  metadata: z.any().optional(),
-});
+export const insertAssistantMessageSchema = createInsertSchema(
+  assistantMessages,
+)
+  .omit({
+    id: true,
+    timestamp: true,
+  })
+  .extend({
+    content: z.string().min(1, { message: "Nachricht darf nicht leer sein" }),
+    role: z.enum(["user", "assistant"]),
+    relatedDreamId: z.number().optional(),
+    relatedJournalId: z.number().optional(),
+    metadata: z.any().optional(),
+  });
 
 // Assistant conversation types
 export type AssistantConversation = typeof assistantConversations.$inferSelect;
-export type InsertAssistantConversation = z.infer<typeof insertAssistantConversationSchema>;
+export type InsertAssistantConversation = z.infer<
+  typeof insertAssistantConversationSchema
+>;
 
 // Assistant message types
 export type AssistantMessage = typeof assistantMessages.$inferSelect;
-export type InsertAssistantMessage = z.infer<typeof insertAssistantMessageSchema>;
+export type InsertAssistantMessage = z.infer<
+  typeof insertAssistantMessageSchema
+>;
 
 // Interfaces for message interaction
 export interface ChatRequest {

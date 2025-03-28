@@ -1,4 +1,3 @@
-
 interface ApiRequestOptions {
   body?: any;
   headers?: Record<string, string>;
@@ -7,10 +6,10 @@ interface ApiRequestOptions {
 export async function apiRequest(
   method: string,
   endpoint: string,
-  options: ApiRequestOptions = {}
+  options: ApiRequestOptions = {},
 ) {
   const headers = {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
     ...options.headers,
   };
 
@@ -18,7 +17,7 @@ export async function apiRequest(
     method,
     headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
-    credentials: 'include',
+    credentials: "include",
   });
 
   return response;

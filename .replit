@@ -1,4 +1,12 @@
-modules = ["nodejs-20", "web", "postgresql-16"]
+modules = [
+  "nodejs-20",
+  "web",
+  "postgresql-16",
+  "dotnet-7.0",
+  "python-base-3.12",
+  "nodejs-with-prybar-18",
+  "zig-0.11",
+]
 run = "npm run dev"
 hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
@@ -11,7 +19,7 @@ build = ["sh", "-c", "npm run build"]
 run = ["sh", "-c", "npm start"]
 
 [workflows]
-runButton = "Run Production"
+runButton = "Start Dev Server"
 
 [[workflows.workflow]]
 name = "Project"
@@ -73,9 +81,27 @@ mode = "sequential"
 task = "shell.exec"
 args = "npm start"
 
+[[workflows.workflow]]
+name = "Start Dev Server"
+author = 38207286
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+
 [[ports]]
 localPort = 5000
 externalPort = 80
 
 [objectStorage]
-defaultBucketID = "replit-objstore-6f998a10-9e16-4e15-9571-3150b2229185"
+defaultBucketID = "replit-objstore-db3213df-6c54-4665-93bb-2488a484a224"
+
+[rules]
+
+[rules.formatter]
+
+[rules.formatter.fileExtensions]
+
+[rules.formatter.fileExtensions.".ts"]
+id = "module:web/languageServer:typescript-language-server"

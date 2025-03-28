@@ -23,40 +23,61 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 function Router() {
   return (
     <Switch>
-      <ProtectedRoute path="/" component={() => (
-        <Layout>
-          <Home />
-        </Layout>
-      )} />
-      <ProtectedRoute path="/new" component={() => (
-        <Layout>
-          <NewDream />
-        </Layout>
-      )} />
-      <ProtectedRoute path="/dreams/:id" component={() => (
-        <Layout>
-          <DreamView />
-        </Layout>
-      )} />
+      <ProtectedRoute
+        path="/"
+        component={() => (
+          <Layout>
+            <Home />
+          </Layout>
+        )}
+      />
+      <ProtectedRoute
+        path="/new"
+        component={() => (
+          <Layout>
+            <NewDream />
+          </Layout>
+        )}
+      />
+      <ProtectedRoute
+        path="/dreams/:id"
+        component={() => (
+          <Layout>
+            <DreamView />
+          </Layout>
+        )}
+      />
       <ProtectedRoute path="/patterns" component={() => <DreamPatterns />} />
-      <ProtectedRoute path="/achievements" component={() => <AchievementsPage />} />
-      <ProtectedRoute path="/calendar" component={() => (
-        <Layout>
-          <CalendarView />
-        </Layout>
-      )} />
+      <ProtectedRoute
+        path="/achievements"
+        component={() => <AchievementsPage />}
+      />
+      <ProtectedRoute
+        path="/calendar"
+        component={() => (
+          <Layout>
+            <CalendarView />
+          </Layout>
+        )}
+      />
       <ProtectedRoute path="/journal" component={() => <JournalPage />} />
       <ProtectedRoute path="/symbols" component={() => <SymbolLibraryPage />} />
-      <ProtectedRoute path="/gallery" component={() => (
-        <Layout>
-          <DreamGalleryPage />
-        </Layout>
-      )} />
-      <ProtectedRoute path="/profile" component={() => (
-        <Layout>
-          <ProfilePage />
-        </Layout>
-      )} />
+      <ProtectedRoute
+        path="/gallery"
+        component={() => (
+          <Layout>
+            <DreamGalleryPage />
+          </Layout>
+        )}
+      />
+      <ProtectedRoute
+        path="/profile"
+        component={() => (
+          <Layout>
+            <ProfilePage />
+          </Layout>
+        )}
+      />
       <ProtectedRoute path="/assistant" component={() => <AssistantPage />} />
       <ProtectedRoute path="/community" component={() => <CommunityPage />} />
       <Route path="/auth" component={AuthPage} />

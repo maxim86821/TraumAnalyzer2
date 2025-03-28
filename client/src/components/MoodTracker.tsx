@@ -1,6 +1,11 @@
-
 import React, { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
 import { Slider } from "./ui/slider";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
@@ -19,33 +24,41 @@ interface MoodTrackerProps {
   onSave?: (moodData: any) => void;
 }
 
-export function MoodTracker({ dreamId, initialMoodData, onSave }: MoodTrackerProps) {
-  const [beforeSleepMood, setBeforeSleepMood] = useState<number>(initialMoodData?.beforeSleep || 5);
-  const [afterWakeupMood, setAfterWakeupMood] = useState<number>(initialMoodData?.afterWakeup || 5);
+export function MoodTracker({
+  dreamId,
+  initialMoodData,
+  onSave,
+}: MoodTrackerProps) {
+  const [beforeSleepMood, setBeforeSleepMood] = useState<number>(
+    initialMoodData?.beforeSleep || 5,
+  );
+  const [afterWakeupMood, setAfterWakeupMood] = useState<number>(
+    initialMoodData?.afterWakeup || 5,
+  );
   const [notes, setNotes] = useState<string>(initialMoodData?.notes || "");
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
-    
+
     try {
       const moodData = {
         beforeSleep: beforeSleepMood,
         afterWakeup: afterWakeupMood,
-        notes: notes
+        notes: notes,
       };
-      
+
       const response = await apiRequest(
-        "PATCH", 
-        `/api/dreams/${dreamId}/mood`, 
-        moodData
+        "PATCH",
+        `/api/dreams/${dreamId}/mood`,
+        moodData,
       );
-      
+
       toast({
         title: "Stimmung gespeichert",
-        description: "Deine Stimmungsdaten wurden erfolgreich gespeichert."
+        description: "Deine Stimmungsdaten wurden erfolgreich gespeichert.",
       });
-      
+
       if (onSave) {
         onSave(moodData);
       }
@@ -53,13 +66,13 @@ export function MoodTracker({ dreamId, initialMoodData, onSave }: MoodTrackerPro
       toast({
         title: "Fehler",
         description: "Deine Stimmungsdaten konnten nicht gespeichert werden.",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setSaving(false);
     }
   };
-  
+
   // Helper function to get appropriate color class for mood value
   const getMoodColorClass = (value: number) => {
     const moodColors = [
@@ -93,7 +106,9 @@ export function MoodTracker({ dreamId, initialMoodData, onSave }: MoodTrackerPro
               <Moon className="h-4 w-4 mr-2" />
               Stimmung vor dem Schlafen
             </Label>
-            <div className={`w-5 h-5 rounded-full ${getMoodColorClass(beforeSleepMood)}`}></div>
+            <div
+              className={`w-5 h-5 rounded-full ${getMoodColorClass(beforeSleepMood)}`}
+            ></div>
           </div>
           <Slider
             id="before-sleep"
@@ -118,7 +133,9 @@ export function MoodTracker({ dreamId, initialMoodData, onSave }: MoodTrackerPro
               <Sun className="h-4 w-4 mr-2" />
               Stimmung nach dem Aufwachen
             </Label>
-            <div className={`w-5 h-5 rounded-full ${getMoodColorClass(afterWakeupMood)}`}></div>
+            <div
+              className={`w-5 h-5 rounded-full ${getMoodColorClass(afterWakeupMood)}`}
+            ></div>
           </div>
           <Slider
             id="after-wakeup"
@@ -151,11 +168,7 @@ export function MoodTracker({ dreamId, initialMoodData, onSave }: MoodTrackerPro
           />
         </div>
 
-        <Button 
-          onClick={handleSave} 
-          disabled={saving}
-          className="w-full"
-        >
+        <Button onClick={handleSave} disabled={saving} className="w-full">
           {saving ? "Wird gespeichert..." : "Stimmung speichern"}
         </Button>
       </CardContent>

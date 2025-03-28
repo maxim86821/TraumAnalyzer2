@@ -3,7 +3,17 @@ import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
-import { XIcon, PlusIcon, TagIcon, BookOpenIcon, CalendarIcon, Upload, Sparkles, Palette, Wind } from "lucide-react";
+import {
+  XIcon,
+  PlusIcon,
+  TagIcon,
+  BookOpenIcon,
+  CalendarIcon,
+  Upload,
+  Sparkles,
+  Palette,
+  Wind,
+} from "lucide-react";
 import { useToast } from "../hooks/use-toast";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -11,7 +21,14 @@ import { apiRequest } from "../lib/queryClient";
 import { queryClient } from "../lib/queryClient";
 import { JournalEntry } from "@shared/schema";
 import { useAuth } from "../hooks/use-auth";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "./ui/dialog";
 
 interface JournalFormProps {
   existingEntry?: JournalEntry;
@@ -19,23 +36,34 @@ interface JournalFormProps {
   onCancel?: () => void;
 }
 
-export default function JournalForm({ existingEntry, onSuccess, onCancel }: JournalFormProps) {
+export default function JournalForm({
+  existingEntry,
+  onSuccess,
+  onCancel,
+}: JournalFormProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [title, setTitle] = useState(existingEntry?.title || "");
   const [content, setContent] = useState(existingEntry?.content || "");
   const [tags, setTags] = useState<string[]>(existingEntry?.tags || []);
   const [newTag, setNewTag] = useState("");
-  const [mood, setMood] = useState<number | undefined>(existingEntry?.mood || undefined);
-  const [date, setDate] = useState<string>(existingEntry?.date 
-    ? format(new Date(existingEntry.date), 'yyyy-MM-dd') 
-    : format(new Date(), 'yyyy-MM-dd')
+  const [mood, setMood] = useState<number | undefined>(
+    existingEntry?.mood || undefined,
   );
-  const [isPrivate, setIsPrivate] = useState(existingEntry?.isPrivate !== false);
+  const [date, setDate] = useState<string>(
+    existingEntry?.date
+      ? format(new Date(existingEntry.date), "yyyy-MM-dd")
+      : format(new Date(), "yyyy-MM-dd"),
+  );
+  const [isPrivate, setIsPrivate] = useState(
+    existingEntry?.isPrivate !== false,
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showMoodImageArea, setShowMoodImageArea] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(existingEntry?.imageUrl || null);
+  const [imagePreview, setImagePreview] = useState<string | null>(
+    existingEntry?.imageUrl || null,
+  );
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [includeInAnalysis, setIncludeInAnalysis] = useState(false);
   const [imagePrompt, setImagePrompt] = useState("");
@@ -54,24 +82,24 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
 
   // Remove a tag
   const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
+    setTags(tags.filter((tag) => tag !== tagToRemove));
   };
 
   // Handle tag input key press
   const handleTagKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.preventDefault();
       addTag();
     }
   };
-  
+
   // Handle image uploads
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     // Check file type
-    if (!file.type.startsWith('image/')) {
+    if (!file.type.startsWith("image/")) {
       toast({
         title: "Fehler",
         description: "Bitte wähle ein Bild aus",
@@ -79,7 +107,7 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
       });
       return;
     }
-    
+
     // Create preview
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -88,101 +116,106 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
       }
     };
     reader.readAsDataURL(file);
-    
+
     setUploadedImage(file);
   };
-  
+
   // Öffnet den Dialog für die Bildgenerierung
   const openImageGenerationDialog = () => {
     if (!content || content.trim().length < 10) {
       toast({
         title: "Hinweis",
-        description: "Bitte füge mehr Inhalt hinzu, um ein besseres Stimmungsbild zu generieren.",
+        description:
+          "Bitte füge mehr Inhalt hinzu, um ein besseres Stimmungsbild zu generieren.",
       });
       return;
     }
-    
+
     // Setze Standardwerte zurück
     setColorThought("");
     setSpontaneousThought("");
     setGeneratedDescription("");
-    
+
     // Öffne den Dialog
     setShowImageDialog(true);
   };
-  
+
   // Schließt den Dialog
   const closeImageDialog = () => {
     setShowImageDialog(false);
     setIsGeneratingImage(false); // Reset des Ladezustands beim Schließen
   };
-  
+
   // Generate mood image
   const generateMoodImage = async () => {
     if (!colorThought || !spontaneousThought) {
       toast({
         title: "Hinweis",
-        description: "Bitte beantworte beide Fragen, um ein aussagekräftiges Stimmungsbild zu generieren.",
+        description:
+          "Bitte beantworte beide Fragen, um ein aussagekräftiges Stimmungsbild zu generieren.",
       });
       return;
     }
-    
+
     setIsGeneratingImage(true);
-    
+
     try {
       // Stelle eine Anfrage an den Server zur Bildgenerierung
-      const response = await fetch('/api/journal/generate-image', {
-        method: 'POST',
+      const response = await fetch("/api/journal/generate-image", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           journalContent: content,
           colorImpression: colorThought,
           spontaneousThought: spontaneousThought,
           tags,
-          mood
+          mood,
         }),
       });
-      
+
       if (!response.ok) {
         setIsGeneratingImage(false); // Sicherstellen, dass der Ladezustand zurückgesetzt wird
-        throw new Error('Fehler bei der API-Anfrage');
+        throw new Error("Fehler bei der API-Anfrage");
       }
-      
+
       const result = await response.json();
-      
+
       // Setze das generierte Bild und die Beschreibung
       setImagePreview(result.imageUrl);
       setGeneratedDescription(result.description);
-      
+
       // Schließe den Dialog nach erfolgreicher Generierung
       closeImageDialog();
-      
+
       toast({
         title: "Erfolg",
         description: "Stimmungsbild wurde generiert",
       });
-      
     } catch (error) {
       console.error("Error generating mood image:", error);
-      
+
       // Fallback zur Offline-Generierung, falls die API nicht verfügbar ist
       toast({
         title: "Hinweis",
-        description: "Lokales Fallback-Bild wird generiert, da die KI-Bildgenerierung nicht verfügbar ist.",
+        description:
+          "Lokales Fallback-Bild wird generiert, da die KI-Bildgenerierung nicht verfügbar ist.",
       });
-      
+
       // Extrahiere wichtige Schlüsselwörter aus dem Journalinhalt
-      const words = content.toLowerCase().split(/\s+/).filter(w => w.length > 4);
+      const words = content
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((w) => w.length > 4);
       // Erstelle ein Array mit eindeutigen Wörtern
       const uniqueWords = Array.from(new Set(words));
       const importantWords = uniqueWords.slice(0, 5);
-      
+
       // Farben extrahieren und SVG-Fallback generieren
       const colorName = colorThought.toLowerCase();
       let baseColor = "#86A7FC"; // Default blau
-      
+
       if (colorName.includes("rot") || colorName.includes("orange")) {
         baseColor = "#FF7F50";
       } else if (colorName.includes("grün")) {
@@ -194,7 +227,7 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
       } else if (colorName.includes("violett") || colorName.includes("lila")) {
         baseColor = "#8A2BE2";
       }
-      
+
       // Einfaches SVG zur Darstellung der Stimmung
       const svgContent = `
       <svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
@@ -202,13 +235,15 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
         <path d="M50,250 C150,50 250,350 350,150" stroke="${baseColor}" stroke-width="20" fill="none" opacity="0.7" />
         <circle cx="200" cy="200" r="50" fill="${baseColor}" opacity="0.3" />
       </svg>`;
-      
+
       const dataUrl = `data:image/svg+xml;base64,${btoa(svgContent)}`;
       setImagePreview(dataUrl);
-      
+
       // Einfache Beschreibung
-      setGeneratedDescription(`Ein Kunstwerk in ${colorThought}, inspiriert von Ihrem Gedanken "${spontaneousThought}".`);
-      
+      setGeneratedDescription(
+        `Ein Kunstwerk in ${colorThought}, inspiriert von Ihrem Gedanken "${spontaneousThought}".`,
+      );
+
       // Dialog schließen
       closeImageDialog();
       setIsGeneratingImage(false);
@@ -218,7 +253,7 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
   // Submit the form
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!title.trim() || !content.trim()) {
       toast({
         title: "Fehler",
@@ -233,25 +268,25 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
     try {
       // Handle image upload if there's an uploaded file
       let imageUrl = imagePreview;
-      
+
       if (uploadedImage) {
         const formData = new FormData();
-        formData.append('image', uploadedImage);
-        
+        formData.append("image", uploadedImage);
+
         // Upload the image
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
         });
-        
+
         if (!response.ok) {
-          throw new Error('Fehler beim Hochladen des Bildes');
+          throw new Error("Fehler beim Hochladen des Bildes");
         }
-        
+
         const data = await response.json();
         imageUrl = data.imageUrl;
       }
-      
+
       // Nur Titel und Content sind obligatorisch
       const journalData = {
         userId: user?.id, // Wichtig: userId muss für neue Einträge mitgegeben werden
@@ -264,12 +299,18 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
         ...(isPrivate !== undefined ? { isPrivate } : { isPrivate: true }),
         ...(imageUrl ? { imageUrl } : {}),
         ...(includeInAnalysis !== undefined ? { includeInAnalysis } : {}),
-        ...(existingEntry?.relatedDreamIds ? { relatedDreamIds: existingEntry.relatedDreamIds } : {})
+        ...(existingEntry?.relatedDreamIds
+          ? { relatedDreamIds: existingEntry.relatedDreamIds }
+          : {}),
       };
 
       if (existingEntry) {
         // Update
-        await apiRequest("PATCH", `/api/journal/${existingEntry.id}`, journalData);
+        await apiRequest(
+          "PATCH",
+          `/api/journal/${existingEntry.id}`,
+          journalData,
+        );
         toast({
           title: "Erfolg",
           description: "Journaleintrag aktualisiert",
@@ -285,14 +326,14 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
 
       // Invalidate queries to refetch journal entries
       queryClient.invalidateQueries({ queryKey: ["/api/journal"] });
-      
+
       // Reset form if not editing an existing entry
       if (!existingEntry) {
         setTitle("");
         setContent("");
         setTags([]);
         setMood(undefined);
-        setDate(format(new Date(), 'yyyy-MM-dd'));
+        setDate(format(new Date(), "yyyy-MM-dd"));
         setIsPrivate(true);
         setShowMoodImageArea(false);
         setImagePreview(null);
@@ -318,7 +359,10 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label htmlFor="journal-title" className="block text-sm font-medium text-gray-700">
+            <label
+              htmlFor="journal-title"
+              className="block text-sm font-medium text-gray-700"
+            >
               Titel
             </label>
             <div className="flex items-center space-x-2">
@@ -341,7 +385,10 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
         </div>
 
         <div>
-          <label htmlFor="journal-content" className="block text-sm font-medium text-gray-700 mb-2">
+          <label
+            htmlFor="journal-content"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
             Inhalt
           </label>
           <Textarea
@@ -407,27 +454,39 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
                 min="1"
                 max="10"
                 value={mood || ""}
-                onChange={(e) => setMood(e.target.value ? parseInt(e.target.value) : undefined)}
+                onChange={(e) =>
+                  setMood(e.target.value ? parseInt(e.target.value) : undefined)
+                }
                 placeholder="1-10"
                 className="w-24"
               />
               {mood && (
-                <div className={`w-5 h-5 rounded-full ${
-                  mood >= 8 ? 'bg-green-500' : 
-                  mood >= 6 ? 'bg-green-400' : 
-                  mood >= 5 ? 'bg-yellow-300' : 
-                  mood >= 3 ? 'bg-orange-400' : 
-                  'bg-red-500'
-                }`}></div>
+                <div
+                  className={`w-5 h-5 rounded-full ${
+                    mood >= 8
+                      ? "bg-green-500"
+                      : mood >= 6
+                        ? "bg-green-400"
+                        : mood >= 5
+                          ? "bg-yellow-300"
+                          : mood >= 3
+                            ? "bg-orange-400"
+                            : "bg-red-500"
+                  }`}
+                ></div>
               )}
               <span className="text-sm text-gray-500">
-                {mood 
-                  ? mood >= 8 ? 'Sehr gut' 
-                    : mood >= 6 ? 'Gut' 
-                    : mood >= 5 ? 'Neutral' 
-                    : mood >= 3 ? 'Nicht so gut' 
-                    : 'Schlecht' 
-                  : 'Keine Angabe'}
+                {mood
+                  ? mood >= 8
+                    ? "Sehr gut"
+                    : mood >= 6
+                      ? "Gut"
+                      : mood >= 5
+                        ? "Neutral"
+                        : mood >= 3
+                          ? "Nicht so gut"
+                          : "Schlecht"
+                  : "Keine Angabe"}
               </span>
             </div>
           </div>
@@ -437,7 +496,9 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
           {/* Bild Bereich */}
           <div className="border rounded-lg p-4">
             <div className="flex justify-between items-center mb-2">
-              <h3 className="text-sm font-medium text-gray-700">Stimmungsbild</h3>
+              <h3 className="text-sm font-medium text-gray-700">
+                Stimmungsbild
+              </h3>
               <Button
                 type="button"
                 variant="outline"
@@ -468,7 +529,9 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
                       variant="secondary"
                       size="sm"
                       className="gap-2"
-                      onClick={() => document.getElementById('image-upload')?.click()}
+                      onClick={() =>
+                        document.getElementById("image-upload")?.click()
+                      }
                     >
                       <Upload className="h-4 w-4" />
                       Hochladen
@@ -487,9 +550,17 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
                 <div className="text-xs text-gray-500 italic">
                   <p>Beispielprompts für die Generierung:</p>
                   <ul className="list-disc pl-5 pt-1 space-y-1">
-                    <li>Ein friedlicher Waldsee bei Sonnenuntergang mit sanftem Nebel</li>
-                    <li>Abstraktes Farbspiel aus Blau und Türkis mit fließenden Übergängen</li>
-                    <li>Gebirgszug mit Schneebedeckung im goldenen Morgenlicht</li>
+                    <li>
+                      Ein friedlicher Waldsee bei Sonnenuntergang mit sanftem
+                      Nebel
+                    </li>
+                    <li>
+                      Abstraktes Farbspiel aus Blau und Türkis mit fließenden
+                      Übergängen
+                    </li>
+                    <li>
+                      Gebirgszug mit Schneebedeckung im goldenen Morgenlicht
+                    </li>
                   </ul>
                 </div>
 
@@ -498,9 +569,9 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
                   <div className="mt-3">
                     <p className="text-sm text-gray-700 mb-2">Vorschau:</p>
                     <div className="relative w-full aspect-video bg-gray-100 rounded-lg overflow-hidden">
-                      <img 
-                        src={imagePreview} 
-                        alt="Vorschau" 
+                      <img
+                        src={imagePreview}
+                        alt="Vorschau"
                         className="object-cover w-full h-full"
                       />
                       <div className="absolute top-2 right-2 flex gap-2">
@@ -534,7 +605,7 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
                         </Button>
                       </div>
                     </div>
-                    
+
                     {/* Zeige die Bildbeschreibung an, wenn eine generiert wurde */}
                     {generatedDescription && (
                       <div className="mt-2 p-3 bg-gray-50 rounded-md text-sm italic text-gray-600">
@@ -556,7 +627,10 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
               onChange={(e) => setIncludeInAnalysis(e.target.checked)}
               className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
             />
-            <label htmlFor="include-in-analysis" className="ml-2 block text-sm text-gray-700">
+            <label
+              htmlFor="include-in-analysis"
+              className="ml-2 block text-sm text-gray-700"
+            >
               In Selbstanalyse einbeziehen (vorher: Traumanalyse)
             </label>
           </div>
@@ -570,7 +644,10 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
               onChange={(e) => setIsPrivate(e.target.checked)}
               className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
             />
-            <label htmlFor="journal-private" className="ml-2 block text-sm text-gray-700">
+            <label
+              htmlFor="journal-private"
+              className="ml-2 block text-sm text-gray-700"
+            >
               Privater Eintrag (nur für dich sichtbar)
             </label>
           </div>
@@ -579,20 +656,16 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
         <div className="sticky bottom-0 bg-white py-3 border-t mt-6">
           <div className="flex justify-end space-x-2">
             {onCancel && (
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={onCancel}
                 disabled={isSubmitting}
               >
                 Abbrechen
               </Button>
             )}
-            <Button 
-              type="submit" 
-              disabled={isSubmitting}
-              className="gap-2"
-            >
+            <Button type="submit" disabled={isSubmitting} className="gap-2">
               {isSubmitting ? (
                 <>
                   <span className="animate-spin">⏳</span>
@@ -608,20 +681,24 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
           </div>
         </div>
       </form>
-      
+
       {/* Dialog für die Bildgenerierung */}
       <Dialog open={showImageDialog} onOpenChange={setShowImageDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Stimmungsbild erstellen</DialogTitle>
             <DialogDescription>
-              Beantworten Sie diese kurzen Fragen, um ein einzigartiges Stimmungsbild zu generieren.
+              Beantworten Sie diese kurzen Fragen, um ein einzigartiges
+              Stimmungsbild zu generieren.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label htmlFor="color-thought" className="text-sm font-medium flex items-center">
+              <label
+                htmlFor="color-thought"
+                className="text-sm font-medium flex items-center"
+              >
                 <Palette className="h-4 w-4 mr-2 text-blue-500" />
                 An welche Farbe denken Sie gerade?
               </label>
@@ -632,9 +709,12 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
                 onChange={(e) => setColorThought(e.target.value)}
               />
             </div>
-            
+
             <div className="space-y-2">
-              <label htmlFor="spontaneous-thought" className="text-sm font-medium flex items-center">
+              <label
+                htmlFor="spontaneous-thought"
+                className="text-sm font-medium flex items-center"
+              >
                 <Wind className="h-4 w-4 mr-2 text-blue-500" />
                 Was beschäftigt Sie in diesem Moment?
               </label>
@@ -654,19 +734,17 @@ export default function JournalForm({ existingEntry, onSuccess, onCancel }: Jour
               </div>
             )}
           </div>
-          
+
           <DialogFooter className="flex justify-between sm:justify-between">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={closeImageDialog}
-            >
+            <Button type="button" variant="outline" onClick={closeImageDialog}>
               Abbrechen
             </Button>
-            <Button 
+            <Button
               type="button"
               onClick={generateMoodImage}
-              disabled={isGeneratingImage || !colorThought || !spontaneousThought}
+              disabled={
+                isGeneratingImage || !colorThought || !spontaneousThought
+              }
               className="gap-2"
             >
               {isGeneratingImage ? (

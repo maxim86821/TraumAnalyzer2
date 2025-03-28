@@ -1,8 +1,8 @@
-import { 
-  Dream, 
-  InsertDream, 
-  AnalysisResponse, 
-  DreamAnalysis, 
+import {
+  Dream,
+  InsertDream,
+  AnalysisResponse,
+  DreamAnalysis,
   InsertDreamAnalysis,
   Achievement,
   InsertAchievement,
@@ -43,9 +43,9 @@ import {
   AssistantMessage,
   InsertAssistantMessage,
   ChatRequest,
-  ChatResponse
+  ChatResponse,
 } from "@shared/schema";
-import pg from 'pg';
+import pg from "pg";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import OpenAI from "openai";
@@ -58,18 +58,27 @@ export interface IStorage {
   getUserById(id: number): Promise<any | undefined>;
   getUserByUsername(username: string): Promise<any | undefined>;
   createUser(user: any): Promise<any>;
-  updateUser(id: number, userData: Partial<{ name?: string, email?: string }>): Promise<any | undefined>;
+  updateUser(
+    id: number,
+    userData: Partial<{ name?: string; email?: string }>,
+  ): Promise<any | undefined>;
 
   // Dreams
   createDream(dream: InsertDream): Promise<Dream>;
   getDreams(): Promise<Dream[]>;
   getDreamsByUserId(userId: number): Promise<Dream[]>;
   getDream(id: number): Promise<Dream | undefined>;
-  updateDream(id: number, dream: Partial<InsertDream>): Promise<Dream | undefined>;
+  updateDream(
+    id: number,
+    dream: Partial<InsertDream>,
+  ): Promise<Dream | undefined>;
   deleteDream(id: number): Promise<boolean>;
 
   // Dream analysis
-  saveDreamAnalysis(dreamId: number, analysis: AnalysisResponse): Promise<Dream>;
+  saveDreamAnalysis(
+    dreamId: number,
+    analysis: AnalysisResponse,
+  ): Promise<Dream>;
 
   // Achievements
   createAchievement(achievement: InsertAchievement): Promise<Achievement>;
@@ -77,29 +86,52 @@ export interface IStorage {
   getAllAchievements(): Promise<Achievement[]>;
 
   // User Achievements
-  createUserAchievement(userAchievement: InsertUserAchievement): Promise<UserAchievement>;
+  createUserAchievement(
+    userAchievement: InsertUserAchievement,
+  ): Promise<UserAchievement>;
   getUserAchievements(userId: number): Promise<UserAchievement[]>;
-  getUserAchievement(userId: number, achievementId: number): Promise<UserAchievement | undefined>;
-  updateUserAchievementProgress(id: number, progress: AchievementProgress): Promise<UserAchievement | undefined>;
+  getUserAchievement(
+    userId: number,
+    achievementId: number,
+  ): Promise<UserAchievement | undefined>;
+  updateUserAchievementProgress(
+    id: number,
+    progress: AchievementProgress,
+  ): Promise<UserAchievement | undefined>;
   completeUserAchievement(id: number): Promise<UserAchievement | undefined>;
-  getLatestUserAchievements(userId: number, limit: number): Promise<UserAchievement[]>;
+  getLatestUserAchievements(
+    userId: number,
+    limit: number,
+  ): Promise<UserAchievement[]>;
 
   // Journal entries
   createJournalEntry(entry: InsertJournalEntry): Promise<JournalEntry>;
   getJournalEntriesByUserId(userId: number): Promise<JournalEntry[]>;
   getJournalEntry(id: number): Promise<JournalEntry | undefined>;
-  updateJournalEntry(id: number, entry: Partial<InsertJournalEntry>): Promise<JournalEntry | undefined>;
+  updateJournalEntry(
+    id: number,
+    entry: Partial<InsertJournalEntry>,
+  ): Promise<JournalEntry | undefined>;
   deleteJournalEntry(id: number): Promise<boolean>;
 
   // Dream content entries for "Was ist Träumen?"
-  createDreamContentEntry(entry: InsertDreamContentEntry): Promise<DreamContentEntry>;
+  createDreamContentEntry(
+    entry: InsertDreamContentEntry,
+  ): Promise<DreamContentEntry>;
   getDreamContentEntries(): Promise<DreamContentEntry[]>;
   getDreamContentEntry(id: number): Promise<DreamContentEntry | undefined>;
-  updateDreamContentEntry(id: number, entry: Partial<InsertDreamContentEntry>): Promise<DreamContentEntry | undefined>;
+  updateDreamContentEntry(
+    id: number,
+    entry: Partial<InsertDreamContentEntry>,
+  ): Promise<DreamContentEntry | undefined>;
   deleteDreamContentEntry(id: number): Promise<boolean>;
   getFeaturedDreamContentEntries(limit: number): Promise<DreamContentEntry[]>;
-  getDreamContentEntriesByType(contentType: string): Promise<DreamContentEntry[]>;
-  incrementDreamContentViewCount(id: number): Promise<DreamContentEntry | undefined>;
+  getDreamContentEntriesByType(
+    contentType: string,
+  ): Promise<DreamContentEntry[]>;
+  incrementDreamContentViewCount(
+    id: number,
+  ): Promise<DreamContentEntry | undefined>;
 
   // Content comments
   createContentComment(comment: InsertContentComment): Promise<ContentComment>;
@@ -107,23 +139,37 @@ export interface IStorage {
   deleteContentComment(id: number): Promise<boolean>;
 
   // Kulturelle Traumsymbol-Bibliothek
-  
+
   // AI Assistant
-  createAssistantConversation(conversation: InsertAssistantConversation): Promise<AssistantConversation>;
-  getAssistantConversation(id: number): Promise<AssistantConversation | undefined>;
-  getUserAssistantConversations(userId: number): Promise<AssistantConversation[]>;
-  updateAssistantConversation(id: number, data: Partial<InsertAssistantConversation>): Promise<AssistantConversation | undefined>;
+  createAssistantConversation(
+    conversation: InsertAssistantConversation,
+  ): Promise<AssistantConversation>;
+  getAssistantConversation(
+    id: number,
+  ): Promise<AssistantConversation | undefined>;
+  getUserAssistantConversations(
+    userId: number,
+  ): Promise<AssistantConversation[]>;
+  updateAssistantConversation(
+    id: number,
+    data: Partial<InsertAssistantConversation>,
+  ): Promise<AssistantConversation | undefined>;
   deleteAssistantConversation(id: number): Promise<boolean>;
-  
+
   // Assistant Messages
-  createAssistantMessage(message: InsertAssistantMessage): Promise<AssistantMessage>;
+  createAssistantMessage(
+    message: InsertAssistantMessage,
+  ): Promise<AssistantMessage>;
   getAssistantMessages(conversationId: number): Promise<AssistantMessage[]>;
 
   // Kulturen
   createCulture(culture: InsertCulture): Promise<Culture>;
   getCulture(id: number): Promise<Culture | undefined>;
   getAllCultures(): Promise<Culture[]>;
-  updateCulture(id: number, culture: Partial<InsertCulture>): Promise<Culture | undefined>;
+  updateCulture(
+    id: number,
+    culture: Partial<InsertCulture>,
+  ): Promise<Culture | undefined>;
   deleteCulture(id: number): Promise<boolean>;
 
   // Traumsymbole
@@ -132,26 +178,47 @@ export interface IStorage {
   getAllDreamSymbols(): Promise<DreamSymbol[]>;
   getDreamSymbolsByCategory(category: string): Promise<DreamSymbol[]>;
   searchDreamSymbols(query: string): Promise<DreamSymbol[]>;
-  updateDreamSymbol(id: number, symbol: Partial<InsertDreamSymbol>): Promise<DreamSymbol | undefined>;
+  updateDreamSymbol(
+    id: number,
+    symbol: Partial<InsertDreamSymbol>,
+  ): Promise<DreamSymbol | undefined>;
   deleteDreamSymbol(id: number): Promise<boolean>;
 
   // Kulturspezifische Interpretationen
-  createCulturalInterpretation(interpretation: InsertCulturalSymbolInterpretation): Promise<CulturalSymbolInterpretation>;
-  getCulturalInterpretationsBySymbolId(symbolId: number): Promise<CulturalSymbolInterpretation[]>;
-  getCulturalInterpretationsByCultureId(cultureId: number): Promise<CulturalSymbolInterpretation[]>;
-  getCulturalInterpretation(id: number): Promise<CulturalSymbolInterpretation | undefined>;
-  updateCulturalInterpretation(id: number, interpretation: Partial<InsertCulturalSymbolInterpretation>): Promise<CulturalSymbolInterpretation | undefined>;
+  createCulturalInterpretation(
+    interpretation: InsertCulturalSymbolInterpretation,
+  ): Promise<CulturalSymbolInterpretation>;
+  getCulturalInterpretationsBySymbolId(
+    symbolId: number,
+  ): Promise<CulturalSymbolInterpretation[]>;
+  getCulturalInterpretationsByCultureId(
+    cultureId: number,
+  ): Promise<CulturalSymbolInterpretation[]>;
+  getCulturalInterpretation(
+    id: number,
+  ): Promise<CulturalSymbolInterpretation | undefined>;
+  updateCulturalInterpretation(
+    id: number,
+    interpretation: Partial<InsertCulturalSymbolInterpretation>,
+  ): Promise<CulturalSymbolInterpretation | undefined>;
   deleteCulturalInterpretation(id: number): Promise<boolean>;
 
   // Symbol-Vergleiche
-  createSymbolComparison(comparison: InsertSymbolComparison): Promise<SymbolComparison>;
+  createSymbolComparison(
+    comparison: InsertSymbolComparison,
+  ): Promise<SymbolComparison>;
   getSymbolComparison(id: number): Promise<SymbolComparison | undefined>;
   getSymbolComparisonsBySymbolId(symbolId: number): Promise<SymbolComparison[]>;
-  updateSymbolComparison(id: number, comparison: Partial<InsertSymbolComparison>): Promise<SymbolComparison | undefined>;
+  updateSymbolComparison(
+    id: number,
+    comparison: Partial<InsertSymbolComparison>,
+  ): Promise<SymbolComparison | undefined>;
   deleteSymbolComparison(id: number): Promise<boolean>;
 
   // Benutzer-Favoriten
-  createUserSymbolFavorite(favorite: InsertUserSymbolFavorite): Promise<UserSymbolFavorite>;
+  createUserSymbolFavorite(
+    favorite: InsertUserSymbolFavorite,
+  ): Promise<UserSymbolFavorite>;
   getUserSymbolFavoritesByUserId(userId: number): Promise<UserSymbolFavorite[]>;
   deleteUserSymbolFavorite(id: number): Promise<boolean>;
 
@@ -164,59 +231,109 @@ export interface IStorage {
   createSharedDream(sharedDream: InsertSharedDream): Promise<SharedDream>;
   getSharedDream(id: number): Promise<SharedDream | undefined>;
   getSharedDreamsByUserId(userId: number): Promise<SharedDream[]>;
-  getPublicSharedDreams(limit?: number, offset?: number): Promise<SharedDream[]>; 
-  getCommunitySharedDreams(limit?: number, offset?: number): Promise<SharedDream[]>;
+  getPublicSharedDreams(
+    limit?: number,
+    offset?: number,
+  ): Promise<SharedDream[]>;
+  getCommunitySharedDreams(
+    limit?: number,
+    offset?: number,
+  ): Promise<SharedDream[]>;
   getFeaturedSharedDreams(limit?: number): Promise<SharedDream[]>;
-  updateSharedDream(id: number, sharedDream: Partial<InsertSharedDream>): Promise<SharedDream | undefined>;
+  updateSharedDream(
+    id: number,
+    sharedDream: Partial<InsertSharedDream>,
+  ): Promise<SharedDream | undefined>;
   deleteSharedDream(id: number): Promise<boolean>;
   incrementSharedDreamViewCount(id: number): Promise<SharedDream | undefined>;
 
   // Dream Comments
   createDreamComment(comment: InsertDreamComment): Promise<DreamComment>;
-  getDreamCommentsBySharedDreamId(sharedDreamId: number): Promise<DreamComment[]>;
+  getDreamCommentsBySharedDreamId(
+    sharedDreamId: number,
+  ): Promise<DreamComment[]>;
   getDreamComment(id: number): Promise<DreamComment | undefined>;
-  updateDreamComment(id: number, comment: Partial<InsertDreamComment>): Promise<DreamComment | undefined>;
+  updateDreamComment(
+    id: number,
+    comment: Partial<InsertDreamComment>,
+  ): Promise<DreamComment | undefined>;
   deleteDreamComment(id: number): Promise<boolean>;
-  
+
   // Comment Likes
   createCommentLike(like: InsertCommentLike): Promise<CommentLike>;
-  getCommentLike(commentId: number, userId: number): Promise<CommentLike | undefined>;
+  getCommentLike(
+    commentId: number,
+    userId: number,
+  ): Promise<CommentLike | undefined>;
   deleteCommentLike(id: number): Promise<boolean>;
   updateCommentLikesCount(commentId: number): Promise<number>;
-  
+
   // Dream Challenges
-  createDreamChallenge(challenge: InsertDreamChallenge): Promise<DreamChallenge>;
+  createDreamChallenge(
+    challenge: InsertDreamChallenge,
+  ): Promise<DreamChallenge>;
   getDreamChallenge(id: number): Promise<DreamChallenge | undefined>;
   getActiveDreamChallenges(): Promise<DreamChallenge[]>;
   getAllDreamChallenges(): Promise<DreamChallenge[]>;
-  updateDreamChallenge(id: number, challenge: Partial<InsertDreamChallenge>): Promise<DreamChallenge | undefined>;
+  updateDreamChallenge(
+    id: number,
+    challenge: Partial<InsertDreamChallenge>,
+  ): Promise<DreamChallenge | undefined>;
   deleteDreamChallenge(id: number): Promise<boolean>;
-  
+
   // Challenge Submissions
-  createChallengeSubmission(submission: InsertChallengeSubmission): Promise<ChallengeSubmission>;
+  createChallengeSubmission(
+    submission: InsertChallengeSubmission,
+  ): Promise<ChallengeSubmission>;
   getChallengeSubmission(id: number): Promise<ChallengeSubmission | undefined>;
-  getChallengeSubmissionsByUserId(userId: number): Promise<ChallengeSubmission[]>;
-  getChallengeSubmissionsByChallengeId(challengeId: number): Promise<ChallengeSubmission[]>;
-  updateChallengeSubmission(id: number, submission: Partial<InsertChallengeSubmission>): Promise<ChallengeSubmission | undefined>;
+  getChallengeSubmissionsByUserId(
+    userId: number,
+  ): Promise<ChallengeSubmission[]>;
+  getChallengeSubmissionsByChallengeId(
+    challengeId: number,
+  ): Promise<ChallengeSubmission[]>;
+  updateChallengeSubmission(
+    id: number,
+    submission: Partial<InsertChallengeSubmission>,
+  ): Promise<ChallengeSubmission | undefined>;
   deleteChallengeSubmission(id: number): Promise<boolean>;
-  
+
   // Challenge Submissions
   getChallengeSubmission(id: number): Promise<ChallengeSubmission | undefined>;
 
   // AI Assistant functionality
-  createAssistantConversation(conversation: InsertAssistantConversation): Promise<AssistantConversation>;
-  getAssistantConversation(id: number): Promise<AssistantConversation | undefined>;
-  getAssistantConversationsByUserId(userId: number): Promise<AssistantConversation[]>;
-  updateAssistantConversation(id: number, conversation: Partial<InsertAssistantConversation>): Promise<AssistantConversation | undefined>;
+  createAssistantConversation(
+    conversation: InsertAssistantConversation,
+  ): Promise<AssistantConversation>;
+  getAssistantConversation(
+    id: number,
+  ): Promise<AssistantConversation | undefined>;
+  getAssistantConversationsByUserId(
+    userId: number,
+  ): Promise<AssistantConversation[]>;
+  updateAssistantConversation(
+    id: number,
+    conversation: Partial<InsertAssistantConversation>,
+  ): Promise<AssistantConversation | undefined>;
   deleteAssistantConversation(id: number): Promise<boolean>;
-  
+
   // AI Assistant messages
-  createAssistantMessage(message: InsertAssistantMessage): Promise<AssistantMessage>;
-  getAssistantMessagesByConversationId(conversationId: number): Promise<AssistantMessage[]>;
-  getAssistantMessageThread(conversationId: number, limit?: number): Promise<AssistantMessage[]>;
-  
+  createAssistantMessage(
+    message: InsertAssistantMessage,
+  ): Promise<AssistantMessage>;
+  getAssistantMessagesByConversationId(
+    conversationId: number,
+  ): Promise<AssistantMessage[]>;
+  getAssistantMessageThread(
+    conversationId: number,
+    limit?: number,
+  ): Promise<AssistantMessage[]>;
+
   // Process chat request (main interaction point)
-  processAssistantChatRequest(userId: number, request: ChatRequest): Promise<ChatResponse>;
+  processAssistantChatRequest(
+    userId: number,
+    request: ChatRequest,
+  ): Promise<ChatResponse>;
 
   // Session store
   sessionStore: session.Store;
@@ -295,7 +412,7 @@ export class MemStorage implements IStorage {
     this.assistantMessages = new Map();
     // IDs initialisieren
     this.currentUserId = 1;
-    
+
     // Testdaten für Community-Funktionen initialisieren
     this.initializeCommunityData();
     this.currentDreamId = 1;
@@ -319,9 +436,9 @@ export class MemStorage implements IStorage {
     this.currentAssistantMessageId = 1;
 
     // In-Memory Session Store erstellen
-    const MemoryStore = require('memorystore')(session);
+    const MemoryStore = require("memorystore")(session);
     this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000 // Prune expired entries every 24h
+      checkPeriod: 86400000, // Prune expired entries every 24h
     });
 
     // Vordefinierte Achievements anlegen
@@ -345,72 +462,84 @@ export class MemStorage implements IStorage {
       // Kulturen erstellen
       const westlicheKulturResult = await this.createCulture({
         name: "Westlich",
-        description: "Traumdeutung aus westlicher, psychologischer Perspektive, basierend auf Theorien von Freud, Jung und modernen Psychologen.",
+        description:
+          "Traumdeutung aus westlicher, psychologischer Perspektive, basierend auf Theorien von Freud, Jung und modernen Psychologen.",
         region: "Europa, Nordamerika",
-        historicalContext: "Moderne westliche Traumdeutung hat ihre Wurzeln in der Psychoanalyse des 19. und 20. Jahrhunderts."
+        historicalContext:
+          "Moderne westliche Traumdeutung hat ihre Wurzeln in der Psychoanalyse des 19. und 20. Jahrhunderts.",
       });
 
       const ostasiatischeKulturResult = await this.createCulture({
         name: "Ostasiatisch",
-        description: "Traumdeutung aus chinesischer und japanischer Tradition, stark beeinflusst von Taoismus, Buddhismus und lokalen spirituellen Praktiken.",
+        description:
+          "Traumdeutung aus chinesischer und japanischer Tradition, stark beeinflusst von Taoismus, Buddhismus und lokalen spirituellen Praktiken.",
         region: "China, Japan, Korea",
-        historicalContext: "Asiatische Traumdeutung geht Tausende von Jahren zurück und ist eng mit spirituellen Praktiken verbunden."
+        historicalContext:
+          "Asiatische Traumdeutung geht Tausende von Jahren zurück und ist eng mit spirituellen Praktiken verbunden.",
       });
 
       const indigeneKulturResult = await this.createCulture({
         name: "Indigene Traditionen",
-        description: "Traumdeutung aus der Perspektive indigener Völker, die Träume oft als Verbindung zur spirituellen Welt und zu Ahnen sehen.",
+        description:
+          "Traumdeutung aus der Perspektive indigener Völker, die Träume oft als Verbindung zur spirituellen Welt und zu Ahnen sehen.",
         region: "Nordamerika, Südamerika, Australien",
-        historicalContext: "Indigene Kulturen betrachten Träume seit Jahrtausenden als heilige Botschaften und spirituelle Reisen."
+        historicalContext:
+          "Indigene Kulturen betrachten Träume seit Jahrtausenden als heilige Botschaften und spirituelle Reisen.",
       });
 
       // Einige wichtige Traumsymbole erstellen
       const wasserSymbolResult = await this.createDreamSymbol({
         name: "Wasser",
-        generalMeaning: "Wasser repräsentiert oft Emotionen, das Unbewusste und Lebensenergie.",
+        generalMeaning:
+          "Wasser repräsentiert oft Emotionen, das Unbewusste und Lebensenergie.",
         category: "Natur",
         tags: ["Fluss", "Meer", "See", "Emotion"],
-        popularity: 90
+        popularity: 90,
       });
 
       const fallSymbolResult = await this.createDreamSymbol({
         name: "Fallen",
-        generalMeaning: "Fallen symbolisiert oft Kontrollverlust, Unsicherheit oder Ängste.",
+        generalMeaning:
+          "Fallen symbolisiert oft Kontrollverlust, Unsicherheit oder Ängste.",
         category: "Handlung",
         tags: ["Angst", "Kontrollverlust", "Hilflosigkeit"],
-        popularity: 85
+        popularity: 85,
       });
 
       const fliegenSymbolResult = await this.createDreamSymbol({
         name: "Fliegen",
-        generalMeaning: "Fliegen steht häufig für Freiheit, Selbstverwirklichung oder Transzendenz.",
+        generalMeaning:
+          "Fliegen steht häufig für Freiheit, Selbstverwirklichung oder Transzendenz.",
         category: "Handlung",
         tags: ["Freiheit", "Erfolg", "Überwindung"],
-        popularity: 80
+        popularity: 80,
       });
 
       const schlangeSymbolResult = await this.createDreamSymbol({
         name: "Schlange",
-        generalMeaning: "Schlangen haben vielfältige Bedeutungen von Transformation und Heilung bis hin zu verborgenen Ängsten und Sexualität.",
+        generalMeaning:
+          "Schlangen haben vielfältige Bedeutungen von Transformation und Heilung bis hin zu verborgenen Ängsten und Sexualität.",
         category: "Tiere",
         tags: ["Transformation", "Gefahr", "Weisheit", "Heilung"],
-        popularity: 75
+        popularity: 75,
       });
 
       const hausSymbolResult = await this.createDreamSymbol({
         name: "Haus",
-        generalMeaning: "Ein Haus repräsentiert oft das Selbst, die Psyche oder persönlichen Lebensraum.",
+        generalMeaning:
+          "Ein Haus repräsentiert oft das Selbst, die Psyche oder persönlichen Lebensraum.",
         category: "Objekte",
         tags: ["Selbst", "Sicherheit", "Vergangenheit"],
-        popularity: 85
+        popularity: 85,
       });
 
       const zaehneSymbolResult = await this.createDreamSymbol({
         name: "Zähne verlieren",
-        generalMeaning: "Zahnverlust im Traum kann Ängste vor Kontrollverlust, Attraktivitätsverlust oder großen Veränderungen symbolisieren.",
+        generalMeaning:
+          "Zahnverlust im Traum kann Ängste vor Kontrollverlust, Attraktivitätsverlust oder großen Veränderungen symbolisieren.",
         category: "Körper",
         tags: ["Angst", "Verlust", "Veränderung", "Körper"],
-        popularity: 70
+        popularity: 70,
       });
 
       // Kulturelle Interpretationen hinzufügen
@@ -419,24 +548,32 @@ export class MemStorage implements IStorage {
       await this.createCulturalInterpretation({
         symbolId: wasserSymbolResult.id,
         cultureId: westlicheKulturResult.id,
-        interpretation: "In westlicher Psychologie symbolisiert Wasser das Unbewusste. Ruhiges Wasser kann emotionale Ausgeglichenheit bedeuten, während stürmisches Wasser auf innere Unruhe hinweisen kann.",
-        examples: "Träume vom Schwimmen im klaren Wasser können ein Zeichen für emotionales Wohlbefinden sein. Untergehen oder Ertrinken kann Überwältigung durch Gefühle symbolisieren.",
-        literaryReferences: "C.G. Jung sah Wasser als Symbol des kollektiven Unbewussten."
+        interpretation:
+          "In westlicher Psychologie symbolisiert Wasser das Unbewusste. Ruhiges Wasser kann emotionale Ausgeglichenheit bedeuten, während stürmisches Wasser auf innere Unruhe hinweisen kann.",
+        examples:
+          "Träume vom Schwimmen im klaren Wasser können ein Zeichen für emotionales Wohlbefinden sein. Untergehen oder Ertrinken kann Überwältigung durch Gefühle symbolisieren.",
+        literaryReferences:
+          "C.G. Jung sah Wasser als Symbol des kollektiven Unbewussten.",
       });
 
       await this.createCulturalInterpretation({
         symbolId: wasserSymbolResult.id,
         cultureId: ostasiatischeKulturResult.id,
-        interpretation: "In ostasiatischen Traditionen wird Wasser mit dem Prinzip des Fließens und der Anpassungsfähigkeit verbunden. Es steht für das Yin-Element und verkörpert passive, weibliche Energie.",
-        examples: "In chinesischer Traumdeutung kann klares, fließendes Wasser Wohlstand und Erfolg bedeuten, während schmutziges oder stehendes Wasser auf Probleme hinweist.",
-        literaryReferences: "Im I Ging (Buch der Wandlungen) verkörpert das Wasser das Prinzip der Anpassungsfähigkeit und des stetigen Fließens."
+        interpretation:
+          "In ostasiatischen Traditionen wird Wasser mit dem Prinzip des Fließens und der Anpassungsfähigkeit verbunden. Es steht für das Yin-Element und verkörpert passive, weibliche Energie.",
+        examples:
+          "In chinesischer Traumdeutung kann klares, fließendes Wasser Wohlstand und Erfolg bedeuten, während schmutziges oder stehendes Wasser auf Probleme hinweist.",
+        literaryReferences:
+          "Im I Ging (Buch der Wandlungen) verkörpert das Wasser das Prinzip der Anpassungsfähigkeit und des stetigen Fließens.",
       });
 
       await this.createCulturalInterpretation({
         symbolId: wasserSymbolResult.id,
         cultureId: indigeneKulturResult.id,
-        interpretation: "In vielen indigenen Traditionen wird Wasser als heilig und reinigend angesehen. Es kann die Verbindung zur spirituellen Welt symbolisieren oder eine Transformation andeuten.",
-        examples: "Bei einigen Stämmen Nordamerikas können Träume vom Überqueren eines Gewässers eine spirituelle Reise oder einen Übergangsritus symbolisieren."
+        interpretation:
+          "In vielen indigenen Traditionen wird Wasser als heilig und reinigend angesehen. Es kann die Verbindung zur spirituellen Welt symbolisieren oder eine Transformation andeuten.",
+        examples:
+          "Bei einigen Stämmen Nordamerikas können Träume vom Überqueren eines Gewässers eine spirituelle Reise oder einen Übergangsritus symbolisieren.",
       });
 
       // Weitere Symbole mit kulturellen Interpretationen
@@ -445,43 +582,53 @@ export class MemStorage implements IStorage {
       await this.createCulturalInterpretation({
         symbolId: hausSymbolResult.id,
         cultureId: westlicheKulturResult.id,
-        interpretation: "In westlicher Traumdeutung repräsentiert ein Haus oft die eigene Psyche. Verschiedene Räume können verschiedene Aspekte des Selbst darstellen.",
-        examples: "Der Dachboden kann für das Über-Ich stehen, der Keller für das Unbewusste oder verdrängte Erinnerungen.",
-        literaryReferences: "Freud und Jung interpretierten Häuser als Repräsentationen des Selbst mit verschiedenen Ebenen des Bewusstseins."
+        interpretation:
+          "In westlicher Traumdeutung repräsentiert ein Haus oft die eigene Psyche. Verschiedene Räume können verschiedene Aspekte des Selbst darstellen.",
+        examples:
+          "Der Dachboden kann für das Über-Ich stehen, der Keller für das Unbewusste oder verdrängte Erinnerungen.",
+        literaryReferences:
+          "Freud und Jung interpretierten Häuser als Repräsentationen des Selbst mit verschiedenen Ebenen des Bewusstseins.",
       });
 
       // Schlange-Interpretationen
       await this.createCulturalInterpretation({
         symbolId: schlangeSymbolResult.id,
         cultureId: westlicheKulturResult.id,
-        interpretation: "In westlicher Psychologie wird die Schlange oft mit verborgenen Ängsten, Sexualität oder Transformation assoziiert.",
-        examples: "Eine häutende Schlange kann Erneuerung symbolisieren, während eine beißende Schlange auf unterdrückte Ängste hindeuten kann.",
-        literaryReferences: "Freud sah in der Schlange ein phallisches Symbol; Jung betrachtete sie als Archetyp der Weisheit und Transformation."
+        interpretation:
+          "In westlicher Psychologie wird die Schlange oft mit verborgenen Ängsten, Sexualität oder Transformation assoziiert.",
+        examples:
+          "Eine häutende Schlange kann Erneuerung symbolisieren, während eine beißende Schlange auf unterdrückte Ängste hindeuten kann.",
+        literaryReferences:
+          "Freud sah in der Schlange ein phallisches Symbol; Jung betrachtete sie als Archetyp der Weisheit und Transformation.",
       });
 
       await this.createCulturalInterpretation({
         symbolId: schlangeSymbolResult.id,
         cultureId: ostasiatischeKulturResult.id,
-        interpretation: "In ostasiatischen Kulturen wird die Schlange oft mit Weisheit, Glück und Langlebigkeit assoziiert. Der Drache, eine mythologische Schlange, symbolisiert Macht und Glück.",
-        examples: "In chinesischer Traumdeutung kann eine weiße Schlange Glück und Erfolg bedeuten."
+        interpretation:
+          "In ostasiatischen Kulturen wird die Schlange oft mit Weisheit, Glück und Langlebigkeit assoziiert. Der Drache, eine mythologische Schlange, symbolisiert Macht und Glück.",
+        examples:
+          "In chinesischer Traumdeutung kann eine weiße Schlange Glück und Erfolg bedeuten.",
       });
 
       // Symbol-Vergleiche erstellen
       await this.createSymbolComparison({
         symbolId: wasserSymbolResult.id,
         title: "Wasser in verschiedenen Kulturen",
-        content: "Das Wassersymbol zeigt faszinierende kulturelle Unterschiede: Während westliche Interpretationen Wasser mit dem Unbewussten verbinden, betonen ostasiatische Traditionen das Fließen und den Kreislauf des Lebens. Indigene Kulturen sehen Wasser oft als heilig und als Verbindung zur spirituellen Welt. Gemeinsam ist allen Interpretationen die Verbindung zu Emotionen und Transformation. Diese unterschiedlichen Betrachtungen zeigen, wie kulturelle Hintergründe unsere Traumsymbolik prägen."
+        content:
+          "Das Wassersymbol zeigt faszinierende kulturelle Unterschiede: Während westliche Interpretationen Wasser mit dem Unbewussten verbinden, betonen ostasiatische Traditionen das Fließen und den Kreislauf des Lebens. Indigene Kulturen sehen Wasser oft als heilig und als Verbindung zur spirituellen Welt. Gemeinsam ist allen Interpretationen die Verbindung zu Emotionen und Transformation. Diese unterschiedlichen Betrachtungen zeigen, wie kulturelle Hintergründe unsere Traumsymbolik prägen.",
       });
 
       await this.createSymbolComparison({
         symbolId: schlangeSymbolResult.id,
         title: "Die Schlange als universelles Symbol",
-        content: "Die Schlange ist eines der ältesten und universellsten Traumsymbole mit stark variierenden Bedeutungen: In westlichen Interpretationen oft mit Gefahr, verborgenen Ängsten oder Sexualität verbunden; in ostasiatischen Kulturen ein Symbol für Weisheit, Glück und Langlebigkeit; in indigenen Traditionen häufig ein spiritueller Bote oder Heilsymbol. Die starken Kontraste zeigen, wie kulturelle Erzählungen und Mythen unsere Traumdeutung prägen, während die transformative Natur der Schlange (Häutung) kulturübergreifend erkannt wird."
+        content:
+          "Die Schlange ist eines der ältesten und universellsten Traumsymbole mit stark variierenden Bedeutungen: In westlichen Interpretationen oft mit Gefahr, verborgenen Ängsten oder Sexualität verbunden; in ostasiatischen Kulturen ein Symbol für Weisheit, Glück und Langlebigkeit; in indigenen Traditionen häufig ein spiritueller Bote oder Heilsymbol. Die starken Kontraste zeigen, wie kulturelle Erzählungen und Mythen unsere Traumdeutung prägen, während die transformative Natur der Schlange (Häutung) kulturübergreifend erkannt wird.",
       });
 
       console.log("Default cultures and dream symbols created");
     } catch (error) {
-      console.error('Error creating default cultures and symbols:', error);
+      console.error("Error creating default cultures and symbols:", error);
     }
   }
 
@@ -499,8 +646,8 @@ export class MemStorage implements IStorage {
       iconName: "moon",
       criteria: {
         type: "dreamCount" as any,
-        threshold: 1
-      } as any
+        threshold: 1,
+      } as any,
     });
 
     this.createAchievement({
@@ -511,8 +658,8 @@ export class MemStorage implements IStorage {
       iconName: "book",
       criteria: {
         type: "dreamCount" as any,
-        threshold: 5
-      } as any
+        threshold: 5,
+      } as any,
     });
 
     // Consistency Achievements
@@ -524,8 +671,8 @@ export class MemStorage implements IStorage {
       iconName: "calendar-check",
       criteria: {
         type: "streakDays" as any,
-        threshold: 3
-      } as any
+        threshold: 3,
+      } as any,
     });
 
     this.createAchievement({
@@ -536,8 +683,8 @@ export class MemStorage implements IStorage {
       iconName: "award",
       criteria: {
         type: "streakDays" as any,
-        threshold: 7
-      } as any
+        threshold: 7,
+      } as any,
     });
 
     // Exploration Achievements
@@ -549,8 +696,8 @@ export class MemStorage implements IStorage {
       iconName: "tags",
       criteria: {
         type: "tagCount" as any,
-        threshold: 5
-      } as any
+        threshold: 5,
+      } as any,
     });
 
     this.createAchievement({
@@ -561,8 +708,8 @@ export class MemStorage implements IStorage {
       iconName: "image",
       criteria: {
         type: "imageCount" as any,
-        threshold: 3
-      } as any
+        threshold: 3,
+      } as any,
     });
 
     // Insight Achievements
@@ -574,8 +721,8 @@ export class MemStorage implements IStorage {
       iconName: "smile",
       criteria: {
         type: "moodTracking" as any,
-        threshold: 5
-      } as any
+        threshold: 5,
+      } as any,
     });
 
     this.createAchievement({
@@ -586,8 +733,8 @@ export class MemStorage implements IStorage {
       iconName: "brain",
       criteria: {
         type: "analysisCount" as any,
-        threshold: 3
-      } as any
+        threshold: 3,
+      } as any,
     });
 
     // Mastery Achievements
@@ -599,13 +746,14 @@ export class MemStorage implements IStorage {
       iconName: "trophy",
       criteria: {
         type: "dreamCount" as any,
-        threshold: 30
-      } as any
+        threshold: 30,
+      } as any,
     });
 
     this.createAchievement({
       name: "Detaillierter Träumer",
-      description: "Schreibe 5 ausführliche Traumeinträge (mindestens 200 Zeichen)",
+      description:
+        "Schreibe 5 ausführliche Traumeinträge (mindestens 200 Zeichen)",
       category: "mastery" as any,
       difficulty: "silver" as any,
       iconName: "file-text",
@@ -613,12 +761,12 @@ export class MemStorage implements IStorage {
         type: "dreamLength" as any,
         threshold: 5,
         additionalParams: {
-          minLength: 200
-        }
-      } as any
+          minLength: 200,
+        },
+      } as any,
     });
   }
-  
+
   /**
    * Initialisiert die Testdaten für Community-Funktionen
    * Erstellt Shared Dreams, Dream Comments, Dream Challenges und Challenge Submissions
@@ -628,7 +776,7 @@ export class MemStorage implements IStorage {
     if (this.sharedDreams.size > 0) {
       return; // Daten bereits initialisiert
     }
-    
+
     try {
       // Demo-Benutzer erstellen, falls noch nicht vorhanden
       if (this.users.size === 0) {
@@ -636,37 +784,38 @@ export class MemStorage implements IStorage {
           username: "dreamwalker",
           name: "Alex Träumer",
           email: "alex@example.com",
-          password: "hashedpassword123"
+          password: "hashedpassword123",
         });
-        
+
         this.createUser({
           username: "traumreisender",
           name: "Maria Nachtfalter",
           email: "maria@example.com",
-          password: "hashedpassword456"
+          password: "hashedpassword456",
         });
-        
+
         this.createUser({
           username: "traumdeuterNRW",
           name: "Thomas Schlafwandler",
           email: "thomas@example.com",
-          password: "hashedpassword789"
+          password: "hashedpassword789",
         });
-        
+
         this.createUser({
           username: "naturträumer",
           name: "Jana Waldtraum",
           email: "jana@example.com",
-          password: "hashedpassword101"
+          password: "hashedpassword101",
         });
       }
-      
+
       // Shared Dreams erstellen
       const dream1 = {
         userId: 2,
         dreamId: null,
         title: "Flug über eine fremde Stadt",
-        content: "Ich flog über eine Stadt mit merkwürdigen Gebäuden, die wie Kristalle aussahen. Die Sonne spiegelte sich in ihnen und erzeugte ein faszinierendes Lichtspiel. Ich konnte die Menschen unten sehen, wie sie ihren Alltag nachgingen, aber sie schienen mich nicht zu bemerken. Die ganze Stadt pulsierte in einem sanften blauen Licht.",
+        content:
+          "Ich flog über eine Stadt mit merkwürdigen Gebäuden, die wie Kristalle aussahen. Die Sonne spiegelte sich in ihnen und erzeugte ein faszinierendes Lichtspiel. Ich konnte die Menschen unten sehen, wie sie ihren Alltag nachgingen, aber sie schienen mich nicht zu bemerken. Die ganze Stadt pulsierte in einem sanften blauen Licht.",
         imageUrl: null,
         tags: ["fliegen", "stadt", "kristalle"],
         visibility: "public",
@@ -674,14 +823,15 @@ export class MemStorage implements IStorage {
         allowInterpretations: true,
         viewCount: 24,
         createdAt: new Date("2025-03-20T14:32:00Z"),
-        username: "traumreisender"
+        username: "traumreisender",
       };
-      
+
       const dream2 = {
         userId: 3,
         dreamId: null,
         title: "Im Labyrinth der Erinnerungen",
-        content: "Ich befand mich in einem sich ständig verändernden Labyrinth. An jeder Ecke sah ich Szenen aus meiner Vergangenheit, aber leicht verändert. Menschen, die ich kannte, verhielten sich anders, Orte sahen nicht ganz so aus, wie ich sie in Erinnerung hatte. Je tiefer ich ins Labyrinth vordrang, desto unbekannter wurden die Erinnerungen.",
+        content:
+          "Ich befand mich in einem sich ständig verändernden Labyrinth. An jeder Ecke sah ich Szenen aus meiner Vergangenheit, aber leicht verändert. Menschen, die ich kannte, verhielten sich anders, Orte sahen nicht ganz so aus, wie ich sie in Erinnerung hatte. Je tiefer ich ins Labyrinth vordrang, desto unbekannter wurden die Erinnerungen.",
         imageUrl: null,
         tags: ["labyrinth", "erinnerungen", "vergangenheit"],
         visibility: "public",
@@ -689,14 +839,15 @@ export class MemStorage implements IStorage {
         allowInterpretations: true,
         viewCount: 18,
         createdAt: new Date("2025-03-25T09:15:00Z"),
-        username: "traumdeuterNRW"
+        username: "traumdeuterNRW",
       };
-      
+
       const dream3 = {
         userId: 4,
         dreamId: null,
         title: "Die sprechenden Bäume",
-        content: "In einem alten Wald begannen die Bäume mit mir zu sprechen. Sie erzählten Geschichten von längst vergangenen Zeiten und gaben mir Ratschläge für die Zukunft. Ein besonders alter Baum in der Mitte des Waldes sagte, ich solle auf meine innere Stimme hören und meinem Pfad treu bleiben.",
+        content:
+          "In einem alten Wald begannen die Bäume mit mir zu sprechen. Sie erzählten Geschichten von längst vergangenen Zeiten und gaben mir Ratschläge für die Zukunft. Ein besonders alter Baum in der Mitte des Waldes sagte, ich solle auf meine innere Stimme hören und meinem Pfad treu bleiben.",
         imageUrl: null,
         tags: ["natur", "kommunikation", "weisheit"],
         visibility: "public",
@@ -704,14 +855,15 @@ export class MemStorage implements IStorage {
         allowInterpretations: true,
         viewCount: 42,
         createdAt: new Date("2025-03-15T16:20:00Z"),
-        username: "naturträumer"
+        username: "naturträumer",
       };
-      
+
       const dream4 = {
         userId: 1,
         dreamId: 10,
         title: "Reise zum Meeresgrund",
-        content: "Ich konnte unter Wasser atmen und erkundete den Meeresboden. Seltsame leuchtende Wesen begleiteten mich auf meiner Reise. Sie schienen mir den Weg zu einer versunkenen Stadt zu zeigen. Als ich die Stadt erreichte, konnte ich verstehen, was die Meeresbewohner sagten.",
+        content:
+          "Ich konnte unter Wasser atmen und erkundete den Meeresboden. Seltsame leuchtende Wesen begleiteten mich auf meiner Reise. Sie schienen mir den Weg zu einer versunkenen Stadt zu zeigen. Als ich die Stadt erreichte, konnte ich verstehen, was die Meeresbewohner sagten.",
         imageUrl: null,
         tags: ["meer", "unterwasser", "entdeckung"],
         visibility: "public",
@@ -719,30 +871,30 @@ export class MemStorage implements IStorage {
         allowInterpretations: true,
         viewCount: 8,
         createdAt: new Date("2025-03-26T22:10:00Z"),
-        username: "dreamwalker"
+        username: "dreamwalker",
       };
-      
+
       // Shared Dreams in die Map einfügen
       this.sharedDreams.set(1, {
         id: 1,
         ...dream1,
       });
-      
+
       this.sharedDreams.set(2, {
         id: 2,
         ...dream2,
       });
-      
+
       this.sharedDreams.set(3, {
         id: 3,
         ...dream3,
       });
-      
+
       this.sharedDreams.set(4, {
         id: 4,
         ...dream4,
       });
-      
+
       // Dream Comments erstellen
       this.dreamComments.set(1, {
         id: 1,
@@ -752,9 +904,9 @@ export class MemStorage implements IStorage {
         isInterpretation: true,
         likesCount: 5,
         createdAt: new Date("2025-03-16T10:45:00Z"),
-        username: "dreamwalker"
+        username: "dreamwalker",
       });
-      
+
       this.dreamComments.set(2, {
         id: 2,
         userId: 2,
@@ -763,9 +915,9 @@ export class MemStorage implements IStorage {
         isInterpretation: false,
         likesCount: 2,
         createdAt: new Date("2025-03-17T14:20:00Z"),
-        username: "traumreisender"
+        username: "traumreisender",
       });
-      
+
       this.dreamComments.set(3, {
         id: 3,
         userId: 3,
@@ -774,36 +926,38 @@ export class MemStorage implements IStorage {
         isInterpretation: true,
         likesCount: 3,
         createdAt: new Date("2025-03-21T08:30:00Z"),
-        username: "traumdeuterNRW"
+        username: "traumdeuterNRW",
       });
-      
+
       // Dream Challenges erstellen
       this.dreamChallenges.set(1, {
         id: 1,
         title: "Wochentema: Wasser",
-        description: "Achte diese Woche besonders auf Traumsymbole, die mit Wasser zu tun haben. Teile deinen Traum und die Bedeutung, die Wasser darin hatte.",
+        description:
+          "Achte diese Woche besonders auf Traumsymbole, die mit Wasser zu tun haben. Teile deinen Traum und die Bedeutung, die Wasser darin hatte.",
         imageUrl: null,
         difficulty: "medium",
         startDate: new Date("2025-03-20T00:00:00Z"),
         endDate: new Date("2025-03-27T23:59:59Z"),
         isActive: true,
         tags: ["wasser", "symbolik", "elemente"],
-        createdAt: new Date("2025-03-19T12:00:00Z")
+        createdAt: new Date("2025-03-19T12:00:00Z"),
       });
-      
+
       this.dreamChallenges.set(2, {
         id: 2,
         title: "Lucides Träumen",
-        description: "Versuche, in dieser Woche einen luziden Traum zu erleben und zu dokumentieren. Teile deine Erfahrungen und Techniken, die dir dabei geholfen haben.",
+        description:
+          "Versuche, in dieser Woche einen luziden Traum zu erleben und zu dokumentieren. Teile deine Erfahrungen und Techniken, die dir dabei geholfen haben.",
         imageUrl: null,
         difficulty: "hard",
         startDate: new Date("2025-03-25T00:00:00Z"),
         endDate: new Date("2025-04-01T23:59:59Z"),
         isActive: true,
         tags: ["luzid", "kontrolle", "bewusstsein"],
-        createdAt: new Date("2025-03-24T15:30:00Z")
+        createdAt: new Date("2025-03-24T15:30:00Z"),
       });
-      
+
       // Challenge Submissions erstellen
       this.challengeSubmissions.set(1, {
         id: 1,
@@ -811,19 +965,20 @@ export class MemStorage implements IStorage {
         challengeId: 1,
         dreamId: null,
         title: "Der sprechende Ozean",
-        content: "In meinem Traum stand ich am Ufer eines unendlich weiten Ozeans. Das Wasser begann, mit einer tiefen, hallenden Stimme zu sprechen. Es erzählte von den Geheimnissen der Tiefsee und den Veränderungen, die der Planet durchmacht. Ich fühlte mich gleichzeitig klein und verbunden mit etwas viel Größerem.",
-        reflection: "Wasser scheint in meinen Träumen oft als Vermittler von tiefem Wissen zu fungieren. Es repräsentiert für mich die Verbindung zur Natur und zu größeren Zusammenhängen.",
+        content:
+          "In meinem Traum stand ich am Ufer eines unendlich weiten Ozeans. Das Wasser begann, mit einer tiefen, hallenden Stimme zu sprechen. Es erzählte von den Geheimnissen der Tiefsee und den Veränderungen, die der Planet durchmacht. Ich fühlte mich gleichzeitig klein und verbunden mit etwas viel Größerem.",
+        reflection:
+          "Wasser scheint in meinen Träumen oft als Vermittler von tiefem Wissen zu fungieren. Es repräsentiert für mich die Verbindung zur Natur und zu größeren Zusammenhängen.",
         imageUrl: null,
         tags: ["ozean", "kommunikation", "natur"],
         submissionDate: new Date("2025-03-23T19:45:00Z"),
         likesCount: 7,
-        username: "naturträumer"
+        username: "naturträumer",
       });
-      
+
       console.log("Community test data initialized");
-      
     } catch (error) {
-      console.error('Error initializing community data:', error);
+      console.error("Error initializing community data:", error);
     }
   }
 
@@ -831,7 +986,7 @@ export class MemStorage implements IStorage {
   async getUser(id: number): Promise<any | undefined> {
     return this.users.get(id);
   }
-  
+
   async getUserById(id: number): Promise<any | undefined> {
     return this.users.get(id);
   }
@@ -848,18 +1003,21 @@ export class MemStorage implements IStorage {
     this.users.set(id, newUser);
     return newUser;
   }
-  
-  async updateUser(id: number, userData: Partial<{ name?: string, email?: string }>): Promise<any | undefined> {
+
+  async updateUser(
+    id: number,
+    userData: Partial<{ name?: string; email?: string }>,
+  ): Promise<any | undefined> {
     const user = this.users.get(id);
     if (!user) {
       return undefined;
     }
-    
+
     const updatedUser = {
       ...user,
-      ...userData
+      ...userData,
     };
-    
+
     this.users.set(id, updatedUser);
     return updatedUser;
   }
@@ -882,7 +1040,7 @@ export class MemStorage implements IStorage {
       moodBeforeSleep: dream.moodBeforeSleep || null,
       moodAfterWakeup: dream.moodAfterWakeup || null,
       moodNotes: dream.moodNotes || null,
-      moodData: {} // Initialize moodData
+      moodData: {}, // Initialize moodData
     };
 
     this.dreams.set(id, newDream);
@@ -891,8 +1049,8 @@ export class MemStorage implements IStorage {
 
   async getDreams(): Promise<Dream[]> {
     // Return dreams in reverse chronological order (newest first)
-    return Array.from(this.dreams.values()).sort((a, b) => 
-      b.date.getTime() - a.date.getTime()
+    return Array.from(this.dreams.values()).sort(
+      (a, b) => b.date.getTime() - a.date.getTime(),
     );
   }
 
@@ -900,7 +1058,10 @@ export class MemStorage implements IStorage {
     return this.dreams.get(id);
   }
 
-  async updateDream(id: number, dreamUpdate: Partial<InsertDream>): Promise<Dream | undefined> {
+  async updateDream(
+    id: number,
+    dreamUpdate: Partial<InsertDream>,
+  ): Promise<Dream | undefined> {
     const dream = this.dreams.get(id);
     if (!dream) {
       return undefined;
@@ -910,7 +1071,7 @@ export class MemStorage implements IStorage {
       ...dream,
       ...dreamUpdate,
       // Ensure date is a Date object
-      date: dreamUpdate.date ? new Date(dreamUpdate.date) : dream.date
+      date: dreamUpdate.date ? new Date(dreamUpdate.date) : dream.date,
     };
 
     this.dreams.set(id, updatedDream);
@@ -922,7 +1083,10 @@ export class MemStorage implements IStorage {
   }
 
   // Dream analysis methods
-  async saveDreamAnalysis(dreamId: number, analysis: AnalysisResponse): Promise<Dream> {
+  async saveDreamAnalysis(
+    dreamId: number,
+    analysis: AnalysisResponse,
+  ): Promise<Dream> {
     // First, check if dream exists
     const dream = this.dreams.get(dreamId);
     if (!dream) {
@@ -933,7 +1097,7 @@ export class MemStorage implements IStorage {
     const analysisString = JSON.stringify(analysis);
     const updatedDream: Dream = {
       ...dream,
-      analysis: analysisString
+      analysis: analysisString,
     };
 
     this.dreams.set(dreamId, updatedDream);
@@ -943,12 +1107,14 @@ export class MemStorage implements IStorage {
   // Get dreams by user ID
   async getDreamsByUserId(userId: number): Promise<Dream[]> {
     return Array.from(this.dreams.values())
-      .filter(dream => dream.userId === userId)
+      .filter((dream) => dream.userId === userId)
       .sort((a, b) => b.date.getTime() - a.date.getTime());
   }
 
   // Achievement methods
-  async createAchievement(achievement: InsertAchievement): Promise<Achievement> {
+  async createAchievement(
+    achievement: InsertAchievement,
+  ): Promise<Achievement> {
     const id = this.currentAchievementId++;
     const createdAt = new Date();
 
@@ -960,7 +1126,7 @@ export class MemStorage implements IStorage {
       difficulty: achievement.difficulty as any, // Type-Assertion, da wir die Validierung bereits im Schema haben
       iconName: achievement.iconName,
       criteria: achievement.criteria as any, // Type-Assertion, da wir die Validierung bereits im Schema haben
-      createdAt
+      createdAt,
     };
 
     this.achievements.set(id, newAchievement);
@@ -976,7 +1142,9 @@ export class MemStorage implements IStorage {
   }
 
   // User Achievement methods
-  async createUserAchievement(userAchievement: InsertUserAchievement): Promise<UserAchievement> {
+  async createUserAchievement(
+    userAchievement: InsertUserAchievement,
+  ): Promise<UserAchievement> {
     const id = this.currentUserAchievementId++;
     const unlockedAt = new Date();
 
@@ -986,7 +1154,7 @@ export class MemStorage implements IStorage {
       achievementId: userAchievement.achievementId,
       progress: userAchievement.progress as any, // Type-Assertion, da wir die Validierung bereits im Schema haben
       isCompleted: userAchievement.isCompleted || false,
-      unlockedAt
+      unlockedAt,
     };
 
     this.userAchievements.set(id, newUserAchievement);
@@ -995,16 +1163,23 @@ export class MemStorage implements IStorage {
 
   async getUserAchievements(userId: number): Promise<UserAchievement[]> {
     return Array.from(this.userAchievements.values())
-      .filter(ua => ua.userId === userId)
+      .filter((ua) => ua.userId === userId)
       .sort((a, b) => b.unlockedAt.getTime() - a.unlockedAt.getTime());
   }
 
-  async getUserAchievement(userId: number, achievementId: number): Promise<UserAchievement | undefined> {
-    return Array.from(this.userAchievements.values())
-      .find(ua => ua.userId === userId && ua.achievementId === achievementId);
+  async getUserAchievement(
+    userId: number,
+    achievementId: number,
+  ): Promise<UserAchievement | undefined> {
+    return Array.from(this.userAchievements.values()).find(
+      (ua) => ua.userId === userId && ua.achievementId === achievementId,
+    );
   }
 
-  async updateUserAchievementProgress(id: number, progress: AchievementProgress): Promise<UserAchievement | undefined> {
+  async updateUserAchievementProgress(
+    id: number,
+    progress: AchievementProgress,
+  ): Promise<UserAchievement | undefined> {
     const userAchievement = this.userAchievements.get(id);
     if (!userAchievement) {
       return undefined;
@@ -1012,11 +1187,14 @@ export class MemStorage implements IStorage {
 
     const updatedUserAchievement: UserAchievement = {
       ...userAchievement,
-      progress
+      progress,
     };
 
     // Überprüfen, ob das Achievement abgeschlossen ist
-    if (progress.currentValue >= progress.requiredValue && !userAchievement.isCompleted) {
+    if (
+      progress.currentValue >= progress.requiredValue &&
+      !userAchievement.isCompleted
+    ) {
       updatedUserAchievement.isCompleted = true;
     }
 
@@ -1024,7 +1202,9 @@ export class MemStorage implements IStorage {
     return updatedUserAchievement;
   }
 
-  async completeUserAchievement(id: number): Promise<UserAchievement | undefined> {
+  async completeUserAchievement(
+    id: number,
+  ): Promise<UserAchievement | undefined> {
     const userAchievement = this.userAchievements.get(id);
     if (!userAchievement) {
       return undefined;
@@ -1032,16 +1212,19 @@ export class MemStorage implements IStorage {
 
     const updatedUserAchievement: UserAchievement = {
       ...userAchievement,
-      isCompleted: true
+      isCompleted: true,
     };
 
     this.userAchievements.set(id, updatedUserAchievement);
     return updatedUserAchievement;
   }
 
-  async getLatestUserAchievements(userId: number, limit: number): Promise<UserAchievement[]> {
+  async getLatestUserAchievements(
+    userId: number,
+    limit: number,
+  ): Promise<UserAchievement[]> {
     return Array.from(this.userAchievements.values())
-      .filter(ua => ua.userId === userId && ua.isCompleted)
+      .filter((ua) => ua.userId === userId && ua.isCompleted)
       .sort((a, b) => b.unlockedAt.getTime() - a.unlockedAt.getTime())
       .slice(0, limit);
   }
@@ -1065,7 +1248,7 @@ export class MemStorage implements IStorage {
       date,
       createdAt,
       updatedAt: createdAt,
-      relatedDreamIds: entry.relatedDreamIds || null
+      relatedDreamIds: entry.relatedDreamIds || null,
     };
 
     this.journalEntries.set(id, newEntry);
@@ -1074,7 +1257,7 @@ export class MemStorage implements IStorage {
 
   async getJournalEntriesByUserId(userId: number): Promise<JournalEntry[]> {
     return Array.from(this.journalEntries.values())
-      .filter(entry => entry.userId === userId)
+      .filter((entry) => entry.userId === userId)
       .sort((a, b) => b.date.getTime() - a.date.getTime());
   }
 
@@ -1082,7 +1265,10 @@ export class MemStorage implements IStorage {
     return this.journalEntries.get(id);
   }
 
-  async updateJournalEntry(id: number, entryUpdate: Partial<InsertJournalEntry>): Promise<JournalEntry | undefined> {
+  async updateJournalEntry(
+    id: number,
+    entryUpdate: Partial<InsertJournalEntry>,
+  ): Promise<JournalEntry | undefined> {
     const entry = this.journalEntries.get(id);
     if (!entry) {
       return undefined;
@@ -1093,7 +1279,7 @@ export class MemStorage implements IStorage {
       ...entryUpdate,
       // Ensure date is a Date object
       date: entryUpdate.date ? new Date(entryUpdate.date) : entry.date,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
 
     this.journalEntries.set(id, updatedEntry);
@@ -1105,7 +1291,9 @@ export class MemStorage implements IStorage {
   }
 
   // Dream content entry methods
-  async createDreamContentEntry(entry: InsertDreamContentEntry): Promise<DreamContentEntry> {
+  async createDreamContentEntry(
+    entry: InsertDreamContentEntry,
+  ): Promise<DreamContentEntry> {
     const id = this.currentDreamContentEntryId++;
     const createdAt = new Date();
 
@@ -1124,7 +1312,7 @@ export class MemStorage implements IStorage {
       viewCount: 0,
       createdAt,
       updatedAt: createdAt,
-      relatedContentIds: entry.relatedContentIds || null
+      relatedContentIds: entry.relatedContentIds || null,
     };
 
     this.dreamContentEntries.set(id, newEntry);
@@ -1133,15 +1321,20 @@ export class MemStorage implements IStorage {
 
   async getDreamContentEntries(): Promise<DreamContentEntry[]> {
     return Array.from(this.dreamContentEntries.values())
-      .filter(entry => entry.isPublished)
+      .filter((entry) => entry.isPublished)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
-  async getDreamContentEntry(id: number): Promise<DreamContentEntry | undefined> {
+  async getDreamContentEntry(
+    id: number,
+  ): Promise<DreamContentEntry | undefined> {
     return this.dreamContentEntries.get(id);
   }
 
-  async updateDreamContentEntry(id: number, entryUpdate: Partial<InsertDreamContentEntry>): Promise<DreamContentEntry | undefined> {
+  async updateDreamContentEntry(
+    id: number,
+    entryUpdate: Partial<InsertDreamContentEntry>,
+  ): Promise<DreamContentEntry | undefined> {
     const entry = this.dreamContentEntries.get(id);
     if (!entry) {
       return undefined;
@@ -1150,7 +1343,7 @@ export class MemStorage implements IStorage {
     const updatedEntry: DreamContentEntry = {
       ...entry,
       ...entryUpdate,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
 
     this.dreamContentEntries.set(id, updatedEntry);
@@ -1161,20 +1354,26 @@ export class MemStorage implements IStorage {
     return this.dreamContentEntries.delete(id);
   }
 
-  async getFeaturedDreamContentEntries(limit: number): Promise<DreamContentEntry[]> {
+  async getFeaturedDreamContentEntries(
+    limit: number,
+  ): Promise<DreamContentEntry[]> {
     return Array.from(this.dreamContentEntries.values())
-      .filter(entry => entry.isPublished && entry.isFeatured)
+      .filter((entry) => entry.isPublished && entry.isFeatured)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .slice(0, limit);
   }
 
-  async getDreamContentEntriesByType(contentType: string): Promise<DreamContentEntry[]> {
+  async getDreamContentEntriesByType(
+    contentType: string,
+  ): Promise<DreamContentEntry[]> {
     return Array.from(this.dreamContentEntries.values())
-      .filter(entry => entry.isPublished && entry.contentType === contentType)
+      .filter((entry) => entry.isPublished && entry.contentType === contentType)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
-  async incrementDreamContentViewCount(id: number): Promise<DreamContentEntry | undefined> {
+  async incrementDreamContentViewCount(
+    id: number,
+  ): Promise<DreamContentEntry | undefined> {
     const entry = this.dreamContentEntries.get(id);
     if (!entry) {
       return undefined;
@@ -1182,7 +1381,7 @@ export class MemStorage implements IStorage {
 
     const updatedEntry: DreamContentEntry = {
       ...entry,
-      viewCount: entry.viewCount + 1
+      viewCount: entry.viewCount + 1,
     };
 
     this.dreamContentEntries.set(id, updatedEntry);
@@ -1190,7 +1389,9 @@ export class MemStorage implements IStorage {
   }
 
   // Content comment methods
-  async createContentComment(comment: InsertContentComment): Promise<ContentComment> {
+  async createContentComment(
+    comment: InsertContentComment,
+  ): Promise<ContentComment> {
     const id = this.currentContentCommentId++;
     const createdAt = new Date();
 
@@ -1200,16 +1401,18 @@ export class MemStorage implements IStorage {
       userId: comment.userId,
       text: comment.text,
       createdAt,
-      updatedAt: createdAt
+      updatedAt: createdAt,
     };
 
     this.contentComments.set(id, newComment);
     return newComment;
   }
 
-  async getContentCommentsByContentId(contentId: number): Promise<ContentComment[]> {
+  async getContentCommentsByContentId(
+    contentId: number,
+  ): Promise<ContentComment[]> {
     return Array.from(this.contentComments.values())
-      .filter(comment => comment.contentId === contentId)
+      .filter((comment) => comment.contentId === contentId)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
@@ -1233,7 +1436,7 @@ export class MemStorage implements IStorage {
       region: culture.region || null,
       historicalContext: culture.historicalContext || null,
       createdAt,
-      updatedAt
+      updatedAt,
     };
 
     this.cultures.set(id, newCulture);
@@ -1245,11 +1448,15 @@ export class MemStorage implements IStorage {
   }
 
   async getAllCultures(): Promise<Culture[]> {
-    return Array.from(this.cultures.values())
-      .sort((a, b) => a.name.localeCompare(b.name));
+    return Array.from(this.cultures.values()).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
   }
 
-  async updateCulture(id: number, cultureUpdate: Partial<InsertCulture>): Promise<Culture | undefined> {
+  async updateCulture(
+    id: number,
+    cultureUpdate: Partial<InsertCulture>,
+  ): Promise<Culture | undefined> {
     const culture = this.cultures.get(id);
     if (!culture) {
       return undefined;
@@ -1258,7 +1465,7 @@ export class MemStorage implements IStorage {
     const updatedCulture: Culture = {
       ...culture,
       ...cultureUpdate,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
 
     this.cultures.set(id, updatedCulture);
@@ -1284,7 +1491,7 @@ export class MemStorage implements IStorage {
       tags: symbol.tags || null,
       popularity: symbol.popularity || 50,
       createdAt,
-      updatedAt
+      updatedAt,
     };
 
     this.dreamSymbols.set(id, newSymbol);
@@ -1296,20 +1503,21 @@ export class MemStorage implements IStorage {
   }
 
   async getAllDreamSymbols(): Promise<DreamSymbol[]> {
-    return Array.from(this.dreamSymbols.values())
-      .sort((a, b) => b.popularity - a.popularity);
+    return Array.from(this.dreamSymbols.values()).sort(
+      (a, b) => b.popularity - a.popularity,
+    );
   }
 
   async getDreamSymbolsByCategory(category: string): Promise<DreamSymbol[]> {
     return Array.from(this.dreamSymbols.values())
-      .filter(symbol => symbol.category === category)
+      .filter((symbol) => symbol.category === category)
       .sort((a, b) => b.popularity - a.popularity);
   }
 
   async searchDreamSymbols(query: string): Promise<DreamSymbol[]> {
     const searchTermLower = query.toLowerCase();
     return Array.from(this.dreamSymbols.values())
-      .filter(symbol => {
+      .filter((symbol) => {
         // Suche im Namen des Symbols
         if (symbol.name.toLowerCase().includes(searchTermLower)) {
           return true;
@@ -1321,7 +1529,10 @@ export class MemStorage implements IStorage {
         }
 
         // Suche in Tags
-        if (symbol.tags && symbol.tags.some(tag => tag.toLowerCase().includes(searchTermLower))) {
+        if (
+          symbol.tags &&
+          symbol.tags.some((tag) => tag.toLowerCase().includes(searchTermLower))
+        ) {
           return true;
         }
 
@@ -1330,7 +1541,10 @@ export class MemStorage implements IStorage {
       .sort((a, b) => b.popularity - a.popularity);
   }
 
-  async updateDreamSymbol(id: number, symbolUpdate: Partial<InsertDreamSymbol>): Promise<DreamSymbol | undefined> {
+  async updateDreamSymbol(
+    id: number,
+    symbolUpdate: Partial<InsertDreamSymbol>,
+  ): Promise<DreamSymbol | undefined> {
     const symbol = this.dreamSymbols.get(id);
     if (!symbol) {
       return undefined;
@@ -1339,7 +1553,7 @@ export class MemStorage implements IStorage {
     const updatedSymbol: DreamSymbol = {
       ...symbol,
       ...symbolUpdate,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
 
     this.dreamSymbols.set(id, updatedSymbol);
@@ -1351,7 +1565,9 @@ export class MemStorage implements IStorage {
   }
 
   // Kulturelle Interpretations-Methoden
-  async createCulturalInterpretation(interpretation: InsertCulturalSymbolInterpretation): Promise<CulturalSymbolInterpretation> {
+  async createCulturalInterpretation(
+    interpretation: InsertCulturalSymbolInterpretation,
+  ): Promise<CulturalSymbolInterpretation> {
     const id = this.currentCulturalInterpretationId++;
     const createdAt = new Date();
     const updatedAt = createdAt;
@@ -1365,28 +1581,39 @@ export class MemStorage implements IStorage {
       literaryReferences: interpretation.literaryReferences || null,
       additionalInfo: interpretation.additionalInfo || null,
       createdAt,
-      updatedAt
+      updatedAt,
     };
 
     this.culturalInterpretations.set(id, newInterpretation);
     return newInterpretation;
   }
 
-  async getCulturalInterpretation(id: number): Promise<CulturalSymbolInterpretation | undefined> {
+  async getCulturalInterpretation(
+    id: number,
+  ): Promise<CulturalSymbolInterpretation | undefined> {
     return this.culturalInterpretations.get(id);
   }
 
-  async getCulturalInterpretationsBySymbolId(symbolId: number): Promise<CulturalSymbolInterpretation[]> {
-    return Array.from(this.culturalInterpretations.values())
-      .filter(interpretation => interpretation.symbolId === symbolId);
+  async getCulturalInterpretationsBySymbolId(
+    symbolId: number,
+  ): Promise<CulturalSymbolInterpretation[]> {
+    return Array.from(this.culturalInterpretations.values()).filter(
+      (interpretation) => interpretation.symbolId === symbolId,
+    );
   }
 
-  async getCulturalInterpretationsByCultureId(cultureId: number): Promise<CulturalSymbolInterpretation[]> {
-    return Array.from(this.culturalInterpretations.values())
-      .filter(interpretation => interpretation.cultureId === cultureId);
+  async getCulturalInterpretationsByCultureId(
+    cultureId: number,
+  ): Promise<CulturalSymbolInterpretation[]> {
+    return Array.from(this.culturalInterpretations.values()).filter(
+      (interpretation) => interpretation.cultureId === cultureId,
+    );
   }
 
-  async updateCulturalInterpretation(id: number, interpretationUpdate: Partial<InsertCulturalSymbolInterpretation>): Promise<CulturalSymbolInterpretation | undefined> {
+  async updateCulturalInterpretation(
+    id: number,
+    interpretationUpdate: Partial<InsertCulturalSymbolInterpretation>,
+  ): Promise<CulturalSymbolInterpretation | undefined> {
     const interpretation = this.culturalInterpretations.get(id);
     if (!interpretation) {
       return undefined;
@@ -1395,7 +1622,7 @@ export class MemStorage implements IStorage {
     const updatedInterpretation: CulturalSymbolInterpretation = {
       ...interpretation,
       ...interpretationUpdate,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
 
     this.culturalInterpretations.set(id, updatedInterpretation);
@@ -1407,7 +1634,9 @@ export class MemStorage implements IStorage {
   }
 
   // Symbol-Vergleiche Methoden
-  async createSymbolComparison(comparison: InsertSymbolComparison): Promise<SymbolComparison> {
+  async createSymbolComparison(
+    comparison: InsertSymbolComparison,
+  ): Promise<SymbolComparison> {
     const id = this.currentSymbolComparisonId++;
     const createdAt = new Date();
     const updatedAt = createdAt;
@@ -1418,7 +1647,7 @@ export class MemStorage implements IStorage {
       title: comparison.title,
       content: comparison.content,
       createdAt,
-      updatedAt
+      updatedAt,
     };
 
     this.symbolComparisons.set(id, newComparison);
@@ -1429,12 +1658,18 @@ export class MemStorage implements IStorage {
     return this.symbolComparisons.get(id);
   }
 
-  async getSymbolComparisonsBySymbolId(symbolId: number): Promise<SymbolComparison[]> {
-    return Array.from(this.symbolComparisons.values())
-      .filter(comparison => comparison.symbolId === symbolId);
+  async getSymbolComparisonsBySymbolId(
+    symbolId: number,
+  ): Promise<SymbolComparison[]> {
+    return Array.from(this.symbolComparisons.values()).filter(
+      (comparison) => comparison.symbolId === symbolId,
+    );
   }
 
-  async updateSymbolComparison(id: number, comparisonUpdate: Partial<InsertSymbolComparison>): Promise<SymbolComparison | undefined> {
+  async updateSymbolComparison(
+    id: number,
+    comparisonUpdate: Partial<InsertSymbolComparison>,
+  ): Promise<SymbolComparison | undefined> {
     const comparison = this.symbolComparisons.get(id);
     if (!comparison) {
       return undefined;
@@ -1443,7 +1678,7 @@ export class MemStorage implements IStorage {
     const updatedComparison: SymbolComparison = {
       ...comparison,
       ...comparisonUpdate,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
 
     this.symbolComparisons.set(id, updatedComparison);
@@ -1455,7 +1690,9 @@ export class MemStorage implements IStorage {
   }
 
   // Benutzer-Favoriten Methoden
-  async createUserSymbolFavorite(favorite: InsertUserSymbolFavorite): Promise<UserSymbolFavorite> {
+  async createUserSymbolFavorite(
+    favorite: InsertUserSymbolFavorite,
+  ): Promise<UserSymbolFavorite> {
     const id = this.currentUserSymbolFavoriteId++;
     const createdAt = new Date();
 
@@ -1464,16 +1701,19 @@ export class MemStorage implements IStorage {
       userId: favorite.userId,
       symbolId: favorite.symbolId,
       notes: favorite.notes || null,
-      createdAt
+      createdAt,
     };
 
     this.userSymbolFavorites.set(id, newFavorite);
     return newFavorite;
   }
 
-  async getUserSymbolFavoritesByUserId(userId: number): Promise<UserSymbolFavorite[]> {
-    return Array.from(this.userSymbolFavorites.values())
-      .filter(favorite => favorite.userId === userId);
+  async getUserSymbolFavoritesByUserId(
+    userId: number,
+  ): Promise<UserSymbolFavorite[]> {
+    return Array.from(this.userSymbolFavorites.values()).filter(
+      (favorite) => favorite.userId === userId,
+    );
   }
 
   async deleteUserSymbolFavorite(id: number): Promise<boolean> {
@@ -1481,34 +1721,40 @@ export class MemStorage implements IStorage {
   }
 
   // Custom methods for tag and mood operations
-  async updateDreamTags(id: number, tags: string[]): Promise<Dream | undefined> {
+  async updateDreamTags(
+    id: number,
+    tags: string[],
+  ): Promise<Dream | undefined> {
     const dream = this.dreams.get(id);
     if (!dream) {
       return undefined;
     }
-    
+
     const updatedDream = {
       ...dream,
-      tags: tags
+      tags: tags,
     };
-    
+
     this.dreams.set(id, updatedDream);
     return updatedDream;
   }
 
-  async updateDreamMood(id: number, moodData: MoodData): Promise<Dream | undefined> {
+  async updateDreamMood(
+    id: number,
+    moodData: MoodData,
+  ): Promise<Dream | undefined> {
     const dream = this.dreams.get(id);
     if (!dream) {
       return undefined;
     }
-    
+
     const updatedDream = {
       ...dream,
       moodBeforeSleep: moodData.beforeSleep || dream.moodBeforeSleep,
       moodAfterWakeup: moodData.afterWakeup || dream.moodAfterWakeup,
-      moodNotes: moodData.notes || dream.moodNotes
+      moodNotes: moodData.notes || dream.moodNotes,
     };
-    
+
     this.dreams.set(id, updatedDream);
     return updatedDream;
   }
@@ -1516,10 +1762,12 @@ export class MemStorage implements IStorage {
   // Collaborative Dream Interpretation methods
 
   // Shared Dreams
-  async createSharedDream(sharedDream: InsertSharedDream): Promise<SharedDream> {
+  async createSharedDream(
+    sharedDream: InsertSharedDream,
+  ): Promise<SharedDream> {
     const id = this.currentSharedDreamId++;
     const now = new Date();
-    
+
     const newSharedDream: SharedDream = {
       id,
       dreamId: sharedDream.dreamId,
@@ -1528,126 +1776,147 @@ export class MemStorage implements IStorage {
       content: sharedDream.content,
       anonymousShare: sharedDream.anonymousShare || false,
       visibility: sharedDream.visibility || "community",
-      allowComments: sharedDream.allowComments !== undefined ? sharedDream.allowComments : true,
-      allowInterpretations: sharedDream.allowInterpretations !== undefined ? sharedDream.allowInterpretations : true,
+      allowComments:
+        sharedDream.allowComments !== undefined
+          ? sharedDream.allowComments
+          : true,
+      allowInterpretations:
+        sharedDream.allowInterpretations !== undefined
+          ? sharedDream.allowInterpretations
+          : true,
       includeAiAnalysis: sharedDream.includeAiAnalysis || false,
       featuredInCommunity: false,
       viewCount: 0,
       createdAt: now,
       updatedAt: now,
       tags: sharedDream.tags || [],
-      imageUrl: sharedDream.imageUrl || null
+      imageUrl: sharedDream.imageUrl || null,
     };
-    
+
     this.sharedDreams.set(id, newSharedDream);
     return newSharedDream;
   }
-  
+
   async getSharedDream(id: number): Promise<SharedDream | undefined> {
     return this.sharedDreams.get(id);
   }
-  
+
   async getSharedDreamsByUserId(userId: number): Promise<SharedDream[]> {
-    return Array.from(this.sharedDreams.values())
-      .filter(dream => dream.userId === userId);
+    return Array.from(this.sharedDreams.values()).filter(
+      (dream) => dream.userId === userId,
+    );
   }
-  
-  async getPublicSharedDreams(limit?: number, offset?: number): Promise<SharedDream[]> {
+
+  async getPublicSharedDreams(
+    limit?: number,
+    offset?: number,
+  ): Promise<SharedDream[]> {
     let dreams = Array.from(this.sharedDreams.values())
-      .filter(dream => dream.visibility === "public")
+      .filter((dream) => dream.visibility === "public")
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    
+
     if (offset !== undefined) {
       dreams = dreams.slice(offset);
     }
-    
+
     if (limit !== undefined) {
       dreams = dreams.slice(0, limit);
     }
-    
+
     return dreams;
   }
-  
-  async getCommunitySharedDreams(limit?: number, offset?: number): Promise<SharedDream[]> {
+
+  async getCommunitySharedDreams(
+    limit?: number,
+    offset?: number,
+  ): Promise<SharedDream[]> {
     let dreams = Array.from(this.sharedDreams.values())
-      .filter(dream => dream.visibility === "community" || dream.visibility === "public")
+      .filter(
+        (dream) =>
+          dream.visibility === "community" || dream.visibility === "public",
+      )
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    
+
     if (offset !== undefined) {
       dreams = dreams.slice(offset);
     }
-    
+
     if (limit !== undefined) {
       dreams = dreams.slice(0, limit);
     }
-    
+
     return dreams;
   }
-  
+
   async getFeaturedSharedDreams(limit?: number): Promise<SharedDream[]> {
     let dreams = Array.from(this.sharedDreams.values())
-      .filter(dream => dream.featuredInCommunity)
+      .filter((dream) => dream.featuredInCommunity)
       .sort((a, b) => b.viewCount - a.viewCount);
-    
+
     if (limit !== undefined) {
       dreams = dreams.slice(0, limit);
     }
-    
+
     return dreams;
   }
-  
-  async updateSharedDream(id: number, sharedDream: Partial<InsertSharedDream>): Promise<SharedDream | undefined> {
+
+  async updateSharedDream(
+    id: number,
+    sharedDream: Partial<InsertSharedDream>,
+  ): Promise<SharedDream | undefined> {
     const dream = this.sharedDreams.get(id);
     if (!dream) {
       return undefined;
     }
-    
+
     const updatedDream = {
       ...dream,
       ...sharedDream,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
-    
+
     this.sharedDreams.set(id, updatedDream);
     return updatedDream;
   }
-  
+
   async deleteSharedDream(id: number): Promise<boolean> {
     // Also delete all comments and likes associated with this shared dream
     Array.from(this.dreamComments.values())
-      .filter(comment => comment.sharedDreamId === id)
-      .forEach(comment => {
+      .filter((comment) => comment.sharedDreamId === id)
+      .forEach((comment) => {
         this.dreamComments.delete(comment.id);
-        
+
         // Delete all likes associated with this comment
         Array.from(this.commentLikes.values())
-          .filter(like => like.commentId === comment.id)
-          .forEach(like => this.commentLikes.delete(like.id));
+          .filter((like) => like.commentId === comment.id)
+          .forEach((like) => this.commentLikes.delete(like.id));
       });
-    
+
     return this.sharedDreams.delete(id);
   }
-  
-  async incrementSharedDreamViewCount(id: number): Promise<SharedDream | undefined> {
+
+  async incrementSharedDreamViewCount(
+    id: number,
+  ): Promise<SharedDream | undefined> {
     const dream = this.sharedDreams.get(id);
     if (!dream) {
       return undefined;
     }
-    
+
     const updatedDream = {
       ...dream,
-      viewCount: dream.viewCount + 1
+      viewCount: dream.viewCount + 1,
     };
-    
+
     this.sharedDreams.set(id, updatedDream);
     return updatedDream;
   }
-  
+
   // Dream Comments
   async createDreamComment(comment: InsertDreamComment): Promise<DreamComment> {
     const id = this.currentDreamCommentId++;
     const now = new Date();
-    
+
     const newComment: DreamComment = {
       id,
       sharedDreamId: comment.sharedDreamId,
@@ -1657,16 +1926,18 @@ export class MemStorage implements IStorage {
       likes: 0,
       parentCommentId: comment.parentCommentId || null,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
     };
-    
+
     this.dreamComments.set(id, newComment);
     return newComment;
   }
-  
-  async getDreamCommentsBySharedDreamId(sharedDreamId: number): Promise<DreamComment[]> {
+
+  async getDreamCommentsBySharedDreamId(
+    sharedDreamId: number,
+  ): Promise<DreamComment[]> {
     return Array.from(this.dreamComments.values())
-      .filter(comment => comment.sharedDreamId === sharedDreamId)
+      .filter((comment) => comment.sharedDreamId === sharedDreamId)
       .sort((a, b) => {
         // Sort top-level comments by creation time (newest first)
         if (!a.parentCommentId && !b.parentCommentId) {
@@ -1675,107 +1946,116 @@ export class MemStorage implements IStorage {
         // Put replies after their parent comments
         if (a.parentCommentId && !b.parentCommentId) return 1;
         if (!a.parentCommentId && b.parentCommentId) return -1;
-        
+
         // If both are replies, sort by creation time (oldest first)
         return a.createdAt.getTime() - b.createdAt.getTime();
       });
   }
-  
+
   async getDreamComment(id: number): Promise<DreamComment | undefined> {
     return this.dreamComments.get(id);
   }
-  
-  async updateDreamComment(id: number, comment: Partial<InsertDreamComment>): Promise<DreamComment | undefined> {
+
+  async updateDreamComment(
+    id: number,
+    comment: Partial<InsertDreamComment>,
+  ): Promise<DreamComment | undefined> {
     const existingComment = this.dreamComments.get(id);
     if (!existingComment) {
       return undefined;
     }
-    
+
     const updatedComment = {
       ...existingComment,
       ...comment,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
-    
+
     this.dreamComments.set(id, updatedComment);
     return updatedComment;
   }
-  
+
   async deleteDreamComment(id: number): Promise<boolean> {
     // Delete all likes associated with this comment
     Array.from(this.commentLikes.values())
-      .filter(like => like.commentId === id)
-      .forEach(like => this.commentLikes.delete(like.id));
-    
+      .filter((like) => like.commentId === id)
+      .forEach((like) => this.commentLikes.delete(like.id));
+
     // Delete all child comments (replies)
     Array.from(this.dreamComments.values())
-      .filter(comment => comment.parentCommentId === id)
-      .forEach(comment => this.deleteDreamComment(comment.id));
-    
+      .filter((comment) => comment.parentCommentId === id)
+      .forEach((comment) => this.deleteDreamComment(comment.id));
+
     return this.dreamComments.delete(id);
   }
-  
+
   // Comment Likes
   async createCommentLike(like: InsertCommentLike): Promise<CommentLike> {
     const id = this.currentCommentLikeId++;
-    
+
     const newLike: CommentLike = {
       id,
       commentId: like.commentId,
       userId: like.userId,
-      createdAt: new Date()
+      createdAt: new Date(),
     };
-    
+
     this.commentLikes.set(id, newLike);
-    
+
     // Increment the likes count on the comment
     await this.updateCommentLikesCount(like.commentId);
-    
+
     return newLike;
   }
-  
-  async getCommentLike(commentId: number, userId: number): Promise<CommentLike | undefined> {
-    return Array.from(this.commentLikes.values())
-      .find(like => like.commentId === commentId && like.userId === userId);
+
+  async getCommentLike(
+    commentId: number,
+    userId: number,
+  ): Promise<CommentLike | undefined> {
+    return Array.from(this.commentLikes.values()).find(
+      (like) => like.commentId === commentId && like.userId === userId,
+    );
   }
-  
+
   async deleteCommentLike(id: number): Promise<boolean> {
     const like = this.commentLikes.get(id);
     if (like) {
       const result = this.commentLikes.delete(id);
-      
+
       // Update the likes count on the comment
       await this.updateCommentLikesCount(like.commentId);
-      
+
       return result;
     }
     return false;
   }
-  
+
   async updateCommentLikesCount(commentId: number): Promise<number> {
     const comment = this.dreamComments.get(commentId);
     if (!comment) {
       return 0;
     }
-    
-    const likesCount = Array.from(this.commentLikes.values())
-      .filter(like => like.commentId === commentId)
-      .length;
-    
+
+    const likesCount = Array.from(this.commentLikes.values()).filter(
+      (like) => like.commentId === commentId,
+    ).length;
+
     const updatedComment = {
       ...comment,
-      likes: likesCount
+      likes: likesCount,
     };
-    
+
     this.dreamComments.set(commentId, updatedComment);
     return likesCount;
   }
-  
+
   // Dream Challenges
-  async createDreamChallenge(challenge: InsertDreamChallenge): Promise<DreamChallenge> {
+  async createDreamChallenge(
+    challenge: InsertDreamChallenge,
+  ): Promise<DreamChallenge> {
     const id = this.currentDreamChallengeId++;
     const now = new Date();
-    
+
     const newChallenge: DreamChallenge = {
       id,
       title: challenge.title,
@@ -1787,65 +2067,76 @@ export class MemStorage implements IStorage {
       prizes: challenge.prizes || null,
       rules: challenge.rules,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
     };
-    
+
     this.dreamChallenges.set(id, newChallenge);
     return newChallenge;
   }
-  
+
   async getDreamChallenge(id: number): Promise<DreamChallenge | undefined> {
     return this.dreamChallenges.get(id);
   }
-  
+
   async getActiveDreamChallenges(): Promise<DreamChallenge[]> {
     const now = new Date();
-    
+
     return Array.from(this.dreamChallenges.values())
-      .filter(challenge => 
-        challenge.isActive && 
-        challenge.startDate <= now && 
-        challenge.endDate >= now
+      .filter(
+        (challenge) =>
+          challenge.isActive &&
+          challenge.startDate <= now &&
+          challenge.endDate >= now,
       )
       .sort((a, b) => b.endDate.getTime() - a.endDate.getTime());
   }
-  
+
   async getAllDreamChallenges(): Promise<DreamChallenge[]> {
-    return Array.from(this.dreamChallenges.values())
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    return Array.from(this.dreamChallenges.values()).sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    );
   }
-  
-  async updateDreamChallenge(id: number, challenge: Partial<InsertDreamChallenge>): Promise<DreamChallenge | undefined> {
+
+  async updateDreamChallenge(
+    id: number,
+    challenge: Partial<InsertDreamChallenge>,
+  ): Promise<DreamChallenge | undefined> {
     const existingChallenge = this.dreamChallenges.get(id);
     if (!existingChallenge) {
       return undefined;
     }
-    
+
     const updatedChallenge = {
       ...existingChallenge,
       ...challenge,
-      startDate: challenge.startDate ? new Date(challenge.startDate) : existingChallenge.startDate,
-      endDate: challenge.endDate ? new Date(challenge.endDate) : existingChallenge.endDate,
-      updatedAt: new Date()
+      startDate: challenge.startDate
+        ? new Date(challenge.startDate)
+        : existingChallenge.startDate,
+      endDate: challenge.endDate
+        ? new Date(challenge.endDate)
+        : existingChallenge.endDate,
+      updatedAt: new Date(),
     };
-    
+
     this.dreamChallenges.set(id, updatedChallenge);
     return updatedChallenge;
   }
-  
+
   async deleteDreamChallenge(id: number): Promise<boolean> {
     // Delete all submissions for this challenge
     Array.from(this.challengeSubmissions.values())
-      .filter(submission => submission.challengeId === id)
-      .forEach(submission => this.challengeSubmissions.delete(submission.id));
-    
+      .filter((submission) => submission.challengeId === id)
+      .forEach((submission) => this.challengeSubmissions.delete(submission.id));
+
     return this.dreamChallenges.delete(id);
   }
-  
+
   // Challenge Submissions
-  async createChallengeSubmission(submission: InsertChallengeSubmission): Promise<ChallengeSubmission> {
+  async createChallengeSubmission(
+    submission: InsertChallengeSubmission,
+  ): Promise<ChallengeSubmission> {
     const id = this.currentChallengeSubmissionId++;
-    
+
     const newSubmission: ChallengeSubmission = {
       id,
       challengeId: submission.challengeId,
@@ -1854,51 +2145,62 @@ export class MemStorage implements IStorage {
       submissionDate: new Date(),
       status: submission.status || "pending",
       notes: submission.notes || null,
-      createdAt: new Date()
+      createdAt: new Date(),
     };
-    
+
     this.challengeSubmissions.set(id, newSubmission);
     return newSubmission;
   }
-  
-  async getChallengeSubmissionsByUserId(userId: number): Promise<ChallengeSubmission[]> {
+
+  async getChallengeSubmissionsByUserId(
+    userId: number,
+  ): Promise<ChallengeSubmission[]> {
     return Array.from(this.challengeSubmissions.values())
-      .filter(submission => submission.userId === userId)
-      .sort((a, b) => b.submissionDate.getTime() - a.submissionDate.getTime());
-  }
-  
-  async getChallengeSubmissionsByChallengeId(challengeId: number): Promise<ChallengeSubmission[]> {
-    return Array.from(this.challengeSubmissions.values())
-      .filter(submission => submission.challengeId === challengeId)
+      .filter((submission) => submission.userId === userId)
       .sort((a, b) => b.submissionDate.getTime() - a.submissionDate.getTime());
   }
 
-  async getChallengeSubmission(id: number): Promise<ChallengeSubmission | undefined> {
+  async getChallengeSubmissionsByChallengeId(
+    challengeId: number,
+  ): Promise<ChallengeSubmission[]> {
+    return Array.from(this.challengeSubmissions.values())
+      .filter((submission) => submission.challengeId === challengeId)
+      .sort((a, b) => b.submissionDate.getTime() - a.submissionDate.getTime());
+  }
+
+  async getChallengeSubmission(
+    id: number,
+  ): Promise<ChallengeSubmission | undefined> {
     return this.challengeSubmissions.get(id);
   }
-  
-  async updateChallengeSubmission(id: number, submission: Partial<InsertChallengeSubmission>): Promise<ChallengeSubmission | undefined> {
+
+  async updateChallengeSubmission(
+    id: number,
+    submission: Partial<InsertChallengeSubmission>,
+  ): Promise<ChallengeSubmission | undefined> {
     const existingSubmission = this.challengeSubmissions.get(id);
     if (!existingSubmission) {
       return undefined;
     }
-    
+
     const updatedSubmission = {
       ...existingSubmission,
-      ...submission
+      ...submission,
     };
-    
+
     this.challengeSubmissions.set(id, updatedSubmission);
     return updatedSubmission;
   }
-  
+
   async deleteChallengeSubmission(id: number): Promise<boolean> {
     return this.challengeSubmissions.delete(id);
   }
 
   // AI Assistant methods
-  
-  async createAssistantConversation(conversation: InsertAssistantConversation): Promise<AssistantConversation> {
+
+  async createAssistantConversation(
+    conversation: InsertAssistantConversation,
+  ): Promise<AssistantConversation> {
     const id = this.currentAssistantConversationId++;
     const now = new Date();
 
@@ -1909,35 +2211,43 @@ export class MemStorage implements IStorage {
       summary: null,
       createdAt: now,
       updatedAt: now,
-      isArchived: conversation.isArchived || false
+      isArchived: conversation.isArchived || false,
     };
 
     this.assistantConversations.set(id, newConversation);
     return newConversation;
   }
 
-  async getAssistantConversation(id: number): Promise<AssistantConversation | undefined> {
+  async getAssistantConversation(
+    id: number,
+  ): Promise<AssistantConversation | undefined> {
     return this.assistantConversations.get(id);
   }
 
-  async getAssistantConversationsByUserId(userId: number): Promise<AssistantConversation[]> {
+  async getAssistantConversationsByUserId(
+    userId: number,
+  ): Promise<AssistantConversation[]> {
     const conversations: AssistantConversation[] = [];
-    
-    this.assistantConversations.forEach(conversation => {
+
+    this.assistantConversations.forEach((conversation) => {
       if (conversation.userId === userId) {
         conversations.push(conversation);
       }
     });
 
     // Sort by most recently updated
-    return conversations.sort((a, b) => 
-      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    return conversations.sort(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
     );
   }
 
-  async updateAssistantConversation(id: number, conversation: Partial<InsertAssistantConversation>): Promise<AssistantConversation | undefined> {
+  async updateAssistantConversation(
+    id: number,
+    conversation: Partial<InsertAssistantConversation>,
+  ): Promise<AssistantConversation | undefined> {
     const existingConversation = this.assistantConversations.get(id);
-    
+
     if (!existingConversation) {
       return undefined;
     }
@@ -1946,7 +2256,7 @@ export class MemStorage implements IStorage {
       ...existingConversation,
       title: conversation.title ?? existingConversation.title,
       updatedAt: new Date(),
-      isArchived: conversation.isArchived ?? existingConversation.isArchived
+      isArchived: conversation.isArchived ?? existingConversation.isArchived,
     };
 
     this.assistantConversations.set(id, updatedConversation);
@@ -1960,12 +2270,14 @@ export class MemStorage implements IStorage {
         this.assistantMessages.delete(msgId);
       }
     });
-    
+
     // Then delete the conversation itself
     return this.assistantConversations.delete(id);
   }
 
-  async createAssistantMessage(message: InsertAssistantMessage): Promise<AssistantMessage> {
+  async createAssistantMessage(
+    message: InsertAssistantMessage,
+  ): Promise<AssistantMessage> {
     const id = this.currentAssistantMessageId++;
     const now = new Date();
 
@@ -1977,13 +2289,15 @@ export class MemStorage implements IStorage {
       timestamp: now,
       relatedDreamId: message.relatedDreamId || null,
       relatedJournalId: message.relatedJournalId || null,
-      metadata: message.metadata || null
+      metadata: message.metadata || null,
     };
 
     this.assistantMessages.set(id, newMessage);
 
     // Update conversation's updatedAt timestamp
-    const conversation = this.assistantConversations.get(message.conversationId);
+    const conversation = this.assistantConversations.get(
+      message.conversationId,
+    );
     if (conversation) {
       conversation.updatedAt = now;
       this.assistantConversations.set(message.conversationId, conversation);
@@ -1992,79 +2306,89 @@ export class MemStorage implements IStorage {
     return newMessage;
   }
 
-  async getAssistantMessagesByConversationId(conversationId: number): Promise<AssistantMessage[]> {
+  async getAssistantMessagesByConversationId(
+    conversationId: number,
+  ): Promise<AssistantMessage[]> {
     const messages: AssistantMessage[] = [];
-    
-    this.assistantMessages.forEach(message => {
+
+    this.assistantMessages.forEach((message) => {
       if (message.conversationId === conversationId) {
         messages.push(message);
       }
     });
 
     // Sort by timestamp (oldest first)
-    return messages.sort((a, b) => 
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    return messages.sort(
+      (a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
     );
   }
 
-  async getAssistantMessageThread(conversationId: number, limit?: number): Promise<AssistantMessage[]> {
-    const messages = await this.getAssistantMessagesByConversationId(conversationId);
-    
+  async getAssistantMessageThread(
+    conversationId: number,
+    limit?: number,
+  ): Promise<AssistantMessage[]> {
+    const messages =
+      await this.getAssistantMessagesByConversationId(conversationId);
+
     if (limit) {
       return messages.slice(0, limit);
     }
-    
+
     return messages;
   }
 
-  async processAssistantChatRequest(userId: number, request: ChatRequest): Promise<ChatResponse> {
+  async processAssistantChatRequest(
+    userId: number,
+    request: ChatRequest,
+  ): Promise<ChatResponse> {
     let conversationId = request.conversationId;
     let conversation: AssistantConversation | undefined;
-    
+
     try {
       // If no conversation ID is provided, create a new conversation
       if (!conversationId) {
         const newConversation: InsertAssistantConversation = {
           userId,
           title: "Neue Unterhaltung",
-          isArchived: false
+          isArchived: false,
         };
-        
+
         conversation = await this.createAssistantConversation(newConversation);
         conversationId = conversation.id;
       } else {
         // Verify the conversation exists and belongs to the user
         conversation = await this.getAssistantConversation(conversationId);
-        
+
         if (!conversation) {
           throw new Error("Conversation not found");
         }
-        
+
         if (conversation.userId !== userId) {
           throw new Error("Unauthorized access to conversation");
         }
       }
-      
+
       // Save the user message
       const userMessage = await this.createAssistantMessage({
         conversationId,
         content: request.message,
         role: "user",
         relatedDreamId: request.relatedDreamId,
-        relatedJournalId: request.relatedJournalId
+        relatedJournalId: request.relatedJournalId,
       });
-      
+
       // Get related content if needed
       let relatedContent: any = null;
       let contextPrompt = "";
-      
+
       if (request.relatedDreamId) {
         const dream = await this.getDream(request.relatedDreamId);
-        
+
         if (dream && dream.userId === userId) {
           relatedContent = dream;
           contextPrompt = `Bezüglich des Traums "${dream.title}" vom ${dream.date?.toLocaleDateString()}:\n${dream.content}\n\n`;
-          
+
           // If there's analysis, add it to the context
           if (dream.analysis) {
             try {
@@ -2077,26 +2401,30 @@ export class MemStorage implements IStorage {
         }
       } else if (request.relatedJournalId) {
         const journal = await this.getJournalEntry(request.relatedJournalId);
-        
+
         if (journal && journal.userId === userId) {
           relatedContent = journal;
           contextPrompt = `Bezüglich des Tagebucheintrags "${journal.title}" vom ${journal.date?.toLocaleDateString()}:\n${journal.content}\n\n`;
         }
       }
-      
+
       // Get conversation history for context
-      const conversations = await this.getAssistantMessagesByConversationId(conversationId);
+      const conversations =
+        await this.getAssistantMessagesByConversationId(conversationId);
       const historyPrompt = conversations
-        .map(msg => `${msg.role === 'user' ? 'Benutzer' : 'Assistent'}: ${msg.content}`)
-        .join('\n');
-      
+        .map(
+          (msg) =>
+            `${msg.role === "user" ? "Benutzer" : "Assistent"}: ${msg.content}`,
+        )
+        .join("\n");
+
       // Generate AI response
       const messageForAI = `${contextPrompt}${request.message}`;
       console.log("Sending message to OpenAI:", messageForAI);
-      
+
       // Call the OpenAI API
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-      
+
       try {
         const completion = await openai.chat.completions.create({
           model: "gpt-4o",
@@ -2119,26 +2447,28 @@ export class MemStorage implements IStorage {
   10. Vermittle eine ausgewogene Perspektive zwischen wissenschaftlicher und spiritueller Traumdeutung.
   
   Bisherige Konversation:
-  ${historyPrompt}`
+  ${historyPrompt}`,
             },
             {
               role: "user",
-              content: messageForAI
-            }
-          ]
+              content: messageForAI,
+            },
+          ],
         });
-      
-        const aiResponse = completion.choices[0].message.content || "Entschuldigung, ich konnte deine Nachricht nicht verarbeiten.";
-        
+
+        const aiResponse =
+          completion.choices[0].message.content ||
+          "Entschuldigung, ich konnte deine Nachricht nicht verarbeiten.";
+
         // Save the assistant's response
         const assistantMessage = await this.createAssistantMessage({
           conversationId,
           content: aiResponse,
           role: "assistant",
           relatedDreamId: request.relatedDreamId,
-          relatedJournalId: request.relatedJournalId
+          relatedJournalId: request.relatedJournalId,
         });
-        
+
         // Update conversation title if it's new (only 2 messages including this one)
         if (conversation && conversations.length === 1) {
           try {
@@ -2147,22 +2477,24 @@ export class MemStorage implements IStorage {
               model: "gpt-4o",
               messages: [
                 {
-                  role: "system", 
-                  content: "Erstelle einen kurzen, aussagekräftigen Titel (max. 5 Wörter) für das folgende Gespräch. Gib nur den Titel zurück, ohne Anführungszeichen oder zusätzlichen Text."
+                  role: "system",
+                  content:
+                    "Erstelle einen kurzen, aussagekräftigen Titel (max. 5 Wörter) für das folgende Gespräch. Gib nur den Titel zurück, ohne Anführungszeichen oder zusätzlichen Text.",
                 },
                 {
                   role: "user",
-                  content: request.message
-                }
-              ]
+                  content: request.message,
+                },
+              ],
             });
-            
-            const generatedTitle = titleCompletion.choices[0].message.content || "Neue Unterhaltung";
-            
-            await this.updateAssistantConversation(conversationId, { 
-              title: generatedTitle
+
+            const generatedTitle =
+              titleCompletion.choices[0].message.content || "Neue Unterhaltung";
+
+            await this.updateAssistantConversation(conversationId, {
+              title: generatedTitle,
             });
-            
+
             // Update the conversation object for the response
             conversation.title = generatedTitle;
           } catch (e) {
@@ -2170,63 +2502,66 @@ export class MemStorage implements IStorage {
             // Continue even if title generation fails
           }
         }
-        
+
         return {
           conversationId,
           message: assistantMessage,
-          relatedContent
+          relatedContent,
         };
       } catch (error) {
         console.error("Error calling OpenAI API:", error);
-        
+
         // Create an error message
         const errorMessage = await this.createAssistantMessage({
           conversationId,
-          content: "Entschuldigung, es gab ein Problem bei der Verarbeitung deiner Anfrage. Bitte versuche es später noch einmal.",
+          content:
+            "Entschuldigung, es gab ein Problem bei der Verarbeitung deiner Anfrage. Bitte versuche es später noch einmal.",
           role: "assistant",
           relatedDreamId: request.relatedDreamId,
-          relatedJournalId: request.relatedJournalId
+          relatedJournalId: request.relatedJournalId,
         });
-        
+
         return {
           conversationId,
           message: errorMessage,
-          relatedContent
+          relatedContent,
         };
       }
     } catch (error) {
       console.error("Error processing chat request:", error);
-      
+
       // If we have a conversation ID, create an error message
       if (conversationId) {
         const errorMessage = await this.createAssistantMessage({
           conversationId,
-          content: "Entschuldigung, es gab ein Problem bei der Verarbeitung deiner Anfrage. Bitte versuche es später noch einmal.",
-          role: "assistant"
+          content:
+            "Entschuldigung, es gab ein Problem bei der Verarbeitung deiner Anfrage. Bitte versuche es später noch einmal.",
+          role: "assistant",
         });
-        
+
         return {
           conversationId,
-          message: errorMessage
+          message: errorMessage,
         };
       }
-      
+
       // If we don't even have a conversation ID, create a new conversation with an error message
       const newConversation = await this.createAssistantConversation({
         userId,
         title: "Fehlerhafte Unterhaltung",
-        isArchived: false
+        isArchived: false,
       });
-      
+
       const errorMessage = await this.createAssistantMessage({
         conversationId: newConversation.id,
-        content: "Entschuldigung, es gab ein Problem bei der Verarbeitung deiner Anfrage. Bitte versuche es später noch einmal.",
-        role: "assistant"
+        content:
+          "Entschuldigung, es gab ein Problem bei der Verarbeitung deiner Anfrage. Bitte versuche es später noch einmal.",
+        role: "assistant",
       });
-      
+
       return {
         conversationId: newConversation.id,
-        message: errorMessage
+        message: errorMessage,
       };
     }
   }
@@ -2244,24 +2579,28 @@ export class DatabaseStorage implements IStorage {
     });
 
     // Session-Store initialisieren
-    this.sessionStore = new PostgresSessionStore({ 
+    this.sessionStore = new PostgresSessionStore({
       pool: this.pool,
-      createTableIfMissing: true 
+      createTableIfMissing: true,
     });
 
     // Tabellen initialisieren
-    this.initTables().then(() => {
-      console.log('Database tables initialized');
+    this.initTables()
+      .then(() => {
+        console.log("Database tables initialized");
 
-      // Vordefinierte Achievements anlegen
-      this.initializeDefaultAchievements().then(() => {
-        console.log('Default achievements created');
-      }).catch(err => {
-        console.error('Error creating default achievements:', err);
+        // Vordefinierte Achievements anlegen
+        this.initializeDefaultAchievements()
+          .then(() => {
+            console.log("Default achievements created");
+          })
+          .catch((err) => {
+            console.error("Error creating default achievements:", err);
+          });
+      })
+      .catch((err) => {
+        console.error("Error initializing database tables:", err);
       });
-    }).catch(err => {
-      console.error('Error initializing database tables:', err);
-    });
   }
 
   // Initialize database tables
@@ -2425,7 +2764,7 @@ export class DatabaseStorage implements IStorage {
    */
   private async initializeDefaultAchievements(): Promise<void> {
     // Prüfen, ob bereits Achievements vorhanden sind
-    const result = await this.pool.query('SELECT COUNT(*) FROM achievements');
+    const result = await this.pool.query("SELECT COUNT(*) FROM achievements");
     if (parseInt(result.rows[0].count) > 0) {
       return; // Achievements bereits vorhanden
     }
@@ -2439,8 +2778,8 @@ export class DatabaseStorage implements IStorage {
       iconName: "moon",
       criteria: {
         type: "dreamCount" as any,
-        threshold: 1
-      } as any
+        threshold: 1,
+      } as any,
     });
 
     await this.createAchievement({
@@ -2451,8 +2790,8 @@ export class DatabaseStorage implements IStorage {
       iconName: "book",
       criteria: {
         type: "dreamCount" as any,
-        threshold: 5
-      } as any
+        threshold: 5,
+      } as any,
     });
 
     // Consistency Achievements
@@ -2464,8 +2803,8 @@ export class DatabaseStorage implements IStorage {
       iconName: "calendar-check",
       criteria: {
         type: "streakDays" as any,
-        threshold: 3
-      } as any
+        threshold: 3,
+      } as any,
     });
 
     await this.createAchievement({
@@ -2476,8 +2815,8 @@ export class DatabaseStorage implements IStorage {
       iconName: "award",
       criteria: {
         type: "streakDays" as any,
-        threshold: 7
-      } as any
+        threshold: 7,
+      } as any,
     });
 
     // Exploration Achievements
@@ -2489,8 +2828,8 @@ export class DatabaseStorage implements IStorage {
       iconName: "tags",
       criteria: {
         type: "tagCount" as any,
-        threshold: 5
-      } as any
+        threshold: 5,
+      } as any,
     });
 
     await this.createAchievement({
@@ -2501,8 +2840,8 @@ export class DatabaseStorage implements IStorage {
       iconName: "image",
       criteria: {
         type: "imageCount" as any,
-        threshold: 3
-      } as any
+        threshold: 3,
+      } as any,
     });
 
     // Insight Achievements
@@ -2514,8 +2853,8 @@ export class DatabaseStorage implements IStorage {
       iconName: "smile",
       criteria: {
         type: "moodTracking" as any,
-        threshold: 5
-      } as any
+        threshold: 5,
+      } as any,
     });
 
     await this.createAchievement({
@@ -2526,8 +2865,8 @@ export class DatabaseStorage implements IStorage {
       iconName: "brain",
       criteria: {
         type: "analysisCount" as any,
-        threshold: 3
-      } as any
+        threshold: 3,
+      } as any,
     });
 
     // Mastery Achievements
@@ -2539,13 +2878,14 @@ export class DatabaseStorage implements IStorage {
       iconName: "trophy",
       criteria: {
         type: "dreamCount" as any,
-        threshold: 30
-      } as any
+        threshold: 30,
+      } as any,
     });
 
     await this.createAchievement({
       name: "Detaillierter Träumer",
-      description: "Schreibe 5 ausführliche Traumeinträge (mindestens 200 Zeichen)",
+      description:
+        "Schreibe 5 ausführliche Traumeinträge (mindestens 200 Zeichen)",
       category: "mastery" as any,
       difficulty: "silver" as any,
       iconName: "file-text",
@@ -2553,75 +2893,76 @@ export class DatabaseStorage implements IStorage {
         type: "dreamLength" as any,
         threshold: 5,
         additionalParams: {
-          minLength: 200
-        }
-      } as any
+          minLength: 200,
+        },
+      } as any,
     });
   }
 
   // User methods
   async getUser(id: number): Promise<any | undefined> {
-    const result = await this.pool.query(
-      'SELECT * FROM users WHERE id = $1',
-      [id]
-    );
+    const result = await this.pool.query("SELECT * FROM users WHERE id = $1", [
+      id,
+    ]);
     return result.rows[0] || undefined;
   }
-  
+
   async getUserById(id: number): Promise<any | undefined> {
-    const result = await this.pool.query(
-      'SELECT * FROM users WHERE id = $1',
-      [id]
-    );
+    const result = await this.pool.query("SELECT * FROM users WHERE id = $1", [
+      id,
+    ]);
     return result.rows[0] || undefined;
   }
 
   async getUserByUsername(username: string): Promise<any | undefined> {
     const result = await this.pool.query(
-      'SELECT * FROM users WHERE username = $1',
-      [username]
+      "SELECT * FROM users WHERE username = $1",
+      [username],
     );
     return result.rows[0] || undefined;
   }
-  
-  async updateUser(id: number, userData: Partial<{ name?: string, email?: string }>): Promise<any | undefined> {
+
+  async updateUser(
+    id: number,
+    userData: Partial<{ name?: string; email?: string }>,
+  ): Promise<any | undefined> {
     // Build the SET clause dynamically based on provided fields
     const updates = [];
     const values = [];
     let paramIndex = 1;
-    
+
     if (userData.name !== undefined) {
       updates.push(`name = $${paramIndex}`);
       values.push(userData.name);
       paramIndex++;
     }
-    
+
     if (userData.email !== undefined) {
       updates.push(`email = $${paramIndex}`);
       values.push(userData.email);
       paramIndex++;
     }
-    
+
     // If no fields to update, return the current user
     if (updates.length === 0) {
       return this.getUser(id);
     }
-    
+
     // Add the ID as the last parameter
     values.push(id);
-    
+
     const result = await this.pool.query(
-      `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
-      values
+      `UPDATE users SET ${updates.join(", ")} WHERE id = $${paramIndex} RETURNING *`,
+      values,
     );
-    
+
     return result.rows[0] || undefined;
   }
 
   async createUser(user: any): Promise<any> {
     const result = await this.pool.query(
-      'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING *',
-      [user.username, user.password]
+      "INSERT INTO users (username, password) VALUES ($1, $2) RETURNING *",
+      [user.username, user.password],
     );
     return result.rows[0];
   }
@@ -2643,8 +2984,8 @@ export class DatabaseStorage implements IStorage {
         dream.moodBeforeSleep || null,
         dream.moodAfterWakeup || null,
         dream.moodNotes || null,
-        JSON.stringify(dream.moodData || {}) // Handle undefined moodData
-      ]
+        JSON.stringify(dream.moodData || {}), // Handle undefined moodData
+      ],
     );
 
     // Convert DB snake_case names to camelCase for API
@@ -2654,28 +2995,32 @@ export class DatabaseStorage implements IStorage {
 
   async getDreams(): Promise<Dream[]> {
     const result = await this.pool.query(
-      'SELECT * FROM dreams ORDER BY date DESC'
+      "SELECT * FROM dreams ORDER BY date DESC",
     );
-    return result.rows.map(dream => this.transformDreamDbToApi(dream));
+    return result.rows.map((dream) => this.transformDreamDbToApi(dream));
   }
 
   async getDreamsByUserId(userId: number): Promise<Dream[]> {
     const result = await this.pool.query(
-      'SELECT * FROM dreams WHERE user_id = $1 ORDER BY date DESC',
-      [userId]
+      "SELECT * FROM dreams WHERE user_id = $1 ORDER BY date DESC",
+      [userId],
     );
-    return result.rows.map(dream => this.transformDreamDbToApi(dream));
+    return result.rows.map((dream) => this.transformDreamDbToApi(dream));
   }
 
   async getDream(id: number): Promise<Dream | undefined> {
-    const result = await this.pool.query(
-      'SELECT * FROM dreams WHERE id = $1',
-      [id]
-    );
-    return result.rows[0] ? this.transformDreamDbToApi(result.rows[0]) : undefined;
+    const result = await this.pool.query("SELECT * FROM dreams WHERE id = $1", [
+      id,
+    ]);
+    return result.rows[0]
+      ? this.transformDreamDbToApi(result.rows[0])
+      : undefined;
   }
 
-  async updateDream(id: number, dreamUpdate: Partial<InsertDream>): Promise<Dream | undefined> {
+  async updateDream(
+    id: number,
+    dreamUpdate: Partial<InsertDream>,
+  ): Promise<Dream | undefined> {
     // Build the SET part of the query dynamically based on the fields being updated
     const updates: string[] = [];
     const values: any[] = [];
@@ -2726,7 +3071,6 @@ export class DatabaseStorage implements IStorage {
       values.push(JSON.stringify(dreamUpdate.moodData));
     }
 
-
     // If there's nothing to update, return the original dream
     if (updates.length === 0) {
       return this.getDream(id);
@@ -2736,27 +3080,32 @@ export class DatabaseStorage implements IStorage {
     values.push(id);
 
     const result = await this.pool.query(
-      `UPDATE dreams SET ${updates.join(', ')} WHERE id = $${paramCounter} RETURNING *`,
-      values
+      `UPDATE dreams SET ${updates.join(", ")} WHERE id = $${paramCounter} RETURNING *`,
+      values,
     );
 
-    return result.rows[0] ? this.transformDreamDbToApi(result.rows[0]) : undefined;
+    return result.rows[0]
+      ? this.transformDreamDbToApi(result.rows[0])
+      : undefined;
   }
 
   async deleteDream(id: number): Promise<boolean> {
     const result = await this.pool.query(
-      'DELETE FROM dreams WHERE id = $1 RETURNING id',
-      [id]
+      "DELETE FROM dreams WHERE id = $1 RETURNING id",
+      [id],
     );
     return result.rows.length > 0;
   }
 
-  async saveDreamAnalysis(dreamId: number, analysis: AnalysisResponse): Promise<Dream> {
+  async saveDreamAnalysis(
+    dreamId: number,
+    analysis: AnalysisResponse,
+  ): Promise<Dream> {
     const analysisStr = JSON.stringify(analysis);
 
     const result = await this.pool.query(
-      'UPDATE dreams SET analysis = $1 WHERE id = $2 RETURNING *',
-      [analysisStr, dreamId]
+      "UPDATE dreams SET analysis = $1 WHERE id = $2 RETURNING *",
+      [analysisStr, dreamId],
     );
 
     if (result.rows.length === 0) {
@@ -2767,7 +3116,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Achievement methods
-  async createAchievement(achievement: InsertAchievement): Promise<Achievement> {
+  async createAchievement(
+    achievement: InsertAchievement,
+  ): Promise<Achievement> {
     const result = await this.pool.query(
       `INSERT INTO achievements 
         (name, description, category, difficulty, icon_name, criteria) 
@@ -2779,8 +3130,8 @@ export class DatabaseStorage implements IStorage {
         achievement.category,
         achievement.difficulty,
         achievement.iconName,
-        JSON.stringify(achievement.criteria)
-      ]
+        JSON.stringify(achievement.criteria),
+      ],
     );
 
     return this.transformAchievementDbToApi(result.rows[0]);
@@ -2788,19 +3139,25 @@ export class DatabaseStorage implements IStorage {
 
   async getAchievement(id: number): Promise<Achievement | undefined> {
     const result = await this.pool.query(
-      'SELECT * FROM achievements WHERE id = $1',
-      [id]
+      "SELECT * FROM achievements WHERE id = $1",
+      [id],
     );
-    return result.rows[0] ? this.transformAchievementDbToApi(result.rows[0]) : undefined;
+    return result.rows[0]
+      ? this.transformAchievementDbToApi(result.rows[0])
+      : undefined;
   }
 
   async getAllAchievements(): Promise<Achievement[]> {
-    const result = await this.pool.query('SELECT * FROM achievements');
-    return result.rows.map(achievement => this.transformAchievementDbToApi(achievement));
+    const result = await this.pool.query("SELECT * FROM achievements");
+    return result.rows.map((achievement) =>
+      this.transformAchievementDbToApi(achievement),
+    );
   }
 
   // User Achievement methods
-  async createUserAchievement(userAchievement: InsertUserAchievement): Promise<UserAchievement> {
+  async createUserAchievement(
+    userAchievement: InsertUserAchievement,
+  ): Promise<UserAchievement> {
     const result = await this.pool.query(
       `INSERT INTO user_achievements 
         (user_id, achievement_id, progress, is_completed) 
@@ -2810,8 +3167,8 @@ export class DatabaseStorage implements IStorage {
         userAchievement.userId,
         userAchievement.achievementId,
         JSON.stringify(userAchievement.progress),
-        userAchievement.isCompleted || false
-      ]
+        userAchievement.isCompleted || false,
+      ],
     );
 
     return this.transformUserAchievementDbToApi(result.rows[0]);
@@ -2819,46 +3176,63 @@ export class DatabaseStorage implements IStorage {
 
   async getUserAchievements(userId: number): Promise<UserAchievement[]> {
     const result = await this.pool.query(
-      'SELECT * FROM user_achievements WHERE user_id = $1 ORDER BY unlocked_at DESC',
-      [userId]
+      "SELECT * FROM user_achievements WHERE user_id = $1 ORDER BY unlocked_at DESC",
+      [userId],
     );
-    return result.rows.map(ua => this.transformUserAchievementDbToApi(ua));
+    return result.rows.map((ua) => this.transformUserAchievementDbToApi(ua));
   }
 
-  async getUserAchievement(userId: number, achievementId: number): Promise<UserAchievement | undefined> {
+  async getUserAchievement(
+    userId: number,
+    achievementId: number,
+  ): Promise<UserAchievement | undefined> {
     const result = await this.pool.query(
-      'SELECT * FROM user_achievements WHERE user_id = $1 AND achievement_id = $2',
-      [userId, achievementId]
+      "SELECT * FROM user_achievements WHERE user_id = $1 AND achievement_id = $2",
+      [userId, achievementId],
     );
-    return result.rows[0] ? this.transformUserAchievementDbToApi(result.rows[0]) : undefined;
+    return result.rows[0]
+      ? this.transformUserAchievementDbToApi(result.rows[0])
+      : undefined;
   }
 
-  async updateUserAchievementProgress(id: number, progress: AchievementProgress): Promise<UserAchievement | undefined> {
+  async updateUserAchievementProgress(
+    id: number,
+    progress: AchievementProgress,
+  ): Promise<UserAchievement | undefined> {
     const isCompleted = progress.currentValue >= progress.requiredValue;
 
     const result = await this.pool.query(
-      'UPDATE user_achievements SET progress = $1, is_completed = $2 WHERE id = $3 RETURNING *',
-      [JSON.stringify(progress), isCompleted, id]
+      "UPDATE user_achievements SET progress = $1, is_completed = $2 WHERE id = $3 RETURNING *",
+      [JSON.stringify(progress), isCompleted, id],
     );
 
-    return result.rows[0] ? this.transformUserAchievementDbToApi(result.rows[0]) : undefined;
+    return result.rows[0]
+      ? this.transformUserAchievementDbToApi(result.rows[0])
+      : undefined;
   }
 
-  async completeUserAchievement(id: number): Promise<UserAchievement | undefined> {
+  async completeUserAchievement(
+    id: number,
+  ): Promise<UserAchievement | undefined> {
     const result = await this.pool.query(
-      'UPDATE user_achievements SET is_completed = true WHERE id = $1 RETURNING *',
-      [id]
+      "UPDATE user_achievements SET is_completed = true WHERE id = $1 RETURNING *",
+      [id],
     );
 
-    return result.rows[0] ? this.transformUserAchievementDbToApi(result.rows[0]) : undefined;
+    return result.rows[0]
+      ? this.transformUserAchievementDbToApi(result.rows[0])
+      : undefined;
   }
 
-  async getLatestUserAchievements(userId: number, limit: number): Promise<UserAchievement[]> {
+  async getLatestUserAchievements(
+    userId: number,
+    limit: number,
+  ): Promise<UserAchievement[]> {
     const result = await this.pool.query(
-      'SELECT * FROM user_achievements WHERE user_id = $1 AND is_completed = true ORDER BY unlocked_at DESC LIMIT $2',
-      [userId, limit]
+      "SELECT * FROM user_achievements WHERE user_id = $1 AND is_completed = true ORDER BY unlocked_at DESC LIMIT $2",
+      [userId, limit],
     );
-    return result.rows.map(ua => this.transformUserAchievementDbToApi(ua));
+    return result.rows.map((ua) => this.transformUserAchievementDbToApi(ua));
   }
 
   // Journal entry methods
@@ -2878,8 +3252,8 @@ export class DatabaseStorage implements IStorage {
         entry.imageUrl || null,
         entry.includeInAnalysis || false,
         entry.date || new Date(),
-        entry.relatedDreamIds || null
-      ]
+        entry.relatedDreamIds || null,
+      ],
     );
 
     return this.transformJournalEntryDbToApi(result.rows[0]);
@@ -2887,21 +3261,26 @@ export class DatabaseStorage implements IStorage {
 
   async getJournalEntriesByUserId(userId: number): Promise<JournalEntry[]> {
     const result = await this.pool.query(
-      'SELECT * FROM journal_entries WHERE user_id = $1 ORDER BY date DESC',
-      [userId]
+      "SELECT * FROM journal_entries WHERE user_id = $1 ORDER BY date DESC",
+      [userId],
     );
-    return result.rows.map(entry => this.transformJournalEntryDbToApi(entry));
+    return result.rows.map((entry) => this.transformJournalEntryDbToApi(entry));
   }
 
   async getJournalEntry(id: number): Promise<JournalEntry | undefined> {
     const result = await this.pool.query(
-      'SELECT * FROM journal_entries WHERE id = $1',
-      [id]
+      "SELECT * FROM journal_entries WHERE id = $1",
+      [id],
     );
-    return result.rows[0] ? this.transformJournalEntryDbToApi(result.rows[0]) : undefined;
+    return result.rows[0]
+      ? this.transformJournalEntryDbToApi(result.rows[0])
+      : undefined;
   }
 
-  async updateJournalEntry(id: number, entryUpdate: Partial<InsertJournalEntry>): Promise<JournalEntry | undefined> {
+  async updateJournalEntry(
+    id: number,
+    entryUpdate: Partial<InsertJournalEntry>,
+  ): Promise<JournalEntry | undefined> {
     // Build the SET part of the query dynamically based on the fields being updated
     const updates: string[] = [];
     const values: any[] = [];
@@ -2965,62 +3344,83 @@ export class DatabaseStorage implements IStorage {
 
     const query = `
       UPDATE journal_entries
-      SET ${updates.join(', ')}
+      SET ${updates.join(", ")}
       WHERE id = $${paramCounter}
       RETURNING *
     `;
 
     const result = await this.pool.query(query, values);
-    return result.rows[0] ? this.transformJournalEntryDbToApi(result.rows[0]) : undefined;
+    return result.rows[0]
+      ? this.transformJournalEntryDbToApi(result.rows[0])
+      : undefined;
   }
 
   async deleteJournalEntry(id: number): Promise<boolean> {
     const result = await this.pool.query(
-      'DELETE FROM journal_entries WHERE id = $1 RETURNING id',
-      [id]
+      "DELETE FROM journal_entries WHERE id = $1 RETURNING id",
+      [id],
     );
     return result.rowCount > 0;
   }
 
   // Dream content entries
-  async createDreamContentEntry(entry: InsertDreamContentEntry): Promise<DreamContentEntry> {
-    const result = await this.pool.query(`
+  async createDreamContentEntry(
+    entry: InsertDreamContentEntry,
+  ): Promise<DreamContentEntry> {
+    const result = await this.pool.query(
+      `
       INSERT INTO dream_content_entries (
         title, summary, content, content_type, url, author, featured, view_count, 
         image_url, video_url, external_links, category, related_content_ids
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING *
-    `, [
-      entry.title,
-      entry.summary,
-      entry.content,
-      entry.contentType,
-      entry.url || null,
-      entry.author || null,
-      entry.featured || false,
-      0, // Initial view count
-      entry.imageUrl || null,
-      entry.videoUrl || null,
-      entry.externalLinks || [],
-      entry.category || null,
-      entry.relatedContentIds || []
-    ]);
-    
+    `,
+      [
+        entry.title,
+        entry.summary,
+        entry.content,
+        entry.contentType,
+        entry.url || null,
+        entry.author || null,
+        entry.featured || false,
+        0, // Initial view count
+        entry.imageUrl || null,
+        entry.videoUrl || null,
+        entry.externalLinks || [],
+        entry.category || null,
+        entry.relatedContentIds || [],
+      ],
+    );
+
     return this.transformDreamContentEntryDbToApi(result.rows[0]);
   }
 
   async getDreamContentEntries(): Promise<DreamContentEntry[]> {
-    const result = await this.pool.query('SELECT * FROM dream_content_entries ORDER BY created_at DESC');
-    return result.rows.map(entry => this.transformDreamContentEntryDbToApi(entry));
+    const result = await this.pool.query(
+      "SELECT * FROM dream_content_entries ORDER BY created_at DESC",
+    );
+    return result.rows.map((entry) =>
+      this.transformDreamContentEntryDbToApi(entry),
+    );
   }
 
-  async getDreamContentEntry(id: number): Promise<DreamContentEntry | undefined> {
-    const result = await this.pool.query('SELECT * FROM dream_content_entries WHERE id = $1', [id]);
-    return result.rows[0] ? this.transformDreamContentEntryDbToApi(result.rows[0]) : undefined;
+  async getDreamContentEntry(
+    id: number,
+  ): Promise<DreamContentEntry | undefined> {
+    const result = await this.pool.query(
+      "SELECT * FROM dream_content_entries WHERE id = $1",
+      [id],
+    );
+    return result.rows[0]
+      ? this.transformDreamContentEntryDbToApi(result.rows[0])
+      : undefined;
   }
 
-  async updateDreamContentEntry(id: number, entry: Partial<InsertDreamContentEntry>): Promise<DreamContentEntry | undefined> {
+  async updateDreamContentEntry(
+    id: number,
+    entry: Partial<InsertDreamContentEntry>,
+  ): Promise<DreamContentEntry | undefined> {
     const updates: string[] = [];
     const values: any[] = [];
     let paramCounter = 1;
@@ -3098,77 +3498,100 @@ export class DatabaseStorage implements IStorage {
 
     const query = `
       UPDATE dream_content_entries
-      SET ${updates.join(', ')}
+      SET ${updates.join(", ")}
       WHERE id = $${paramCounter}
       RETURNING *
     `;
 
     const result = await this.pool.query(query, values);
-    return result.rows[0] ? this.transformDreamContentEntryDbToApi(result.rows[0]) : undefined;
+    return result.rows[0]
+      ? this.transformDreamContentEntryDbToApi(result.rows[0])
+      : undefined;
   }
 
   async deleteDreamContentEntry(id: number): Promise<boolean> {
     const result = await this.pool.query(
-      'DELETE FROM dream_content_entries WHERE id = $1 RETURNING id',
-      [id]
+      "DELETE FROM dream_content_entries WHERE id = $1 RETURNING id",
+      [id],
     );
     return result.rowCount > 0;
   }
 
-  async getFeaturedDreamContentEntries(limit: number): Promise<DreamContentEntry[]> {
+  async getFeaturedDreamContentEntries(
+    limit: number,
+  ): Promise<DreamContentEntry[]> {
     const result = await this.pool.query(
-      'SELECT * FROM dream_content_entries WHERE featured = true ORDER BY created_at DESC LIMIT $1',
-      [limit]
+      "SELECT * FROM dream_content_entries WHERE featured = true ORDER BY created_at DESC LIMIT $1",
+      [limit],
     );
-    return result.rows.map(entry => this.transformDreamContentEntryDbToApi(entry));
+    return result.rows.map((entry) =>
+      this.transformDreamContentEntryDbToApi(entry),
+    );
   }
 
-  async getDreamContentEntriesByType(contentType: string): Promise<DreamContentEntry[]> {
+  async getDreamContentEntriesByType(
+    contentType: string,
+  ): Promise<DreamContentEntry[]> {
     const result = await this.pool.query(
-      'SELECT * FROM dream_content_entries WHERE content_type = $1 ORDER BY created_at DESC',
-      [contentType]
+      "SELECT * FROM dream_content_entries WHERE content_type = $1 ORDER BY created_at DESC",
+      [contentType],
     );
-    return result.rows.map(entry => this.transformDreamContentEntryDbToApi(entry));
+    return result.rows.map((entry) =>
+      this.transformDreamContentEntryDbToApi(entry),
+    );
   }
 
-  async incrementDreamContentViewCount(id: number): Promise<DreamContentEntry | undefined> {
+  async incrementDreamContentViewCount(
+    id: number,
+  ): Promise<DreamContentEntry | undefined> {
     const result = await this.pool.query(
-      'UPDATE dream_content_entries SET view_count = view_count + 1 WHERE id = $1 RETURNING *',
-      [id]
+      "UPDATE dream_content_entries SET view_count = view_count + 1 WHERE id = $1 RETURNING *",
+      [id],
     );
-    return result.rows[0] ? this.transformDreamContentEntryDbToApi(result.rows[0]) : undefined;
+    return result.rows[0]
+      ? this.transformDreamContentEntryDbToApi(result.rows[0])
+      : undefined;
   }
 
   // Content comments
-  async createContentComment(comment: InsertContentComment): Promise<ContentComment> {
-    const result = await this.pool.query(`
+  async createContentComment(
+    comment: InsertContentComment,
+  ): Promise<ContentComment> {
+    const result = await this.pool.query(
+      `
       INSERT INTO content_comments (
         content_id, user_id, text, parent_comment_id
       )
       VALUES ($1, $2, $3, $4)
       RETURNING *
-    `, [
-      comment.contentId,
-      comment.userId,
-      comment.text,
-      comment.parentCommentId || null
-    ]);
-    
+    `,
+      [
+        comment.contentId,
+        comment.userId,
+        comment.text,
+        comment.parentCommentId || null,
+      ],
+    );
+
     return this.transformContentCommentDbToApi(result.rows[0]);
   }
 
-  async getContentCommentsByContentId(contentId: number): Promise<ContentComment[]> {
+  async getContentCommentsByContentId(
+    contentId: number,
+  ): Promise<ContentComment[]> {
     const result = await this.pool.query(
-      'SELECT * FROM content_comments WHERE content_id = $1 ORDER BY created_at ASC',
-      [contentId]
+      "SELECT * FROM content_comments WHERE content_id = $1 ORDER BY created_at ASC",
+      [contentId],
     );
-    return result.rows.map(comment => this.transformContentCommentDbToApi(comment));
+    return result.rows.map((comment) =>
+      this.transformContentCommentDbToApi(comment),
+    );
   }
 
   async deleteContentComment(id: number): Promise<boolean> {
     const result = await this.pool.query(
-      'DELETE FROM content_comments WHERE id = $1 RETURNING id',
-      [id]
+      "DELETE FROM content_comments WHERE id = $1 RETURNING id",
+      [id],
     );
     return result.rowCount > 0;
   }
@@ -3191,7 +3614,7 @@ export class DatabaseStorage implements IStorage {
       category: entry.category,
       relatedContentIds: entry.related_content_ids,
       createdAt: entry.created_at,
-      updatedAt: entry.updated_at
+      updatedAt: entry.updated_at,
     };
   }
 
@@ -3203,7 +3626,7 @@ export class DatabaseStorage implements IStorage {
       text: comment.text,
       parentCommentId: comment.parent_comment_id,
       createdAt: comment.created_at,
-      updatedAt: comment.updated_at
+      updatedAt: comment.updated_at,
     };
   }
 
@@ -3221,7 +3644,7 @@ export class DatabaseStorage implements IStorage {
       date: entry.date,
       createdAt: entry.created_at,
       updatedAt: entry.updated_at,
-      relatedDreamIds: entry.related_dream_ids
+      relatedDreamIds: entry.related_dream_ids,
     };
   }
 
@@ -3238,7 +3661,7 @@ export class DatabaseStorage implements IStorage {
       isPrivate: dream.is_private,
       analysis: dream.analysis,
       createdAt: dream.created_at,
-      updatedAt: dream.updated_at
+      updatedAt: dream.updated_at,
     };
   }
 
@@ -3251,11 +3674,13 @@ export class DatabaseStorage implements IStorage {
       iconUrl: achievement.icon_url,
       category: achievement.category,
       points: achievement.points,
-      createdAt: achievement.created_at
+      createdAt: achievement.created_at,
     };
   }
 
-  private transformUserAchievementDbToApi(userAchievement: any): UserAchievement {
+  private transformUserAchievementDbToApi(
+    userAchievement: any,
+  ): UserAchievement {
     return {
       id: userAchievement.id,
       userId: userAchievement.user_id,
@@ -3264,18 +3689,20 @@ export class DatabaseStorage implements IStorage {
       progress: userAchievement.progress,
       earnedDate: userAchievement.earned_date,
       createdAt: userAchievement.created_at,
-      updatedAt: userAchievement.updated_at
+      updatedAt: userAchievement.updated_at,
     };
   }
 
   // User Symbol Favorites methods
-  async createUserSymbolFavorite(favorite: InsertUserSymbolFavorite): Promise<UserSymbolFavorite> {
+  async createUserSymbolFavorite(
+    favorite: InsertUserSymbolFavorite,
+  ): Promise<UserSymbolFavorite> {
     try {
       const result = await this.pool.query(
         `INSERT INTO user_symbol_favorites (user_id, symbol_id, notes)
          VALUES ($1, $2, $3)
          RETURNING id, user_id, symbol_id, notes, created_at`,
-        [favorite.userId, favorite.symbolId, favorite.notes]
+        [favorite.userId, favorite.symbolId, favorite.notes],
       );
 
       return {
@@ -3283,18 +3710,22 @@ export class DatabaseStorage implements IStorage {
         userId: result.rows[0].user_id,
         symbolId: result.rows[0].symbol_id,
         notes: result.rows[0].notes,
-        createdAt: result.rows[0].created_at
+        createdAt: result.rows[0].created_at,
       };
     } catch (error) {
-      console.error('Error creating user symbol favorite:', error);
+      console.error("Error creating user symbol favorite:", error);
       throw error;
     }
   }
 
-  async getUserSymbolFavoritesByUserId(userId: number): Promise<UserSymbolFavorite[]> {
+  async getUserSymbolFavoritesByUserId(
+    userId: number,
+  ): Promise<UserSymbolFavorite[]> {
     try {
-      console.log(`DatabaseStorage.getUserSymbolFavoritesByUserId called with userId: ${userId}`);
-      
+      console.log(
+        `DatabaseStorage.getUserSymbolFavoritesByUserId called with userId: ${userId}`,
+      );
+
       // First check if the table exists
       try {
         const tableCheck = await this.pool.query(
@@ -3302,12 +3733,14 @@ export class DatabaseStorage implements IStorage {
             SELECT FROM information_schema.tables 
             WHERE table_schema = 'public'
             AND table_name = 'user_symbol_favorites'
-          )`
+          )`,
         );
-        console.log('Table check result:', tableCheck.rows[0]);
-        
+        console.log("Table check result:", tableCheck.rows[0]);
+
         if (!tableCheck.rows[0].exists) {
-          console.log('user_symbol_favorites table does not exist, creating it now');
+          console.log(
+            "user_symbol_favorites table does not exist, creating it now",
+          );
           await this.pool.query(
             `CREATE TABLE IF NOT EXISTS user_symbol_favorites (
               id SERIAL PRIMARY KEY,
@@ -3317,15 +3750,15 @@ export class DatabaseStorage implements IStorage {
               created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
               FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
               FOREIGN KEY (symbol_id) REFERENCES dream_symbols(id) ON DELETE CASCADE
-            )`
+            )`,
           );
-          console.log('user_symbol_favorites table created successfully');
+          console.log("user_symbol_favorites table created successfully");
           return []; // Return empty array as the table was just created
         }
       } catch (tableError) {
-        console.error('Error checking/creating table:', tableError);
+        console.error("Error checking/creating table:", tableError);
       }
-      
+
       const result = await this.pool.query(
         `SELECT usf.id, usf.user_id, usf.symbol_id, usf.notes, usf.created_at,
                 ds.name as symbol_name, ds.general_meaning as symbol_meaning
@@ -3333,25 +3766,27 @@ export class DatabaseStorage implements IStorage {
          LEFT JOIN dream_symbols ds ON usf.symbol_id = ds.id
          WHERE usf.user_id = $1
          ORDER BY usf.created_at DESC`,
-        [userId]
+        [userId],
       );
-      
+
       console.log(`Query result:`, result.rows);
 
-      return result.rows.map(row => ({
+      return result.rows.map((row) => ({
         id: row.id,
         userId: row.user_id,
         symbolId: row.symbol_id,
         notes: row.notes,
         createdAt: row.created_at,
-        symbol: row.symbol_name ? {
-          name: row.symbol_name,
-          generalMeaning: row.symbol_meaning
-        } : null
+        symbol: row.symbol_name
+          ? {
+              name: row.symbol_name,
+              generalMeaning: row.symbol_meaning,
+            }
+          : null,
       }));
     } catch (error) {
-      console.error('Error getting user symbol favorites:', error);
-      console.error('Stack trace:', (error as Error).stack);
+      console.error("Error getting user symbol favorites:", error);
+      console.error("Stack trace:", (error as Error).stack);
       // Return empty array instead of throwing to avoid breaking the app
       return [];
     }
@@ -3360,23 +3795,25 @@ export class DatabaseStorage implements IStorage {
   async deleteUserSymbolFavorite(id: number): Promise<boolean> {
     try {
       const result = await this.pool.query(
-        'DELETE FROM user_symbol_favorites WHERE id = $1 RETURNING id',
-        [id]
+        "DELETE FROM user_symbol_favorites WHERE id = $1 RETURNING id",
+        [id],
       );
-      
+
       return result.rows.length > 0;
     } catch (error) {
-      console.error('Error deleting user symbol favorite:', error);
+      console.error("Error deleting user symbol favorite:", error);
       throw error;
     }
   }
 
   // AI Assistant implementation
 
-  async createAssistantConversation(conversation: InsertAssistantConversation): Promise<AssistantConversation> {
+  async createAssistantConversation(
+    conversation: InsertAssistantConversation,
+  ): Promise<AssistantConversation> {
     const id = this.currentAssistantConversationId++;
     const now = new Date();
-    
+
     const newConversation: AssistantConversation = {
       id,
       userId: conversation.userId,
@@ -3384,37 +3821,44 @@ export class DatabaseStorage implements IStorage {
       summary: null,
       createdAt: now,
       updatedAt: now,
-      isArchived: conversation.isArchived || false
+      isArchived: conversation.isArchived || false,
     };
-    
+
     this.assistantConversations.set(id, newConversation);
     return newConversation;
   }
 
-  async getAssistantConversation(id: number): Promise<AssistantConversation | undefined> {
+  async getAssistantConversation(
+    id: number,
+  ): Promise<AssistantConversation | undefined> {
     return this.assistantConversations.get(id);
   }
 
-  async getAssistantConversationsByUserId(userId: number): Promise<AssistantConversation[]> {
+  async getAssistantConversationsByUserId(
+    userId: number,
+  ): Promise<AssistantConversation[]> {
     return Array.from(this.assistantConversations.values())
-      .filter(conv => conv.userId === userId)
+      .filter((conv) => conv.userId === userId)
       .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()); // Sort by most recent
   }
 
-  async updateAssistantConversation(id: number, conversation: Partial<InsertAssistantConversation>): Promise<AssistantConversation | undefined> {
+  async updateAssistantConversation(
+    id: number,
+    conversation: Partial<InsertAssistantConversation>,
+  ): Promise<AssistantConversation | undefined> {
     const existingConversation = this.assistantConversations.get(id);
-    
+
     if (!existingConversation) {
       return undefined;
     }
-    
+
     const updatedConversation: AssistantConversation = {
       ...existingConversation,
       title: conversation.title ?? existingConversation.title,
       isArchived: conversation.isArchived ?? existingConversation.isArchived,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
-    
+
     this.assistantConversations.set(id, updatedConversation);
     return updatedConversation;
   }
@@ -3422,20 +3866,22 @@ export class DatabaseStorage implements IStorage {
   async deleteAssistantConversation(id: number): Promise<boolean> {
     // Get all messages in this conversation to delete them too
     const messages = await this.getAssistantMessagesByConversationId(id);
-    
+
     // Delete all the messages
     for (const message of messages) {
       this.assistantMessages.delete(message.id);
     }
-    
+
     // Delete the conversation
     return this.assistantConversations.delete(id);
   }
 
-  async createAssistantMessage(message: InsertAssistantMessage): Promise<AssistantMessage> {
+  async createAssistantMessage(
+    message: InsertAssistantMessage,
+  ): Promise<AssistantMessage> {
     const id = this.currentAssistantMessageId++;
     const now = new Date();
-    
+
     const newMessage: AssistantMessage = {
       id,
       conversationId: message.conversationId,
@@ -3444,78 +3890,89 @@ export class DatabaseStorage implements IStorage {
       timestamp: now,
       relatedDreamId: message.relatedDreamId || null,
       relatedJournalId: message.relatedJournalId || null,
-      metadata: message.metadata || null
+      metadata: message.metadata || null,
     };
-    
+
     this.assistantMessages.set(id, newMessage);
-    
+
     // Update the conversation's updatedAt timestamp
-    const conversation = this.assistantConversations.get(message.conversationId);
+    const conversation = this.assistantConversations.get(
+      message.conversationId,
+    );
     if (conversation) {
       conversation.updatedAt = now;
       this.assistantConversations.set(conversation.id, conversation);
     }
-    
+
     return newMessage;
   }
 
-  async getAssistantMessagesByConversationId(conversationId: number): Promise<AssistantMessage[]> {
+  async getAssistantMessagesByConversationId(
+    conversationId: number,
+  ): Promise<AssistantMessage[]> {
     return Array.from(this.assistantMessages.values())
-      .filter(msg => msg.conversationId === conversationId)
+      .filter((msg) => msg.conversationId === conversationId)
       .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()); // Sort by timestamp
   }
 
-  async getAssistantMessageThread(conversationId: number, limit?: number): Promise<AssistantMessage[]> {
-    const messages = await this.getAssistantMessagesByConversationId(conversationId);
-    
+  async getAssistantMessageThread(
+    conversationId: number,
+    limit?: number,
+  ): Promise<AssistantMessage[]> {
+    const messages =
+      await this.getAssistantMessagesByConversationId(conversationId);
+
     if (limit && messages.length > limit) {
       return messages.slice(-limit); // Get only the most recent messages
     }
-    
+
     return messages;
   }
 
-  async processAssistantChatRequest(userId: number, request: ChatRequest): Promise<ChatResponse> {
+  async processAssistantChatRequest(
+    userId: number,
+    request: ChatRequest,
+  ): Promise<ChatResponse> {
     let conversationId = request.conversationId;
     let conversation: AssistantConversation | undefined;
-    
+
     // If no conversation ID is provided, create a new conversation
     if (!conversationId) {
       conversation = await this.createAssistantConversation({
         userId,
         title: "Neue Unterhaltung", // Default title
-        isArchived: false
+        isArchived: false,
       });
       conversationId = conversation.id;
     } else {
       conversation = await this.getAssistantConversation(conversationId);
-      
+
       // Check if the conversation exists and belongs to the user
       if (!conversation || conversation.userId !== userId) {
         throw new Error("Conversation not found or unauthorized");
       }
     }
-    
+
     // Save the user message
     const userMessage = await this.createAssistantMessage({
       conversationId,
       content: request.message,
       role: "user",
       relatedDreamId: request.relatedDreamId,
-      relatedJournalId: request.relatedJournalId
+      relatedJournalId: request.relatedJournalId,
     });
-    
+
     try {
       // Fetch related content if needed
       let relatedContent: any = null;
       let contextPrompt = "";
-      
+
       if (request.relatedDreamId) {
         const dream = await this.getDream(request.relatedDreamId);
         if (dream) {
           relatedContent = dream;
           contextPrompt = `Bezüglich des Traums "${dream.title}" vom ${dream.date.toLocaleDateString()}:\n${dream.content}\n\n`;
-          
+
           // If there's analysis, add it to the context
           if (dream.analysis) {
             try {
@@ -3533,15 +3990,23 @@ export class DatabaseStorage implements IStorage {
           contextPrompt = `Bezüglich des Tagebucheintrags "${journal.title}" vom ${journal.date.toLocaleDateString()}:\n${journal.content}\n\n`;
         }
       }
-      
+
       // Prepare conversation history for context
-      const conversationHistory = await this.getAssistantMessageThread(conversationId, 10);
-      const historyPrompt = conversationHistory.map(msg => `${msg.role === 'user' ? 'Benutzer' : 'Assistent'}: ${msg.content}`).join('\n');
-      
+      const conversationHistory = await this.getAssistantMessageThread(
+        conversationId,
+        10,
+      );
+      const historyPrompt = conversationHistory
+        .map(
+          (msg) =>
+            `${msg.role === "user" ? "Benutzer" : "Assistent"}: ${msg.content}`,
+        )
+        .join("\n");
+
       // Generate AI response
       const messageForAI = `${contextPrompt}${request.message}`;
       console.log("Sending message to OpenAI:", messageForAI);
-      
+
       // Call the OpenAI API
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
       const completion = await openai.chat.completions.create({
@@ -3565,26 +4030,28 @@ Verwende die folgende Anleitung für deine Antworten:
 10. Vermittle eine ausgewogene Perspektive zwischen wissenschaftlicher und spiritueller Traumdeutung.
 
 Bisherige Konversation:
-${historyPrompt}`
+${historyPrompt}`,
           },
           {
             role: "user",
-            content: messageForAI
-          }
-        ]
+            content: messageForAI,
+          },
+        ],
       });
-      
-      const aiResponse = completion.choices[0].message.content || "Entschuldigung, ich konnte deine Nachricht nicht verarbeiten.";
-      
+
+      const aiResponse =
+        completion.choices[0].message.content ||
+        "Entschuldigung, ich konnte deine Nachricht nicht verarbeiten.";
+
       // Save the assistant's response
       const assistantMessage = await this.createAssistantMessage({
         conversationId,
         content: aiResponse,
         role: "assistant",
         relatedDreamId: request.relatedDreamId,
-        relatedJournalId: request.relatedJournalId
+        relatedJournalId: request.relatedJournalId,
       });
-      
+
       // Update conversation title if it's new
       if (conversation && conversationHistory.length === 0) {
         // Generate a title based on the first user message
@@ -3592,45 +4059,52 @@ ${historyPrompt}`
           model: "gpt-4o",
           messages: [
             {
-              role: "system", 
-              content: "Erstelle einen kurzen, aussagekräftigen Titel (max. 5 Wörter) für das folgende Gespräch. Gib nur den Titel zurück, ohne Anführungszeichen oder zusätzlichen Text."
+              role: "system",
+              content:
+                "Erstelle einen kurzen, aussagekräftigen Titel (max. 5 Wörter) für das folgende Gespräch. Gib nur den Titel zurück, ohne Anführungszeichen oder zusätzlichen Text.",
             },
             {
               role: "user",
-              content: request.message
-            }
-          ]
+              content: request.message,
+            },
+          ],
         });
-        
-        const generatedTitle = titleCompletion.choices[0].message.content || "Neue Unterhaltung";
-        await this.updateAssistantConversation(conversationId, { title: generatedTitle });
+
+        const generatedTitle =
+          titleCompletion.choices[0].message.content || "Neue Unterhaltung";
+        await this.updateAssistantConversation(conversationId, {
+          title: generatedTitle,
+        });
       }
-      
+
       return {
         conversationId,
         message: assistantMessage,
-        relatedContent
+        relatedContent,
       };
     } catch (error) {
       console.error("Error processing assistant chat request:", error);
-      
+
       // Create an error response message
       const errorMessage = await this.createAssistantMessage({
         conversationId,
-        content: "Entschuldigung, es gab ein Problem bei der Verarbeitung deiner Anfrage. Bitte versuche es später noch einmal.",
-        role: "assistant"
+        content:
+          "Entschuldigung, es gab ein Problem bei der Verarbeitung deiner Anfrage. Bitte versuche es später noch einmal.",
+        role: "assistant",
       });
-      
+
       return {
         conversationId,
-        message: errorMessage
+        message: errorMessage,
       };
     }
   }
 
   // AI Assistant methods
 
-  async createAssistantConversation(conversation: InsertAssistantConversation): Promise<AssistantConversation> {
+  async createAssistantConversation(
+    conversation: InsertAssistantConversation,
+  ): Promise<AssistantConversation> {
     try {
       const now = new Date();
       const result = await this.pool.query(
@@ -3644,8 +4118,8 @@ ${historyPrompt}`
           null,
           now,
           now,
-          conversation.isArchived || false
-        ]
+          conversation.isArchived || false,
+        ],
       );
 
       return {
@@ -3655,19 +4129,21 @@ ${historyPrompt}`
         summary: result.rows[0].summary,
         createdAt: result.rows[0].created_at,
         updatedAt: result.rows[0].updated_at,
-        isArchived: result.rows[0].is_archived
+        isArchived: result.rows[0].is_archived,
       };
     } catch (error) {
-      console.error('Error creating assistant conversation:', error);
+      console.error("Error creating assistant conversation:", error);
       throw error;
     }
   }
 
-  async getAssistantConversation(id: number): Promise<AssistantConversation | undefined> {
+  async getAssistantConversation(
+    id: number,
+  ): Promise<AssistantConversation | undefined> {
     try {
       const result = await this.pool.query(
-        'SELECT * FROM assistant_conversations WHERE id = $1',
-        [id]
+        "SELECT * FROM assistant_conversations WHERE id = $1",
+        [id],
       );
 
       if (result.rows.length === 0) {
@@ -3681,45 +4157,50 @@ ${historyPrompt}`
         summary: result.rows[0].summary,
         createdAt: result.rows[0].created_at,
         updatedAt: result.rows[0].updated_at,
-        isArchived: result.rows[0].is_archived
+        isArchived: result.rows[0].is_archived,
       };
     } catch (error) {
-      console.error('Error getting assistant conversation:', error);
+      console.error("Error getting assistant conversation:", error);
       throw error;
     }
   }
 
-  async getAssistantConversationsByUserId(userId: number): Promise<AssistantConversation[]> {
+  async getAssistantConversationsByUserId(
+    userId: number,
+  ): Promise<AssistantConversation[]> {
     try {
       const result = await this.pool.query(
-        'SELECT * FROM assistant_conversations WHERE user_id = $1 ORDER BY updated_at DESC',
-        [userId]
+        "SELECT * FROM assistant_conversations WHERE user_id = $1 ORDER BY updated_at DESC",
+        [userId],
       );
 
-      return result.rows.map(row => ({
+      return result.rows.map((row) => ({
         id: row.id,
         userId: row.user_id,
         title: row.title,
         summary: row.summary,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
-        isArchived: row.is_archived
+        isArchived: row.is_archived,
       }));
     } catch (error) {
-      console.error('Error getting assistant conversations by user ID:', error);
+      console.error("Error getting assistant conversations by user ID:", error);
       return [];
     }
   }
 
-  async updateAssistantConversation(id: number, conversation: Partial<InsertAssistantConversation>): Promise<AssistantConversation | undefined> {
+  async updateAssistantConversation(
+    id: number,
+    conversation: Partial<InsertAssistantConversation>,
+  ): Promise<AssistantConversation | undefined> {
     try {
       // Get the existing conversation first
       const existingConversation = await this.getAssistantConversation(id);
-      
+
       if (!existingConversation) {
         return undefined;
       }
-      
+
       const now = new Date();
       const result = await this.pool.query(
         `UPDATE assistant_conversations 
@@ -3730,8 +4211,8 @@ ${historyPrompt}`
           conversation.title ?? existingConversation.title,
           conversation.isArchived ?? existingConversation.isArchived,
           now,
-          id
-        ]
+          id,
+        ],
       );
 
       if (result.rows.length === 0) {
@@ -3745,10 +4226,10 @@ ${historyPrompt}`
         summary: result.rows[0].summary,
         createdAt: result.rows[0].created_at,
         updatedAt: result.rows[0].updated_at,
-        isArchived: result.rows[0].is_archived
+        isArchived: result.rows[0].is_archived,
       };
     } catch (error) {
-      console.error('Error updating assistant conversation:', error);
+      console.error("Error updating assistant conversation:", error);
       throw error;
     }
   }
@@ -3757,24 +4238,26 @@ ${historyPrompt}`
     try {
       // Delete all messages in this conversation first
       await this.pool.query(
-        'DELETE FROM assistant_messages WHERE conversation_id = $1',
-        [id]
+        "DELETE FROM assistant_messages WHERE conversation_id = $1",
+        [id],
       );
-      
+
       // Then delete the conversation
       const result = await this.pool.query(
-        'DELETE FROM assistant_conversations WHERE id = $1 RETURNING id',
-        [id]
+        "DELETE FROM assistant_conversations WHERE id = $1 RETURNING id",
+        [id],
       );
-      
+
       return result.rows.length > 0;
     } catch (error) {
-      console.error('Error deleting assistant conversation:', error);
+      console.error("Error deleting assistant conversation:", error);
       throw error;
     }
   }
 
-  async createAssistantMessage(message: InsertAssistantMessage): Promise<AssistantMessage> {
+  async createAssistantMessage(
+    message: InsertAssistantMessage,
+  ): Promise<AssistantMessage> {
     try {
       const now = new Date();
       const result = await this.pool.query(
@@ -3789,14 +4272,14 @@ ${historyPrompt}`
           now,
           message.relatedDreamId || null,
           message.relatedJournalId || null,
-          message.metadata ? JSON.stringify(message.metadata) : null
-        ]
+          message.metadata ? JSON.stringify(message.metadata) : null,
+        ],
       );
 
       // Update the conversation's updatedAt timestamp
       await this.pool.query(
-        'UPDATE assistant_conversations SET updated_at = $1 WHERE id = $2',
-        [now, message.conversationId]
+        "UPDATE assistant_conversations SET updated_at = $1 WHERE id = $2",
+        [now, message.conversationId],
       );
 
       return {
@@ -3807,22 +4290,26 @@ ${historyPrompt}`
         timestamp: result.rows[0].timestamp,
         relatedDreamId: result.rows[0].related_dream_id,
         relatedJournalId: result.rows[0].related_journal_id,
-        metadata: result.rows[0].metadata ? JSON.parse(result.rows[0].metadata) : null
+        metadata: result.rows[0].metadata
+          ? JSON.parse(result.rows[0].metadata)
+          : null,
       };
     } catch (error) {
-      console.error('Error creating assistant message:', error);
+      console.error("Error creating assistant message:", error);
       throw error;
     }
   }
 
-  async getAssistantMessagesByConversationId(conversationId: number): Promise<AssistantMessage[]> {
+  async getAssistantMessagesByConversationId(
+    conversationId: number,
+  ): Promise<AssistantMessage[]> {
     try {
       const result = await this.pool.query(
-        'SELECT * FROM assistant_messages WHERE conversation_id = $1 ORDER BY timestamp ASC',
-        [conversationId]
+        "SELECT * FROM assistant_messages WHERE conversation_id = $1 ORDER BY timestamp ASC",
+        [conversationId],
       );
 
-      return result.rows.map(row => ({
+      return result.rows.map((row) => ({
         id: row.id,
         conversationId: row.conversation_id,
         content: row.content,
@@ -3830,27 +4317,34 @@ ${historyPrompt}`
         timestamp: row.timestamp,
         relatedDreamId: row.related_dream_id,
         relatedJournalId: row.related_journal_id,
-        metadata: row.metadata ? JSON.parse(row.metadata) : null
+        metadata: row.metadata ? JSON.parse(row.metadata) : null,
       }));
     } catch (error) {
-      console.error('Error getting assistant messages by conversation ID:', error);
+      console.error(
+        "Error getting assistant messages by conversation ID:",
+        error,
+      );
       return [];
     }
   }
 
-  async getAssistantMessageThread(conversationId: number, limit?: number): Promise<AssistantMessage[]> {
+  async getAssistantMessageThread(
+    conversationId: number,
+    limit?: number,
+  ): Promise<AssistantMessage[]> {
     try {
-      let query = 'SELECT * FROM assistant_messages WHERE conversation_id = $1 ORDER BY timestamp ASC';
+      let query =
+        "SELECT * FROM assistant_messages WHERE conversation_id = $1 ORDER BY timestamp ASC";
       const params = [conversationId];
-      
+
       if (limit) {
-        query += ' LIMIT $2';
+        query += " LIMIT $2";
         params.push(limit);
       }
-      
+
       const result = await this.pool.query(query, params);
 
-      return result.rows.map(row => ({
+      return result.rows.map((row) => ({
         id: row.id,
         conversationId: row.conversation_id,
         content: row.content,
@@ -3858,24 +4352,27 @@ ${historyPrompt}`
         timestamp: row.timestamp,
         relatedDreamId: row.related_dream_id,
         relatedJournalId: row.related_journal_id,
-        metadata: row.metadata ? JSON.parse(row.metadata) : null
+        metadata: row.metadata ? JSON.parse(row.metadata) : null,
       }));
     } catch (error) {
-      console.error('Error getting assistant message thread:', error);
+      console.error("Error getting assistant message thread:", error);
       return [];
     }
   }
 
-  async processAssistantChatRequest(userId: number, request: ChatRequest): Promise<ChatResponse> {
+  async processAssistantChatRequest(
+    userId: number,
+    request: ChatRequest,
+  ): Promise<ChatResponse> {
     let conversationId = request.conversationId;
     let conversation: AssistantConversation | undefined;
-    
+
     // Start a transaction to ensure data consistency
     const client = await this.pool.connect();
-    
+
     try {
-      await client.query('BEGIN');
-      
+      await client.query("BEGIN");
+
       // If no conversation ID is provided, create a new conversation
       if (!conversationId) {
         const createResult = await client.query(
@@ -3883,9 +4380,9 @@ ${historyPrompt}`
           (user_id, title, created_at, updated_at, is_archived) 
           VALUES ($1, $2, $3, $4, $5) 
           RETURNING *`,
-          [userId, "Neue Unterhaltung", new Date(), new Date(), false]
+          [userId, "Neue Unterhaltung", new Date(), new Date(), false],
         );
-        
+
         conversation = {
           id: createResult.rows[0].id,
           userId: createResult.rows[0].user_id,
@@ -3893,21 +4390,21 @@ ${historyPrompt}`
           summary: createResult.rows[0].summary,
           createdAt: createResult.rows[0].created_at,
           updatedAt: createResult.rows[0].updated_at,
-          isArchived: createResult.rows[0].is_archived
+          isArchived: createResult.rows[0].is_archived,
         };
-        
+
         conversationId = conversation.id;
       } else {
         // Verify the conversation exists and belongs to the user
         const conversationResult = await client.query(
-          'SELECT * FROM assistant_conversations WHERE id = $1 AND user_id = $2',
-          [conversationId, userId]
+          "SELECT * FROM assistant_conversations WHERE id = $1 AND user_id = $2",
+          [conversationId, userId],
         );
-        
+
         if (conversationResult.rows.length === 0) {
           throw new Error("Conversation not found or unauthorized");
         }
-        
+
         conversation = {
           id: conversationResult.rows[0].id,
           userId: conversationResult.rows[0].user_id,
@@ -3915,10 +4412,10 @@ ${historyPrompt}`
           summary: conversationResult.rows[0].summary,
           createdAt: conversationResult.rows[0].created_at,
           updatedAt: conversationResult.rows[0].updated_at,
-          isArchived: conversationResult.rows[0].is_archived
+          isArchived: conversationResult.rows[0].is_archived,
         };
       }
-      
+
       // Save the user message
       const now = new Date();
       const userMessageResult = await client.query(
@@ -3926,15 +4423,22 @@ ${historyPrompt}`
         (conversation_id, content, role, timestamp, related_dream_id, related_journal_id) 
         VALUES ($1, $2, $3, $4, $5, $6) 
         RETURNING *`,
-        [conversationId, request.message, "user", now, request.relatedDreamId || null, request.relatedJournalId || null]
+        [
+          conversationId,
+          request.message,
+          "user",
+          now,
+          request.relatedDreamId || null,
+          request.relatedJournalId || null,
+        ],
       );
-      
+
       // Update conversation timestamp
       await client.query(
-        'UPDATE assistant_conversations SET updated_at = $1 WHERE id = $2',
-        [now, conversationId]
+        "UPDATE assistant_conversations SET updated_at = $1 WHERE id = $2",
+        [now, conversationId],
       );
-      
+
       const userMessage = {
         id: userMessageResult.rows[0].id,
         conversationId: userMessageResult.rows[0].conversation_id,
@@ -3943,19 +4447,21 @@ ${historyPrompt}`
         timestamp: userMessageResult.rows[0].timestamp,
         relatedDreamId: userMessageResult.rows[0].related_dream_id,
         relatedJournalId: userMessageResult.rows[0].related_journal_id,
-        metadata: userMessageResult.rows[0].metadata ? JSON.parse(userMessageResult.rows[0].metadata) : null
+        metadata: userMessageResult.rows[0].metadata
+          ? JSON.parse(userMessageResult.rows[0].metadata)
+          : null,
       };
-      
+
       // Get related content if needed
       let relatedContent: any = null;
       let contextPrompt = "";
-      
+
       if (request.relatedDreamId) {
         const dreamResult = await client.query(
-          'SELECT * FROM dreams WHERE id = $1 AND user_id = $2',
-          [request.relatedDreamId, userId]
+          "SELECT * FROM dreams WHERE id = $1 AND user_id = $2",
+          [request.relatedDreamId, userId],
         );
-        
+
         if (dreamResult.rows.length > 0) {
           const dream = {
             id: dreamResult.rows[0].id,
@@ -3969,12 +4475,12 @@ ${historyPrompt}`
             tags: dreamResult.rows[0].tags,
             moodBeforeSleep: dreamResult.rows[0].mood_before_sleep,
             moodAfterWakeup: dreamResult.rows[0].mood_after_wakeup,
-            moodNotes: dreamResult.rows[0].mood_notes
+            moodNotes: dreamResult.rows[0].mood_notes,
           };
-          
+
           relatedContent = dream;
           contextPrompt = `Bezüglich des Traums "${dream.title}" vom ${dream.date.toLocaleDateString()}:\n${dream.content}\n\n`;
-          
+
           // If there's analysis, add it to the context
           if (dream.analysis) {
             try {
@@ -3987,10 +4493,10 @@ ${historyPrompt}`
         }
       } else if (request.relatedJournalId) {
         const journalResult = await client.query(
-          'SELECT * FROM journal_entries WHERE id = $1 AND user_id = $2',
-          [request.relatedJournalId, userId]
+          "SELECT * FROM journal_entries WHERE id = $1 AND user_id = $2",
+          [request.relatedJournalId, userId],
         );
-        
+
         if (journalResult.rows.length > 0) {
           const journal = {
             id: journalResult.rows[0].id,
@@ -3999,21 +4505,21 @@ ${historyPrompt}`
             title: journalResult.rows[0].title,
             content: journalResult.rows[0].content,
             imageUrl: journalResult.rows[0].image_url,
-            createdAt: journalResult.rows[0].created_at
+            createdAt: journalResult.rows[0].created_at,
           };
-          
+
           relatedContent = journal;
           contextPrompt = `Bezüglich des Tagebucheintrags "${journal.title}" vom ${journal.date.toLocaleDateString()}:\n${journal.content}\n\n`;
         }
       }
-      
+
       // Get conversation history for context
       const historyResult = await client.query(
-        'SELECT * FROM assistant_messages WHERE conversation_id = $1 ORDER BY timestamp ASC LIMIT 10',
-        [conversationId]
+        "SELECT * FROM assistant_messages WHERE conversation_id = $1 ORDER BY timestamp ASC LIMIT 10",
+        [conversationId],
       );
-      
-      const conversationHistory = historyResult.rows.map(row => ({
+
+      const conversationHistory = historyResult.rows.map((row) => ({
         id: row.id,
         conversationId: row.conversation_id,
         content: row.content,
@@ -4021,15 +4527,20 @@ ${historyPrompt}`
         timestamp: row.timestamp,
         relatedDreamId: row.related_dream_id,
         relatedJournalId: row.related_journal_id,
-        metadata: row.metadata ? JSON.parse(row.metadata) : null
+        metadata: row.metadata ? JSON.parse(row.metadata) : null,
       }));
-      
-      const historyPrompt = conversationHistory.map(msg => `${msg.role === 'user' ? 'Benutzer' : 'Assistent'}: ${msg.content}`).join('\n');
-      
+
+      const historyPrompt = conversationHistory
+        .map(
+          (msg) =>
+            `${msg.role === "user" ? "Benutzer" : "Assistent"}: ${msg.content}`,
+        )
+        .join("\n");
+
       // Generate AI response
       const messageForAI = `${contextPrompt}${request.message}`;
       console.log("Sending message to OpenAI:", messageForAI);
-      
+
       // Call the OpenAI API
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
       const completion = await openai.chat.completions.create({
@@ -4053,26 +4564,35 @@ Verwende die folgende Anleitung für deine Antworten:
 10. Vermittle eine ausgewogene Perspektive zwischen wissenschaftlicher und spiritueller Traumdeutung.
 
 Bisherige Konversation:
-${historyPrompt}`
+${historyPrompt}`,
           },
           {
             role: "user",
-            content: messageForAI
-          }
-        ]
+            content: messageForAI,
+          },
+        ],
       });
-      
-      const aiResponse = completion.choices[0].message.content || "Entschuldigung, ich konnte deine Nachricht nicht verarbeiten.";
-      
+
+      const aiResponse =
+        completion.choices[0].message.content ||
+        "Entschuldigung, ich konnte deine Nachricht nicht verarbeiten.";
+
       // Save the assistant's response
       const assistantMessageResult = await client.query(
         `INSERT INTO assistant_messages 
         (conversation_id, content, role, timestamp, related_dream_id, related_journal_id) 
         VALUES ($1, $2, $3, $4, $5, $6) 
         RETURNING *`,
-        [conversationId, aiResponse, "assistant", new Date(), request.relatedDreamId || null, request.relatedJournalId || null]
+        [
+          conversationId,
+          aiResponse,
+          "assistant",
+          new Date(),
+          request.relatedDreamId || null,
+          request.relatedJournalId || null,
+        ],
       );
-      
+
       const assistantMessage = {
         id: assistantMessageResult.rows[0].id,
         conversationId: assistantMessageResult.rows[0].conversation_id,
@@ -4081,9 +4601,11 @@ ${historyPrompt}`
         timestamp: assistantMessageResult.rows[0].timestamp,
         relatedDreamId: assistantMessageResult.rows[0].related_dream_id,
         relatedJournalId: assistantMessageResult.rows[0].related_journal_id,
-        metadata: assistantMessageResult.rows[0].metadata ? JSON.parse(assistantMessageResult.rows[0].metadata) : null
+        metadata: assistantMessageResult.rows[0].metadata
+          ? JSON.parse(assistantMessageResult.rows[0].metadata)
+          : null,
       };
-      
+
       // Update conversation title if it's new
       if (conversation && conversationHistory.length === 0) {
         try {
@@ -4092,41 +4614,43 @@ ${historyPrompt}`
             model: "gpt-4o",
             messages: [
               {
-                role: "system", 
-                content: "Erstelle einen kurzen, aussagekräftigen Titel (max. 5 Wörter) für das folgende Gespräch. Gib nur den Titel zurück, ohne Anführungszeichen oder zusätzlichen Text."
+                role: "system",
+                content:
+                  "Erstelle einen kurzen, aussagekräftigen Titel (max. 5 Wörter) für das folgende Gespräch. Gib nur den Titel zurück, ohne Anführungszeichen oder zusätzlichen Text.",
               },
               {
                 role: "user",
-                content: request.message
-              }
-            ]
+                content: request.message,
+              },
+            ],
           });
-          
-          const generatedTitle = titleCompletion.choices[0].message.content || "Neue Unterhaltung";
-          
+
+          const generatedTitle =
+            titleCompletion.choices[0].message.content || "Neue Unterhaltung";
+
           await client.query(
-            'UPDATE assistant_conversations SET title = $1 WHERE id = $2',
-            [generatedTitle, conversationId]
+            "UPDATE assistant_conversations SET title = $1 WHERE id = $2",
+            [generatedTitle, conversationId],
           );
         } catch (e) {
           console.error("Error generating title:", e);
           // Continue even if title generation fails
         }
       }
-      
+
       // Commit the transaction
-      await client.query('COMMIT');
-      
+      await client.query("COMMIT");
+
       return {
         conversationId,
         message: assistantMessage,
-        relatedContent
+        relatedContent,
       };
     } catch (error) {
       // Rollback the transaction on error
-      await client.query('ROLLBACK');
+      await client.query("ROLLBACK");
       console.error("Error processing assistant chat request:", error);
-      
+
       // Create an error response message
       try {
         const errorResult = await this.pool.query(
@@ -4138,10 +4662,10 @@ ${historyPrompt}`
             conversationId,
             "Entschuldigung, es gab ein Problem bei der Verarbeitung deiner Anfrage. Bitte versuche es später noch einmal.",
             "assistant",
-            new Date()
-          ]
+            new Date(),
+          ],
         );
-        
+
         const errorMessage = {
           id: errorResult.rows[0].id,
           conversationId: errorResult.rows[0].conversation_id,
@@ -4150,12 +4674,14 @@ ${historyPrompt}`
           timestamp: errorResult.rows[0].timestamp,
           relatedDreamId: errorResult.rows[0].related_dream_id,
           relatedJournalId: errorResult.rows[0].related_journal_id,
-          metadata: errorResult.rows[0].metadata ? JSON.parse(errorResult.rows[0].metadata) : null
+          metadata: errorResult.rows[0].metadata
+            ? JSON.parse(errorResult.rows[0].metadata)
+            : null,
         };
-        
+
         return {
           conversationId: conversationId!,
-          message: errorMessage
+          message: errorMessage,
         };
       } catch (e) {
         console.error("Error creating error message:", e);
@@ -4187,9 +4713,12 @@ if (usePostgres) {
   console.log("Using PostgreSQL database storage");
   const pool = new pg.Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    ssl:
+      process.env.NODE_ENV === "production"
+        ? { rejectUnauthorized: false }
+        : false,
   });
-  
+
   storage = new DatabaseStorage(pool);
 } else {
   console.log("Using in-memory storage (no database URL found)");

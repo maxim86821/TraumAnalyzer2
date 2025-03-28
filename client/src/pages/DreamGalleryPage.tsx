@@ -1,22 +1,27 @@
-import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Link } from 'wouter';
-import { useAuth } from '@/hooks/use-auth';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Search, Filter, Image, Clock, Tag } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { toast } from '@/hooks/use-toast'; // Assuming a toast component exists
-import { apiRequest } from '@/lib/api'; // Assuming an apiRequest function exists
-
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Loader2, Search, Filter, Image, Clock, Tag } from "lucide-react";
+import { motion } from "framer-motion";
+import { toast } from "@/hooks/use-toast"; // Assuming a toast component exists
+import { apiRequest } from "@/lib/api"; // Assuming an apiRequest function exists
 
 // Gallery view types
-type ViewMode = 'grid' | 'masonry' | 'carousel';
-type SortOption = 'recent' | 'oldest' | 'emotional' | 'popular';
-type FilterCriteria = { 
+type ViewMode = "grid" | "masonry" | "carousel";
+type SortOption = "recent" | "oldest" | "emotional" | "popular";
+type FilterCriteria = {
   searchTerm?: string;
   tags?: string[];
   timeRange?: string;
@@ -31,28 +36,32 @@ interface ShareSettings {
 
 export default function DreamGalleryPage() {
   const { user } = useAuth();
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [sortBy, setSortBy] = useState<SortOption>('recent');
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [sortBy, setSortBy] = useState<SortOption>("recent");
   const [filters, setFilters] = useState<FilterCriteria>({});
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]); 
-  const [availableTags, setAvailableTags] = useState<string[]>([]); 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [shareSettings, setShareSettings] = useState<ShareSettings>({
     isPublic: false,
     allowComments: true,
     allowInterpretations: true,
-    anonymousShare: false
+    anonymousShare: false,
   });
 
   // Fetch dreams
-  const { data: dreams, isLoading, error } = useQuery({
-    queryKey: ['/api/dreams', user?.id],
+  const {
+    data: dreams,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["/api/dreams", user?.id],
     enabled: !!user,
   });
 
   // Apply filters and sorting to dream data
   const dreamsArray = Array.isArray(dreams) ? dreams : [];
-  const filteredDreams = filterDreams(dreamsArray, filters, selectedTags); 
+  const filteredDreams = filterDreams(dreamsArray, filters, selectedTags);
   const sortedDreams = sortDreams(filteredDreams, sortBy);
 
   // Handle search input change with debounce
@@ -63,7 +72,7 @@ export default function DreamGalleryPage() {
   // Update filters when search term changes (debounced)
   useEffect(() => {
     const timer = setTimeout(() => {
-      setFilters(prev => ({ ...prev, searchTerm }));
+      setFilters((prev) => ({ ...prev, searchTerm }));
     }, 300);
 
     return () => clearTimeout(timer);
@@ -72,14 +81,14 @@ export default function DreamGalleryPage() {
   // Handle tag filter change
   const handleTagFilterChange = (tag: string) => {
     if (selectedTags.includes(tag)) {
-      setSelectedTags(selectedTags.filter(t => t !== tag));
+      setSelectedTags(selectedTags.filter((t) => t !== tag));
     } else {
       setSelectedTags([...selectedTags, tag]);
     }
-    setFilters(prev => ({ ...prev, tags: selectedTags }));
+    setFilters((prev) => ({ ...prev, tags: selectedTags }));
   };
 
-    // Extract unique tags from all dreams for filtering
+  // Extract unique tags from all dreams for filtering
   useEffect(() => {
     if (dreams?.length > 0) {
       const allTags = new Set<string>();
@@ -92,27 +101,26 @@ export default function DreamGalleryPage() {
     }
   }, [dreams]);
 
-
   // Handle time range filter change
   const handleTimeRangeChange = (timeRange: string) => {
-    setFilters(prev => ({ ...prev, timeRange }));
+    setFilters((prev) => ({ ...prev, timeRange }));
   };
 
   const handleShareDream = async (dreamId: number) => {
     try {
-      await apiRequest('POST', `/api/community/dreams`, {
+      await apiRequest("POST", `/api/community/dreams`, {
         dreamId,
-        ...shareSettings
+        ...shareSettings,
       });
       toast({
-        title: 'Erfolg',
-        description: 'Traum wurde erfolgreich geteilt',
+        title: "Erfolg",
+        description: "Traum wurde erfolgreich geteilt",
       });
     } catch (error) {
       toast({
-        title: 'Fehler',
-        description: 'Fehler beim Teilen des Traums',
-        variant: 'destructive'
+        title: "Fehler",
+        description: "Fehler beim Teilen des Traums",
+        variant: "destructive",
       });
     }
   };
@@ -130,7 +138,9 @@ export default function DreamGalleryPage() {
   if (error) {
     return (
       <div className="container py-8 mx-auto text-center">
-        <h1 className="text-2xl font-bold text-red-500 mb-4">Error Loading Dream Gallery</h1>
+        <h1 className="text-2xl font-bold text-red-500 mb-4">
+          Error Loading Dream Gallery
+        </h1>
         <p className="mb-4">There was a problem loading your dreams.</p>
         <Button onClick={() => window.location.reload()}>Try Again</Button>
       </div>
@@ -175,7 +185,10 @@ export default function DreamGalleryPage() {
           </div>
 
           <div className="flex gap-2">
-            <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+            <Select
+              value={sortBy}
+              onValueChange={(value) => setSortBy(value as SortOption)}
+            >
               <SelectTrigger className="min-w-[160px]">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
@@ -204,7 +217,11 @@ export default function DreamGalleryPage() {
         {/* Tag filter */}
         <div className="flex flex-wrap gap-2">
           {availableTags.map((tag) => (
-            <Button key={tag} onClick={() => handleTagFilterChange(tag)} className={`border border-gray-300 px-3 py-1 rounded-md ${selectedTags.includes(tag) ? 'bg-blue-500 text-white' : 'bg-white text-gray-700'}`}>
+            <Button
+              key={tag}
+              onClick={() => handleTagFilterChange(tag)}
+              className={`border border-gray-300 px-3 py-1 rounded-md ${selectedTags.includes(tag) ? "bg-blue-500 text-white" : "bg-white text-gray-700"}`}
+            >
               {tag}
             </Button>
           ))}
@@ -212,7 +229,11 @@ export default function DreamGalleryPage() {
       </div>
 
       {/* View mode selection */}
-      <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as ViewMode)} className="mb-6">
+      <Tabs
+        value={viewMode}
+        onValueChange={(value) => setViewMode(value as ViewMode)}
+        className="mb-6"
+      >
         <TabsList>
           <TabsTrigger value="grid">
             <div className="flex items-center gap-2">
@@ -238,9 +259,9 @@ export default function DreamGalleryPage() {
         <TabsContent value="grid" className="mt-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {sortedDreams.map((dream, index) => (
-              <DreamVisualizationCard 
-                key={dream.id} 
-                dream={dream} 
+              <DreamVisualizationCard
+                key={dream.id}
+                dream={dream}
                 index={index}
                 viewMode={viewMode}
                 onShare={() => handleShareDream(dream.id)} // Added onShare prop
@@ -254,8 +275,8 @@ export default function DreamGalleryPage() {
           <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
             {sortedDreams.map((dream, index) => (
               <div key={dream.id} className="break-inside-avoid">
-                <DreamVisualizationCard 
-                  dream={dream} 
+                <DreamVisualizationCard
+                  dream={dream}
                   index={index}
                   viewMode={viewMode}
                   onShare={() => handleShareDream(dream.id)} // Added onShare prop
@@ -269,9 +290,12 @@ export default function DreamGalleryPage() {
         <TabsContent value="carousel" className="mt-4">
           <div className="flex overflow-x-auto pb-4 snap-x snap-mandatory gap-4">
             {sortedDreams.map((dream, index) => (
-              <div key={dream.id} className="snap-start min-w-[300px] max-w-[400px]">
-                <DreamVisualizationCard 
-                  dream={dream} 
+              <div
+                key={dream.id}
+                className="snap-start min-w-[300px] max-w-[400px]"
+              >
+                <DreamVisualizationCard
+                  dream={dream}
                   index={index}
                   viewMode={viewMode}
                   onShare={() => handleShareDream(dream.id)} // Added onShare prop
@@ -286,7 +310,17 @@ export default function DreamGalleryPage() {
 }
 
 // Dream visualization card component
-function DreamVisualizationCard({ dream, index, viewMode, onShare }: { dream: any, index: number, viewMode: ViewMode, onShare: () => void }) {
+function DreamVisualizationCard({
+  dream,
+  index,
+  viewMode,
+  onShare,
+}: {
+  dream: any;
+  index: number;
+  viewMode: ViewMode;
+  onShare: () => void;
+}) {
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: (i: number) => ({
@@ -295,8 +329,8 @@ function DreamVisualizationCard({ dream, index, viewMode, onShare }: { dream: an
       transition: {
         delay: i * 0.05,
         duration: 0.4,
-      }
-    })
+      },
+    }),
   };
 
   return (
@@ -306,14 +340,14 @@ function DreamVisualizationCard({ dream, index, viewMode, onShare }: { dream: an
       animate="visible"
       variants={cardVariants}
       whileHover={{ scale: 1.02 }}
-      className={`h-full ${viewMode === 'masonry' ? 'mb-4' : ''}`}
+      className={`h-full ${viewMode === "masonry" ? "mb-4" : ""}`}
     >
       <Link href={`/dreams/${dream.id}`}>
         <Card className="overflow-hidden h-full flex flex-col cursor-pointer hover:shadow-md transition-shadow">
           {dream.imageUrl && (
             <div className="relative aspect-video overflow-hidden">
-              <img 
-                src={dream.imageUrl} 
+              <img
+                src={dream.imageUrl}
                 alt={dream.title}
                 className="w-full h-full object-cover transition-transform duration-500 ease-in-out hover:scale-105"
               />
@@ -324,14 +358,18 @@ function DreamVisualizationCard({ dream, index, viewMode, onShare }: { dream: an
             </div>
           )}
           <div className="p-4 flex flex-col flex-grow">
-            <h3 className="font-semibold text-lg mb-1 line-clamp-1">{dream.title}</h3>
-            <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{dream.content}</p>
+            <h3 className="font-semibold text-lg mb-1 line-clamp-1">
+              {dream.title}
+            </h3>
+            <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+              {dream.content}
+            </p>
 
             {dream.tags && dream.tags.length > 0 && (
               <div className="mt-auto flex flex-wrap gap-1">
                 {dream.tags.slice(0, 3).map((tag: string) => (
-                  <span 
-                    key={tag} 
+                  <span
+                    key={tag}
                     className="inline-flex items-center px-2 py-1 text-xs bg-primary/10 text-primary rounded-full"
                   >
                     {tag}
@@ -345,7 +383,10 @@ function DreamVisualizationCard({ dream, index, viewMode, onShare }: { dream: an
               </div>
             )}
           </div>
-          <Button onClick={onShare} className="mt-2">Share</Button> {/* Added share button */}
+          <Button onClick={onShare} className="mt-2">
+            Share
+          </Button>{" "}
+          {/* Added share button */}
         </Card>
       </Link>
     </motion.div>
@@ -353,8 +394,12 @@ function DreamVisualizationCard({ dream, index, viewMode, onShare }: { dream: an
 }
 
 // Helper function to filter dreams based on criteria
-function filterDreams(dreams: any[], criteria: FilterCriteria, selectedTags: string[]): any[] {
-  return dreams.filter(dream => {
+function filterDreams(
+  dreams: any[],
+  criteria: FilterCriteria,
+  selectedTags: string[],
+): any[] {
+  return dreams.filter((dream) => {
     // Filter out dreams without images
     if (!dream.imageUrl) return false;
 
@@ -362,33 +407,43 @@ function filterDreams(dreams: any[], criteria: FilterCriteria, selectedTags: str
     if (criteria.searchTerm) {
       const searchTermLower = criteria.searchTerm.toLowerCase();
       const titleMatch = dream.title?.toLowerCase().includes(searchTermLower);
-      const contentMatch = dream.content?.toLowerCase().includes(searchTermLower);
-      const tagMatch = dream.tags?.some((tag: string) => tag.toLowerCase().includes(searchTermLower));
+      const contentMatch = dream.content
+        ?.toLowerCase()
+        .includes(searchTermLower);
+      const tagMatch = dream.tags?.some((tag: string) =>
+        tag.toLowerCase().includes(searchTermLower),
+      );
 
       if (!titleMatch && !contentMatch && !tagMatch) return false;
     }
 
     // Apply tag filter
-    if (selectedTags && selectedTags.length > 0) { 
-      if (!dream.tags || !selectedTags.every(tag => dream.tags.includes(tag))) {
+    if (selectedTags && selectedTags.length > 0) {
+      if (
+        !dream.tags ||
+        !selectedTags.every((tag) => dream.tags.includes(tag))
+      ) {
         return false;
       }
     }
 
     // Apply time range filter
-    if (criteria.timeRange && criteria.timeRange !== 'all') {
+    if (criteria.timeRange && criteria.timeRange !== "all") {
       const dreamDate = new Date(dream.date || dream.createdAt);
       const now = new Date();
 
       switch (criteria.timeRange) {
-        case 'week':
-          if (now.getTime() - dreamDate.getTime() > 7 * 24 * 60 * 60 * 1000) return false;
+        case "week":
+          if (now.getTime() - dreamDate.getTime() > 7 * 24 * 60 * 60 * 1000)
+            return false;
           break;
-        case 'month':
-          if (now.getTime() - dreamDate.getTime() > 30 * 24 * 60 * 60 * 1000) return false;
+        case "month":
+          if (now.getTime() - dreamDate.getTime() > 30 * 24 * 60 * 60 * 1000)
+            return false;
           break;
-        case 'year':
-          if (now.getTime() - dreamDate.getTime() > 365 * 24 * 60 * 60 * 1000) return false;
+        case "year":
+          if (now.getTime() - dreamDate.getTime() > 365 * 24 * 60 * 60 * 1000)
+            return false;
           break;
       }
     }
@@ -402,26 +457,26 @@ function sortDreams(dreams: any[], sortOption: SortOption): any[] {
   const dreamsToSort = [...dreams];
 
   switch (sortOption) {
-    case 'recent':
+    case "recent":
       return dreamsToSort.sort((a, b) => {
         const dateA = new Date(a.date || a.createdAt);
         const dateB = new Date(b.date || b.createdAt);
         return dateB.getTime() - dateA.getTime();
       });
-    case 'oldest':
+    case "oldest":
       return dreamsToSort.sort((a, b) => {
         const dateA = new Date(a.date || a.createdAt);
         const dateB = new Date(b.date || b.createdAt);
         return dateA.getTime() - dateB.getTime();
       });
-    case 'emotional':
+    case "emotional":
       return dreamsToSort.sort((a, b) => {
         // Sort by emotional intensity if available in the analysis
         const emotionalScoreA = getEmotionalScore(a);
         const emotionalScoreB = getEmotionalScore(b);
         return emotionalScoreB - emotionalScoreA;
       });
-    case 'popular':
+    case "popular":
       // This would ideally use view counts if that feature is implemented
       return dreamsToSort;
     default:
@@ -435,22 +490,27 @@ function getEmotionalScore(dream: any): number {
 
   try {
     // If analysis is stored as a string, parse it
-    const analysis = typeof dream.analysis === 'string' 
-      ? JSON.parse(dream.analysis) 
-      : dream.analysis;
+    const analysis =
+      typeof dream.analysis === "string"
+        ? JSON.parse(dream.analysis)
+        : dream.analysis;
 
     // If there are emotions with intensity, calculate average intensity
     if (analysis.emotions && Array.isArray(analysis.emotions)) {
-      const emotionIntensities = analysis.emotions
-        .map((emotion: any) => emotion.intensity || 0);
+      const emotionIntensities = analysis.emotions.map(
+        (emotion: any) => emotion.intensity || 0,
+      );
 
       if (emotionIntensities.length) {
-        return emotionIntensities.reduce((a: number, b: number) => a + b, 0) / emotionIntensities.length;
+        return (
+          emotionIntensities.reduce((a: number, b: number) => a + b, 0) /
+          emotionIntensities.length
+        );
       }
     }
   } catch (e) {
     // If parsing fails, return 0
-    console.error('Error parsing dream analysis:', e);
+    console.error("Error parsing dream analysis:", e);
   }
 
   return 0;

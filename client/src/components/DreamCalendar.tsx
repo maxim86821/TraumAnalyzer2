@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Calendar } from "./ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -23,22 +22,25 @@ export function DreamCalendar({ dreams }: DreamCalendarProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
 
   // Group dreams by date
-  const dreamsByDate = dreams.reduce((acc, dream) => {
-    const dreamDate = new Date(dream.date).toISOString().split('T')[0];
-    if (!acc[dreamDate]) {
-      acc[dreamDate] = [];
-    }
-    acc[dreamDate].push(dream);
-    return acc;
-  }, {} as Record<string, Dream[]>);
+  const dreamsByDate = dreams.reduce(
+    (acc, dream) => {
+      const dreamDate = new Date(dream.date).toISOString().split("T")[0];
+      if (!acc[dreamDate]) {
+        acc[dreamDate] = [];
+      }
+      acc[dreamDate].push(dream);
+      return acc;
+    },
+    {} as Record<string, Dream[]>,
+  );
 
   // Get dreams for selected date
-  const selectedDateStr = date ? format(date, 'yyyy-MM-dd') : '';
+  const selectedDateStr = date ? format(date, "yyyy-MM-dd") : "";
   const dreamsForSelectedDate = dreamsByDate[selectedDateStr] || [];
 
   // Function to determine which dates have dreams
   const isDreamDate = (date: Date) => {
-    const dateStr = format(date, 'yyyy-MM-dd');
+    const dateStr = format(date, "yyyy-MM-dd");
     return dateStr in dreamsByDate;
   };
 
@@ -69,14 +71,14 @@ export function DreamCalendar({ dreams }: DreamCalendarProps) {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
-              Träume am {date && format(date, 'dd. MMMM yyyy', { locale: de })}
+              Träume am {date && format(date, "dd. MMMM yyyy", { locale: de })}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {dreamsForSelectedDate.map((dream) => (
-                <div 
-                  key={dream.id} 
+                <div
+                  key={dream.id}
                   className="p-3 border rounded-md cursor-pointer hover:bg-gray-50 transition-colors"
                   onClick={() => navigate(`/dreams/${dream.id}`)}
                 >
@@ -84,7 +86,11 @@ export function DreamCalendar({ dreams }: DreamCalendarProps) {
                   {dream.tags && dream.tags.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
                       {dream.tags.map((tag, i) => (
-                        <Badge key={i} variant="outline" className="bg-dream-secondary/10 text-dream-secondary">
+                        <Badge
+                          key={i}
+                          variant="outline"
+                          className="bg-dream-secondary/10 text-dream-secondary"
+                        >
                           {tag}
                         </Badge>
                       ))}
