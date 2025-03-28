@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -172,4 +172,103 @@ export interface DeepPatternResponse {
     general: string[]; // Allgemeine Empfehlungen
     actionable: string[]; // Konkrete Handlungsvorschläge
   };
+}
+
+// Achievement-System und Gamification
+
+export const achievementCategories = [
+  "beginner",      // Anfänger-Erfolge
+  "consistency",   // Konsequenz-Erfolge
+  "exploration",   // Erkundungs-Erfolge
+  "insight",       // Einsicht-Erfolge
+  "mastery",       // Meister-Erfolge
+  "special"        // Besondere Erfolge
+] as const;
+
+export type AchievementCategory = typeof achievementCategories[number];
+
+export const achievementDifficulties = [
+  "bronze",   // Leicht zu erreichen
+  "silver",   // Mäßig schwer zu erreichen
+  "gold",     // Schwer zu erreichen
+  "platinum"  // Sehr schwer zu erreichen
+] as const;
+
+export type AchievementDifficulty = typeof achievementDifficulties[number];
+
+// Achievement-Definitionen
+export const achievements = pgTable("achievements", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  category: text("category").notNull().$type<AchievementCategory>(),
+  difficulty: text("difficulty").notNull().$type<AchievementDifficulty>(),
+  iconName: text("icon_name").notNull(),
+  criteria: json("criteria").notNull().$type<AchievementCriteria>(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Benutzer-Achievements
+export const userAchievements = pgTable("user_achievements", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  achievementId: integer("achievement_id").notNull(),
+  unlockedAt: timestamp("unlocked_at").notNull().defaultNow(),
+  progress: json("progress").notNull().$type<AchievementProgress>(),
+  isCompleted: boolean("is_completed").notNull().default(false),
+});
+
+// Achievement-Schema für's Einfügen
+export const insertAchievementSchema = createInsertSchema(achievements).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Benutzer-Achievement-Schema für's Einfügen
+export const insertUserAchievementSchema = createInsertSchema(userAchievements).omit({
+  id: true,
+  unlockedAt: true,
+});
+
+// Typen für Achievements
+export type Achievement = typeof achievements.$inferSelect;
+export type InsertAchievement = z.infer<typeof insertAchievementSchema>;
+
+export type UserAchievement = typeof userAchievements.$inferSelect;
+export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;
+
+// Kriterien für Achievements
+export interface AchievementCriteria {
+  type: 
+    | "dreamCount"          // Basierend auf Anzahl der Träume
+    | "streakDays"          // Basierend auf Anzahl aufeinanderfolgender Tage
+    | "tagCount"            // Basierend auf Anzahl verwendeter Tags
+    | "imageCount"          // Basierend auf Anzahl hochgeladener Bilder
+    | "analysisCount"       // Basierend auf Anzahl der Analysen
+    | "patternCount"        // Basierend auf Anzahl der Musteranalysen
+    | "moodTracking"        // Basierend auf Stimmungstracking
+    | "dreamLength"         // Basierend auf Länge der Traumeinträge
+    | "specialTag"          // Basierend auf speziellen Tags
+    | "combinedCriteria";   // Kombination mehrerer Kriterien
+  threshold: number;        // Schwellenwert für Erfüllung
+  additionalParams?: Record<string, any>; // Zusätzliche Parameter für bestimmte Kriterien
+}
+
+// Fortschritt für Achievements
+export interface AchievementProgress {
+  currentValue: number;    // Aktueller Wert
+  requiredValue: number;   // Erforderlicher Wert
+  lastUpdated: string;     // Zeitpunkt der letzten Aktualisierung
+  details?: Record<string, any>; // Zusätzliche Details
+}
+
+// Achievement Notification für das Frontend
+export interface AchievementNotification {
+  achievementId: number;
+  achievementName: string;
+  achievementDescription: string;
+  iconName: string;
+  category: AchievementCategory;
+  difficulty: AchievementDifficulty;
+  timestamp: string;
 }

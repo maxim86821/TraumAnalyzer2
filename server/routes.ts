@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { analyzeDream, analyzePatterns, generateDreamImage } from "./openai";
 import { saveBase64Image, deleteImage } from "./utils";
-import { insertDreamSchema } from "@shared/schema";
+import { insertDreamSchema, insertAchievementSchema, insertUserAchievementSchema } from "@shared/schema";
 import { setupAuth, authenticateJWT } from "./auth";
 import express from "express";
 import multer from "multer";
@@ -432,6 +432,250 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // ========= Achievement Routes =========
+
+  // Get all achievements
+  app.get('/api/achievements', async (req: Request, res: Response) => {
+    try {
+      const achievements = await storage.getAllAchievements();
+      res.json(achievements);
+    } catch (error) {
+      console.error('Error fetching achievements:', error);
+      res.status(500).json({ message: 'Fehler beim Laden der Erfolge' });
+    }
+  });
+
+  // Get user's achievements
+  app.get('/api/achievements/user', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+
+      const userAchievements = await storage.getUserAchievements(req.user.id);
+      res.json(userAchievements);
+    } catch (error) {
+      console.error('Error fetching user achievements:', error);
+      res.status(500).json({ message: 'Fehler beim Laden der Benutzer-Erfolge' });
+    }
+  });
+
+  // Get latest completed achievements for the user
+  app.get('/api/achievements/user/latest', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+
+      const limit = parseInt(req.query.limit as string) || 5;
+      const latestAchievements = await storage.getLatestUserAchievements(req.user.id, limit);
+      
+      // Fetch full achievement details for each user achievement
+      const achievementsWithDetails = await Promise.all(
+        latestAchievements.map(async (ua) => {
+          const achievement = await storage.getAchievement(ua.achievementId);
+          return {
+            ...ua,
+            achievement
+          };
+        })
+      );
+      
+      res.json(achievementsWithDetails);
+    } catch (error) {
+      console.error('Error fetching latest user achievements:', error);
+      res.status(500).json({ message: 'Fehler beim Laden der neuesten Benutzer-Erfolge' });
+    }
+  });
+
+  // Create a new achievement (admin only)
+  app.post('/api/achievements', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      // In a real app, check for admin role
+      // For now, validate the request body
+      const parseResult = insertAchievementSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        return res.status(400).json({ 
+          message: 'Ungültige Achievement-Daten', 
+          errors: parseResult.error.errors 
+        });
+      }
+
+      const newAchievement = await storage.createAchievement(parseResult.data);
+      res.status(201).json(newAchievement);
+    } catch (error) {
+      console.error('Error creating achievement:', error);
+      res.status(500).json({ message: 'Fehler beim Erstellen des Erfolgs' });
+    }
+  });
+
+  // Check and process user achievements
+  app.post('/api/achievements/check', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+
+      const userId = req.user.id;
+      
+      // Get all achievements and user's dreams
+      const achievements = await storage.getAllAchievements();
+      const dreams = await storage.getDreamsByUserId(userId);
+      
+      // Get user's existing achievements
+      const userAchievements = await storage.getUserAchievements(userId);
+      
+      // Object to collect new achievements
+      const newAchievements = [];
+      
+      // Check each achievement
+      for (const achievement of achievements) {
+        // Skip if user already has this achievement and it's completed
+        const existingAchievement = userAchievements.find(
+          ua => ua.achievementId === achievement.id && ua.isCompleted
+        );
+        
+        if (existingAchievement) {
+          continue;
+        }
+        
+        // Get or create user achievement
+        let userAchievement = userAchievements.find(ua => ua.achievementId === achievement.id);
+        
+        // Calculate current progress based on achievement criteria
+        let currentValue = 0;
+        
+        switch (achievement.criteria.type) {
+          case "dreamCount":
+            currentValue = dreams.length;
+            break;
+          case "streakDays":
+            // Calculate consecutive days with dreams
+            currentValue = calculateStreakDays(dreams);
+            break;
+          case "tagCount":
+            // Count unique tags
+            currentValue = countUniqueTags(dreams);
+            break;
+          case "imageCount":
+            // Count dreams with images
+            currentValue = dreams.filter(dream => dream.imageUrl).length;
+            break;
+          case "analysisCount":
+            // Count dreams with analysis
+            currentValue = dreams.filter(dream => dream.analysis).length;
+            break;
+          case "moodTracking":
+            // Count dreams with mood tracking
+            currentValue = dreams.filter(dream => 
+              dream.moodBeforeSleep !== null || dream.moodAfterWakeup !== null
+            ).length;
+            break;
+          case "dreamLength":
+            // Count dreams with content longer than threshold
+            const minLength = achievement.criteria.additionalParams?.minLength || 100;
+            currentValue = dreams.filter(dream => dream.content.length > minLength).length;
+            break;
+          // Additional types would be handled here
+        }
+        
+        // Create progress object
+        const progress = {
+          currentValue,
+          requiredValue: achievement.criteria.threshold,
+          lastUpdated: new Date().toISOString(),
+          details: achievement.criteria.additionalParams || {}
+        };
+        
+        // If user achievement doesn't exist, create it
+        if (!userAchievement) {
+          userAchievement = await storage.createUserAchievement({
+            userId,
+            achievementId: achievement.id,
+            progress,
+            isCompleted: currentValue >= achievement.criteria.threshold
+          });
+        } else {
+          // Otherwise update existing progress
+          userAchievement = await storage.updateUserAchievementProgress(userAchievement.id, progress);
+        }
+        
+        // If achievement is completed, add to new achievements
+        if (userAchievement && userAchievement.isCompleted && !existingAchievement) {
+          const timestamp = userAchievement.unlockedAt.toISOString();
+          newAchievements.push({
+            achievementId: achievement.id,
+            achievementName: achievement.name,
+            achievementDescription: achievement.description,
+            iconName: achievement.iconName,
+            category: achievement.category,
+            difficulty: achievement.difficulty,
+            timestamp
+          });
+        }
+      }
+      
+      res.json({
+        achievements: userAchievements,
+        newAchievements
+      });
+    } catch (error) {
+      console.error('Error checking achievements:', error);
+      res.status(500).json({ message: 'Fehler beim Prüfen der Erfolge' });
+    }
+  });
+
+  // Helper functions for achievement processing
+  function calculateStreakDays(dreams: any[]): number {
+    if (dreams.length === 0) return 0;
+    
+    // Sort dreams by date (newest first)
+    const sortedDreams = [...dreams].sort((a, b) => b.date.getTime() - a.date.getTime());
+    
+    // Get unique days (in ISO string format YYYY-MM-DD)
+    const uniqueDays = new Set<string>();
+    sortedDreams.forEach(dream => {
+      uniqueDays.add(dream.date.toISOString().split('T')[0]);
+    });
+    
+    // Convert to array and sort (newest first)
+    const days = Array.from(uniqueDays).sort().reverse();
+    
+    // Count consecutive days
+    let currentStreak = 1;
+    let maxStreak = 1;
+    
+    for (let i = 1; i < days.length; i++) {
+      const prevDay = new Date(days[i-1]);
+      const currentDay = new Date(days[i]);
+      
+      // Check if days are consecutive
+      const timeDiff = Math.abs(prevDay.getTime() - currentDay.getTime());
+      const dayDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+      
+      if (dayDiff === 1) {
+        currentStreak++;
+        maxStreak = Math.max(maxStreak, currentStreak);
+      } else {
+        currentStreak = 1;
+      }
+    }
+    
+    return maxStreak;
+  }
+  
+  function countUniqueTags(dreams: any[]): number {
+    const allTags = new Set<string>();
+    
+    dreams.forEach(dream => {
+      if (dream.tags && Array.isArray(dream.tags)) {
+        dream.tags.forEach((tag: string) => allTags.add(tag));
+      }
+    });
+    
+    return allTags.size;
+  }
 
   const httpServer = createServer(app);
   return httpServer;

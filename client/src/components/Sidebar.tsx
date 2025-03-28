@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "../hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { LogOut, User } from "lucide-react";
+import { Award, LogOut, User } from "lucide-react";
 
 interface SidebarProps {
   className?: string;

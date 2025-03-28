@@ -7,6 +7,7 @@ import Home from "@/pages/Home";
 import NewDream from "@/pages/NewDream";
 import DreamView from "@/pages/DreamView";
 import DreamPatterns from "@/pages/DreamPatterns";
+import AchievementsPage from "@/pages/AchievementsPage";
 import AuthPage from "@/pages/auth-page";
 import Layout from "@/components/Layout";
 import { AuthProvider } from "./hooks/use-auth";
@@ -31,6 +32,7 @@ function Router() {
         </Layout>
       )} />
       <ProtectedRoute path="/patterns" component={DreamPatterns} />
+      <ProtectedRoute path="/achievements" component={AchievementsPage} />
       <Route path="/auth" component={AuthPage} />
       {/* Fallback to 404 */}
       <Route component={NotFound} />
