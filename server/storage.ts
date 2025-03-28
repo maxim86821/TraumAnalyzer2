@@ -1804,4 +1804,345 @@ export class DatabaseStorage implements IStorage {
     // Always update the updated_at timestamp
     updates.push(`updated_at = CURRENT_TIMESTAMP`);
 
-    // If there's
+    // If there's nothing to update, return the existing entry
+    if (updates.length === 0) {
+      return this.getJournalEntry(id);
+    }
+
+    // Add the id to the values array
+    values.push(id);
+
+    const query = `
+      UPDATE journal_entries
+      SET ${updates.join(', ')}
+      WHERE id = $${paramCounter}
+      RETURNING *
+    `;
+
+    const result = await this.pool.query(query, values);
+    return result.rows[0] ? this.transformJournalEntryDbToApi(result.rows[0]) : undefined;
+  }
+
+  async deleteJournalEntry(id: number): Promise<boolean> {
+    const result = await this.pool.query(
+      'DELETE FROM journal_entries WHERE id = $1 RETURNING id',
+      [id]
+    );
+    return result.rowCount > 0;
+  }
+
+  // Dream content entries
+  async createDreamContentEntry(entry: InsertDreamContentEntry): Promise<DreamContentEntry> {
+    const result = await this.pool.query(`
+      INSERT INTO dream_content_entries (
+        title, summary, content, content_type, url, author, featured, view_count, 
+        image_url, video_url, external_links, category, related_content_ids
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      RETURNING *
+    `, [
+      entry.title,
+      entry.summary,
+      entry.content,
+      entry.contentType,
+      entry.url || null,
+      entry.author || null,
+      entry.featured || false,
+      0, // Initial view count
+      entry.imageUrl || null,
+      entry.videoUrl || null,
+      entry.externalLinks || [],
+      entry.category || null,
+      entry.relatedContentIds || []
+    ]);
+    
+    return this.transformDreamContentEntryDbToApi(result.rows[0]);
+  }
+
+  async getDreamContentEntries(): Promise<DreamContentEntry[]> {
+    const result = await this.pool.query('SELECT * FROM dream_content_entries ORDER BY created_at DESC');
+    return result.rows.map(entry => this.transformDreamContentEntryDbToApi(entry));
+  }
+
+  async getDreamContentEntry(id: number): Promise<DreamContentEntry | undefined> {
+    const result = await this.pool.query('SELECT * FROM dream_content_entries WHERE id = $1', [id]);
+    return result.rows[0] ? this.transformDreamContentEntryDbToApi(result.rows[0]) : undefined;
+  }
+
+  async updateDreamContentEntry(id: number, entry: Partial<InsertDreamContentEntry>): Promise<DreamContentEntry | undefined> {
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramCounter = 1;
+
+    if (entry.title !== undefined) {
+      updates.push(`title = $${paramCounter++}`);
+      values.push(entry.title);
+    }
+
+    if (entry.summary !== undefined) {
+      updates.push(`summary = $${paramCounter++}`);
+      values.push(entry.summary);
+    }
+
+    if (entry.content !== undefined) {
+      updates.push(`content = $${paramCounter++}`);
+      values.push(entry.content);
+    }
+
+    if (entry.contentType !== undefined) {
+      updates.push(`content_type = $${paramCounter++}`);
+      values.push(entry.contentType);
+    }
+
+    if (entry.url !== undefined) {
+      updates.push(`url = $${paramCounter++}`);
+      values.push(entry.url);
+    }
+
+    if (entry.author !== undefined) {
+      updates.push(`author = $${paramCounter++}`);
+      values.push(entry.author);
+    }
+
+    if (entry.featured !== undefined) {
+      updates.push(`featured = $${paramCounter++}`);
+      values.push(entry.featured);
+    }
+
+    if (entry.imageUrl !== undefined) {
+      updates.push(`image_url = $${paramCounter++}`);
+      values.push(entry.imageUrl);
+    }
+
+    if (entry.videoUrl !== undefined) {
+      updates.push(`video_url = $${paramCounter++}`);
+      values.push(entry.videoUrl);
+    }
+
+    if (entry.externalLinks !== undefined) {
+      updates.push(`external_links = $${paramCounter++}`);
+      values.push(entry.externalLinks);
+    }
+
+    if (entry.category !== undefined) {
+      updates.push(`category = $${paramCounter++}`);
+      values.push(entry.category);
+    }
+
+    if (entry.relatedContentIds !== undefined) {
+      updates.push(`related_content_ids = $${paramCounter++}`);
+      values.push(entry.relatedContentIds);
+    }
+
+    // Always update the updated_at timestamp
+    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+
+    // If there's nothing to update, return the existing entry
+    if (updates.length === 0) {
+      return this.getDreamContentEntry(id);
+    }
+
+    // Add the id to the values array
+    values.push(id);
+
+    const query = `
+      UPDATE dream_content_entries
+      SET ${updates.join(', ')}
+      WHERE id = $${paramCounter}
+      RETURNING *
+    `;
+
+    const result = await this.pool.query(query, values);
+    return result.rows[0] ? this.transformDreamContentEntryDbToApi(result.rows[0]) : undefined;
+  }
+
+  async deleteDreamContentEntry(id: number): Promise<boolean> {
+    const result = await this.pool.query(
+      'DELETE FROM dream_content_entries WHERE id = $1 RETURNING id',
+      [id]
+    );
+    return result.rowCount > 0;
+  }
+
+  async getFeaturedDreamContentEntries(limit: number): Promise<DreamContentEntry[]> {
+    const result = await this.pool.query(
+      'SELECT * FROM dream_content_entries WHERE featured = true ORDER BY created_at DESC LIMIT $1',
+      [limit]
+    );
+    return result.rows.map(entry => this.transformDreamContentEntryDbToApi(entry));
+  }
+
+  async getDreamContentEntriesByType(contentType: string): Promise<DreamContentEntry[]> {
+    const result = await this.pool.query(
+      'SELECT * FROM dream_content_entries WHERE content_type = $1 ORDER BY created_at DESC',
+      [contentType]
+    );
+    return result.rows.map(entry => this.transformDreamContentEntryDbToApi(entry));
+  }
+
+  async incrementDreamContentViewCount(id: number): Promise<DreamContentEntry | undefined> {
+    const result = await this.pool.query(
+      'UPDATE dream_content_entries SET view_count = view_count + 1 WHERE id = $1 RETURNING *',
+      [id]
+    );
+    return result.rows[0] ? this.transformDreamContentEntryDbToApi(result.rows[0]) : undefined;
+  }
+
+  // Content comments
+  async createContentComment(comment: InsertContentComment): Promise<ContentComment> {
+    const result = await this.pool.query(`
+      INSERT INTO content_comments (
+        content_id, user_id, text, parent_comment_id
+      )
+      VALUES ($1, $2, $3, $4)
+      RETURNING *
+    `, [
+      comment.contentId,
+      comment.userId,
+      comment.text,
+      comment.parentCommentId || null
+    ]);
+    
+    return this.transformContentCommentDbToApi(result.rows[0]);
+  }
+
+  async getContentCommentsByContentId(contentId: number): Promise<ContentComment[]> {
+    const result = await this.pool.query(
+      'SELECT * FROM content_comments WHERE content_id = $1 ORDER BY created_at ASC',
+      [contentId]
+    );
+    return result.rows.map(comment => this.transformContentCommentDbToApi(comment));
+  }
+
+  async deleteContentComment(id: number): Promise<boolean> {
+    const result = await this.pool.query(
+      'DELETE FROM content_comments WHERE id = $1 RETURNING id',
+      [id]
+    );
+    return result.rowCount > 0;
+  }
+
+  // Helper methods for transforming database rows to API format
+  private transformDreamContentEntryDbToApi(entry: any): DreamContentEntry {
+    return {
+      id: entry.id,
+      title: entry.title,
+      summary: entry.summary,
+      content: entry.content,
+      contentType: entry.content_type,
+      url: entry.url,
+      author: entry.author,
+      featured: entry.featured,
+      viewCount: entry.view_count,
+      imageUrl: entry.image_url,
+      videoUrl: entry.video_url,
+      externalLinks: entry.external_links,
+      category: entry.category,
+      relatedContentIds: entry.related_content_ids,
+      createdAt: entry.created_at,
+      updatedAt: entry.updated_at
+    };
+  }
+
+  private transformContentCommentDbToApi(comment: any): ContentComment {
+    return {
+      id: comment.id,
+      contentId: comment.content_id,
+      userId: comment.user_id,
+      text: comment.text,
+      parentCommentId: comment.parent_comment_id,
+      createdAt: comment.created_at,
+      updatedAt: comment.updated_at
+    };
+  }
+
+  private transformJournalEntryDbToApi(entry: any): JournalEntry {
+    return {
+      id: entry.id,
+      userId: entry.user_id,
+      title: entry.title,
+      content: entry.content,
+      tags: entry.tags,
+      mood: entry.mood,
+      imageUrl: entry.image_url,
+      isPrivate: entry.is_private,
+      includeInAnalysis: entry.include_in_analysis,
+      date: entry.date,
+      createdAt: entry.created_at,
+      updatedAt: entry.updated_at,
+      relatedDreamIds: entry.related_dream_ids
+    };
+  }
+
+  private transformDreamDbToApi(dream: any): Dream {
+    return {
+      id: dream.id,
+      userId: dream.user_id,
+      title: dream.title,
+      content: dream.content,
+      date: dream.date,
+      tags: dream.tags,
+      mood: dream.mood,
+      imageUrl: dream.image_url,
+      isPrivate: dream.is_private,
+      analysis: dream.analysis,
+      createdAt: dream.created_at,
+      updatedAt: dream.updated_at
+    };
+  }
+
+  private transformAchievementDbToApi(achievement: any): Achievement {
+    return {
+      id: achievement.id,
+      name: achievement.name,
+      description: achievement.description,
+      criteria: achievement.criteria,
+      iconUrl: achievement.icon_url,
+      category: achievement.category,
+      points: achievement.points,
+      createdAt: achievement.created_at
+    };
+  }
+
+  private transformUserAchievementDbToApi(userAchievement: any): UserAchievement {
+    return {
+      id: userAchievement.id,
+      userId: userAchievement.user_id,
+      achievementId: userAchievement.achievement_id,
+      completed: userAchievement.completed,
+      progress: userAchievement.progress,
+      earnedDate: userAchievement.earned_date,
+      createdAt: userAchievement.created_at,
+      updatedAt: userAchievement.updated_at
+    };
+  }
+}
+
+// Define MoodData interface for tracking mood information
+export interface MoodData {
+  happiness?: number;
+  anxiety?: number;
+  energy?: number;
+  clarity?: number;
+  overall?: number;
+  notes?: string;
+}
+
+// Create a storage instance based on the environment
+// If we're in production and have a DATABASE_URL, use PostgreSQL, otherwise use in-memory storage
+let usePostgres = !!process.env.DATABASE_URL;
+
+export let storage: IStorage;
+
+if (usePostgres) {
+  console.log("Using PostgreSQL database storage");
+  const pool = new pg.Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  });
+  
+  storage = new DatabaseStorage(pool);
+} else {
+  console.log("Using in-memory storage (no database URL found)");
+  storage = new MemStorage();
+}
