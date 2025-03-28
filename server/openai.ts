@@ -28,21 +28,21 @@ export async function generateJournalMoodImage(
       .slice(0, 30);
     
     const uniqueWords = Array.from(new Set(words));
-    const importantWords = uniqueWords.slice(0, 5);
+    const importantWords = uniqueWords.slice(0, 3); // Reduziert auf 3 wichtige Wörter
     
     // Erstelle einen detaillierten Prompt basierend auf Journal und Eingaben
-    let promptBase = "Erstelle ein aussagekräftiges visuelles Kunstwerk im Stil einer Hochqualitäts-Illustration, das";
-    promptBase += ` die Essenz dieses Journaleintrags einfängt:\n\n"${journalContent.substring(0, 300)}..."`;
+    let promptBase = "Erstelle ein ausdrucksstarkes visuelles Kunstwerk im Stil einer Hochqualitäts-Illustration, das";
+    promptBase += ` die emotionale Essenz dieses Journaleintrags einfängt:\n\n"${journalContent.substring(0, 200)}..."`;
     
     // Füge Farbimpressionen und Gedanken hinzu
     promptBase += `\n\nDer Autor verbindet diese Gedanken mit der Farbe "${colorImpression}" und denkt dabei an "${spontaneousThought}".`;
     
-    // Füge Tags hinzu
+    // Füge Tags hinzu, wenn vorhanden
     if (tags && tags.length > 0) {
-      promptBase += `\n\nWichtige Tags: ${tags.join(", ")}`;
+      promptBase += `\n\nWichtige Themen: ${tags.join(", ")}`;
     }
     
-    // Füge Stimmungsinformation hinzu
+    // Füge Stimmungsinformation hinzu, wenn vorhanden
     if (mood !== undefined && mood !== null) {
       const moodDescription = mood > 7 ? "sehr positiv" : 
                              mood > 5 ? "positiv" : 
@@ -50,15 +50,20 @@ export async function generateJournalMoodImage(
       promptBase += `\n\nDie Stimmung ist ${moodDescription} (${mood}/10).`;
     }
     
-    // Füge wichtige Wörter hinzu
+    // Füge wichtige Wörter hinzu, wenn vorhanden
     if (importantWords.length > 0) {
-      promptBase += `\n\nSchlüsselwörter aus dem Text: ${importantWords.join(", ")}`;
+      promptBase += `\n\nZentrale Konzepte: ${importantWords.join(", ")}`;
     }
     
-    // Kunstrichtung und Stil basierend auf Inhalt
+    // Kunstrichtung und Stilanweisungen
     promptBase += `\n\nDas Bild soll konkrete, erkennbare Elemente enthalten, keine abstrakten Formen oder Farbflächen.`;
-    promptBase += `\n\nVisualisiere besonders diese Aspekte: (1) die Hauptemotion, (2) den Kerngedanken und (3) die bedeutendste Metapher aus dem Journal.`;
-    promptBase += `\n\nVerwende lebendige Farben mit hohem Kontrast und erkennbaren Naturelementen. Integriere subtil Text- oder Symbolelemente, die sich auf die wichtigsten Schlüsselwörter beziehen.`;
+    promptBase += `\n\nVisualisiere besonders: die Hauptemotion und den Kerngedanken aus dem Journal über symbolische Darstellungen.`;
+    promptBase += `\n\nVerwende lebendige ${colorImpression} Farbtöne mit hohem Kontrast und erkennbaren Naturelementen wie Landschaften oder atmosphärischen Elementen.`;
+    
+    // WICHTIG: Keine Textinhalte im Bild
+    promptBase += `\n\nWICHTIG: Das Bild darf KEINE Textinhalte, Wörter, Buchstaben oder Schriftzüge enthalten - erstelle es ausschließlich mit visuellen Elementen wie Farben, Formen und symbolischen Objekten.`;
+    
+    console.log("Generiere Bild mit angepasstem Prompt ohne Textinhalte");
     
     // Generiere ein Bild mit DALL-E 3
     const response = await openai.images.generate({
@@ -162,6 +167,9 @@ export async function generateDreamImage(
     // Add style directions
     promptBase += "\n\nStil: Traumartig, surreal, mit fließenden Übergängen und symbolischer Bedeutung. Eine Mischung aus realistischen und fantastischen Elementen.";
     
+    // WICHTIG: Keine Textinhalte im Bild
+    promptBase += "\n\nWICHTIG: Das Bild darf KEINE Textinhalte, Wörter, Buchstaben oder Schriftzüge enthalten - erstelle es ausschließlich mit visuellen Elementen wie Farben, Formen und symbolischen Objekten.";
+    
     console.log("Generating image with prompt:", promptBase);
     
     // Call the OpenAI DALL-E API to generate the image
@@ -171,6 +179,7 @@ export async function generateDreamImage(
       n: 1,
       size: "1024x1024",
       quality: "standard",
+      style: "vivid",
     });
     
     const imageUrl = response.data[0].url;
