@@ -29,6 +29,11 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
   const [moodAfterWakeup, setMoodAfterWakeup] = useState<number | undefined>(dream.moodAfterWakeup || undefined);
   const [moodNotes, setMoodNotes] = useState<string | undefined>(dream.moodNotes || undefined);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  
+  // Stellen Sie sicher, dass die Dream-ID eine valide Zahl ist
+  const dreamId = dream && dream.id ? parseInt(String(dream.id)) : 0;
+  
+  console.log("DreamDetail Component - Dream Props:", { id: dream?.id, parsedId: dreamId });
 
   // Parse the analysis JSON if it exists
   const analysis = dream.analysis ? JSON.parse(dream.analysis) : null;
@@ -80,12 +85,12 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
     try {
       setIsUpdating(true);
       
-      // Überprüfen, ob dream.id definiert ist, bevor wir die Anfrage senden
-      if (!dream.id) {
+      // Überprüfen, ob dreamId gültig ist
+      if (!dreamId || dreamId <= 0) {
         throw new Error("Ungültige Traum-ID. Der Traum kann nicht aktualisiert werden.");
       }
       
-      console.log("Updating dream with ID:", dream.id);
+      console.log("Updating dream with ID:", dreamId);
       
       const updateData: any = {
         title,
@@ -102,7 +107,7 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
       }
       
       // Update the dream
-      const response = await apiRequest('PATCH', `/api/dreams/${dream.id}`, updateData);
+      const response = await apiRequest('PATCH', `/api/dreams/${dreamId}`, updateData);
       
       if (!response.ok) {
         const errorData = await response.json();
@@ -110,7 +115,7 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
       }
       
       // Invalidate the cache to refresh data
-      queryClient.invalidateQueries({ queryKey: ['/api/dreams', dream.id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/dreams', dreamId] });
       queryClient.invalidateQueries({ queryKey: ['/api/dreams'] });
       
       setEditing(false);
@@ -153,18 +158,24 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
         description: "Das KI-Bild wird basierend auf deinem Traum erstellt. Dies kann einen Moment dauern...",
       });
       
-      // Überprüfen, ob dream.id definiert ist, bevor wir die Anfrage senden
-      if (!dream.id) {
+      // Überprüfen, ob dreamId gültig ist
+      if (!dreamId || dreamId <= 0) {
         throw new Error("Ungültige Traum-ID. Bitte speichern Sie den Traum zuerst.");
       }
       
-      console.log("Generating image for dream ID:", dream.id);
-      const response = await apiRequest('POST', `/api/dreams/${dream.id}/generate-image`);
+      console.log("Generating image for dream ID:", dreamId);
+      const response = await apiRequest('POST', `/api/dreams/${dreamId}/generate-image`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Fehler bei der Bildgenerierung");
+      }
+      
       const data = await response.json();
       
       if (data.success) {
         // Invalidate the cache to refresh data
-        queryClient.invalidateQueries({ queryKey: ['/api/dreams', dream.id] });
+        queryClient.invalidateQueries({ queryKey: ['/api/dreams', dreamId] });
         queryClient.invalidateQueries({ queryKey: ['/api/dreams'] });
         
         toast({

@@ -25,10 +25,14 @@ export default function DreamView() {
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
   
+  // Konvertiere die ID in eine Zahl oder verwende 0 als Fallback
+  const dreamId = id ? parseInt(id) : 0;
+  console.log("DreamView Component - Traum-ID:", id, "Parsed ID:", dreamId);
+  
   // Fetch the dream by ID
   const { data: dream, isLoading, error } = useQuery<Dream>({
-    queryKey: ['/api/dreams', id ? parseInt(id) : 0],
-    enabled: !!id // Nur abfragen, wenn eine ID vorhanden ist
+    queryKey: ['/api/dreams', dreamId],
+    enabled: dreamId > 0 // Nur abfragen, wenn eine gültige ID vorhanden ist
   });
 
   // Handle dream deletion
@@ -36,13 +40,13 @@ export default function DreamView() {
     try {
       setIsDeleting(true);
       
-      // Überprüfen, ob id definiert ist
-      if (!id) {
+      // Überprüfen, ob dreamId gültig ist
+      if (!dreamId || dreamId <= 0) {
         throw new Error("Ungültige Traum-ID");
       }
       
-      console.log("Deleting dream with ID:", id);
-      const response = await apiRequest('DELETE', `/api/dreams/${id}`);
+      console.log("Deleting dream with ID:", dreamId);
+      const response = await apiRequest('DELETE', `/api/dreams/${dreamId}`);
       
       if (!response.ok) {
         const errorData = await response.json();
