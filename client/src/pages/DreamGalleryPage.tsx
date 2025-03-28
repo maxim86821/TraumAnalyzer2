@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Search, Filter, Image, Clock, Tag } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { toast } from '@/components/ui/use-toast'; // Assuming a toast component exists
+import { toast } from '@/hooks/use-toast'; // Assuming a toast component exists
 import { apiRequest } from '@/lib/api'; // Assuming an apiRequest function exists
 
 
