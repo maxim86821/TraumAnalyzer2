@@ -148,7 +148,7 @@ export default function DreamView() {
         </AlertDialog>
       </div>
       
-      <DreamDetail dream={dream} />
+      {dream && <DreamDetail dream={dream} />}
     </div>
   );
 }
