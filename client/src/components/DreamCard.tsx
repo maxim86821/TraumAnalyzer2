@@ -1,8 +1,10 @@
 import { Dream } from "@shared/schema";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import { TagIcon } from "lucide-react";
 
 interface DreamCardProps {
   dream: Dream;
@@ -12,8 +14,9 @@ export default function DreamCard({ dream }: DreamCardProps) {
   // Parse the analysis JSON if it exists
   const analysis = dream.analysis ? JSON.parse(dream.analysis) : null;
   
-  // Get the first 3 themes from the analysis or use default tags
-  const themes = analysis?.themes?.slice(0, 3) || [];
+  // Use user-defined tags or get the first 3 themes from the analysis
+  const userTags = dream.tags || [];
+  const themes = userTags.length > 0 ? userTags : (analysis?.themes?.slice(0, 3) || []);
   
   // Format date in German
   const formattedDate = format(new Date(dream.date), 'd. MMM yyyy', { locale: de });
@@ -51,24 +54,38 @@ export default function DreamCard({ dream }: DreamCardProps) {
           {themes.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">
               {themes.map((theme: string, index: number) => {
-                // Different background colors for variety
-                const colorClasses = [
-                  "bg-dream-light text-dream-primary",
-                  "bg-blue-50 text-blue-600",
-                  "bg-yellow-50 text-yellow-600",
-                  "bg-green-50 text-green-600",
-                  "bg-purple-50 text-purple-600"
-                ];
-                const colorClass = colorClasses[index % colorClasses.length];
+                // Different styling for user tags vs AI themes
+                const isUserTag = userTags.includes(theme);
                 
-                return (
-                  <span 
-                    key={index} 
-                    className={`inline-block ${colorClass} text-xs px-2 py-1 rounded-full font-medium`}
-                  >
-                    {theme}
-                  </span>
-                );
+                if (isUserTag) {
+                  return (
+                    <Badge key={index} variant="secondary" className="px-3 py-1">
+                      <span className="flex items-center gap-1">
+                        <TagIcon className="h-3 w-3" />
+                        {theme}
+                      </span>
+                    </Badge>
+                  );
+                } else {
+                  // Different background colors for variety
+                  const colorClasses = [
+                    "bg-dream-light text-dream-primary",
+                    "bg-blue-50 text-blue-600",
+                    "bg-yellow-50 text-yellow-600",
+                    "bg-green-50 text-green-600",
+                    "bg-purple-50 text-purple-600"
+                  ];
+                  const colorClass = colorClasses[index % colorClasses.length];
+                  
+                  return (
+                    <span 
+                      key={index} 
+                      className={`inline-block ${colorClass} text-xs px-2 py-1 rounded-full font-medium`}
+                    >
+                      {theme}
+                    </span>
+                  );
+                }
               })}
             </div>
           )}

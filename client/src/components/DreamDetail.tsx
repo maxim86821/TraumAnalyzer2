@@ -1,14 +1,15 @@
 import { Dream } from "@shared/schema";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { apiRequest } from "@/lib/queryClient";
-import { queryClient } from "@/lib/queryClient";
+import { Button } from "../components/ui/button";
+import { Textarea } from "../components/ui/textarea";
+import { Input } from "../components/ui/input";
+import { Badge } from "../components/ui/badge";
+import { apiRequest } from "../lib/queryClient";
+import { queryClient } from "../lib/queryClient";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { PencilIcon, CameraIcon, XIcon, CheckIcon } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { PencilIcon, CameraIcon, XIcon, CheckIcon, TagIcon, PlusIcon } from "lucide-react";
+import { useToast } from "../hooks/use-toast";
 
 interface DreamDetailProps {
   dream: Dream;
@@ -22,6 +23,8 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [tagInput, setTagInput] = useState("");
+  const [tags, setTags] = useState<string[]>(dream.tags || []);
 
   // Parse the analysis JSON if it exists
   const analysis = dream.analysis ? JSON.parse(dream.analysis) : null;
@@ -44,6 +47,28 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
     }
   };
 
+  // Add a tag
+  const addTag = () => {
+    const trimmedTag = tagInput.trim();
+    if (trimmedTag && !tags.includes(trimmedTag)) {
+      setTags([...tags, trimmedTag]);
+      setTagInput("");
+    }
+  };
+  
+  // Remove a tag
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter(tag => tag !== tagToRemove));
+  };
+  
+  // Handle tag input keydown events
+  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      addTag();
+    }
+  };
+
   // Handle save changes
   const handleSave = async () => {
     try {
@@ -51,7 +76,8 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
       
       const updateData: any = {
         title,
-        content
+        content,
+        tags
       };
       
       // Include image if it was changed
@@ -87,6 +113,8 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
   const handleCancel = () => {
     setTitle(dream.title);
     setContent(dream.content);
+    setTags(dream.tags || []);
+    setTagInput("");
     setImagePreview(null);
     setImageFile(null);
     setEditing(false);
@@ -176,6 +204,67 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
                     <CheckIcon className="h-4 w-4 mr-1" />
                     Speichern
                   </Button>
+                </div>
+              )}
+            </div>
+            
+            {/* Tags section */}
+            <div className="mb-4">
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="text-sm font-medium text-gray-700">Tags</h4>
+                {dream.tags && dream.tags.length > 0 && !editing && (
+                  <span className="text-xs text-gray-500">{dream.tags.length} Tag{dream.tags.length !== 1 ? 's' : ''}</span>
+                )}
+              </div>
+              
+              {editing ? (
+                <div className="mb-4">
+                  <div className="flex gap-2 mb-2">
+                    <Input
+                      placeholder="Tag hinzufügen (Enter drücken)"
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyDown={handleTagInputKeyDown}
+                      className="flex-grow"
+                    />
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={addTag}
+                      className="px-3 text-dream-primary border-dream-primary"
+                    >
+                      <PlusIcon className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    {tags.map((tag, idx) => (
+                      <Badge key={idx} variant="secondary" className="px-3 py-1 group">
+                        <span className="flex items-center gap-1">
+                          <TagIcon className="h-3 w-3" />
+                          {tag}
+                          <XIcon 
+                            className="h-3 w-3 ml-1 cursor-pointer opacity-70 hover:opacity-100" 
+                            onClick={() => removeTag(tag)}
+                          />
+                        </span>
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {dream.tags && dream.tags.map((tag, idx) => (
+                    <Badge key={idx} variant="secondary" className="px-3 py-1">
+                      <span className="flex items-center gap-1">
+                        <TagIcon className="h-3 w-3" />
+                        {tag}
+                      </span>
+                    </Badge>
+                  ))}
+                  {(!dream.tags || dream.tags.length === 0) && (
+                    <span className="text-sm text-gray-500 italic">Keine Tags</span>
+                  )}
                 </div>
               )}
             </div>

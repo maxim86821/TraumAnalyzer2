@@ -1,26 +1,29 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertDreamSchema, InsertDream } from "@shared/schema";
 import { useLocation } from "wouter";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { CalendarIcon, XIcon } from "lucide-react";
+import { apiRequest, queryClient } from "../lib/queryClient";
+import { useToast } from "../hooks/use-toast";
+import { Card, CardContent } from "../components/ui/card";
+import { Button } from "../components/ui/button";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../components/ui/form";
+import { Input } from "../components/ui/input";
+import { Textarea } from "../components/ui/textarea";
+import { CalendarIcon, PlusIcon, TagIcon, XIcon } from "lucide-react";
 import { format } from "date-fns";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { Calendar } from "../components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
+import { Badge } from "../components/ui/badge";
+import { cn } from "../lib/utils";
 
 export default function DreamForm() {
   const [_, setLocation] = useLocation();
   const { toast } = useToast();
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [tagInput, setTagInput] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
   
   // Initialize the form with default values
   const form = useForm<InsertDream>({
@@ -59,6 +62,28 @@ export default function DreamForm() {
   const removeImage = () => {
     setImagePreview(null);
   };
+  
+  // Add a tag
+  const addTag = () => {
+    const trimmedTag = tagInput.trim();
+    if (trimmedTag && !tags.includes(trimmedTag)) {
+      setTags([...tags, trimmedTag]);
+      setTagInput("");
+    }
+  };
+  
+  // Remove a tag
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter(tag => tag !== tagToRemove));
+  };
+  
+  // Handle tag input keydown events
+  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      addTag();
+    }
+  };
 
   // Submit the form
   const onSubmit = async (data: InsertDream) => {
@@ -66,9 +91,14 @@ export default function DreamForm() {
       setIsSubmitting(true);
       
       // Add the image as base64 if available
-      const submitData = imagePreview 
+      let submitData = imagePreview 
         ? { ...data, imageBase64: imagePreview } 
         : data;
+      
+      // Add tags if available
+      if (tags.length > 0) {
+        submitData = { ...submitData, tags };
+      }
       
       // Send the dream data to the server
       const response = await apiRequest('POST', '/api/dreams', submitData);
@@ -228,7 +258,50 @@ export default function DreamForm() {
               )}
             </div>
 
-            <div className="flex justify-end space-x-3">
+            <div className="space-y-4">
+              <div>
+                <FormLabel className="block mb-2">Tags hinzufügen (optional)</FormLabel>
+                <div className="flex gap-2 mb-2">
+                  <Input
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={handleTagInputKeyDown}
+                    placeholder="Tag eingeben und Enter drücken..."
+                    className="flex-grow"
+                  />
+                  <Button 
+                    type="button" 
+                    onClick={addTag}
+                    variant="outline"
+                    className="shrink-0"
+                  >
+                    <PlusIcon className="h-4 w-4 mr-1" />
+                    Hinzufügen
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {tags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="px-3 py-1">
+                      <span className="flex items-center gap-1">
+                        <TagIcon className="h-3 w-3" />
+                        {tag}
+                        <XIcon 
+                          className="h-3 w-3 ml-1 cursor-pointer" 
+                          onClick={() => removeTag(tag)}
+                        />
+                      </span>
+                    </Badge>
+                  ))}
+                  {tags.length === 0 && (
+                    <div className="text-sm text-muted-foreground italic">
+                      Keine Tags hinzugefügt. Gute Tags könnten sein: "alptraum", "luzid", "wiederkehrend", "fliegend", etc.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-8">
               <Button 
                 type="button" 
                 variant="outline"

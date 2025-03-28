@@ -94,6 +94,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           parseResult.data.imageUrl = imagePath;
         }
       }
+      
+      // Process tags if they're included
+      if (req.body.tags && Array.isArray(req.body.tags)) {
+        parseResult.data.tags = req.body.tags;
+      }
 
       // Set the user ID from the authenticated user
       parseResult.data.userId = req.user?.id;
@@ -153,6 +158,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Remove the base64 data from the object to avoid saving it
         delete req.body.imageBase64;
+      }
+      
+      // Process tags if they're included
+      if ('tags' in req.body) {
+        // Ensure tags is always an array, even if empty
+        req.body.tags = Array.isArray(req.body.tags) ? req.body.tags : [];
       }
 
       // Update the dream
