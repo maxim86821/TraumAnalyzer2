@@ -1280,6 +1280,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User profile endpoints
+  app.get('/api/user/profile', authenticateJWT, async (req, res) => {
+    try {
+      const user = await storage.getUserById(req.user!.id);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'Benutzer nicht gefunden' });
+      }
+      
+      // Don't send password back to client
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      res.status(500).json({ message: 'Fehler beim Abrufen des Benutzerprofils' });
+    }
+  });
+  
+  app.patch('/api/user/profile', authenticateJWT, async (req, res) => {
+    try {
+      const { name, email } = req.body;
+      
+      // Update user profile
+      const updatedUser = await storage.updateUser(req.user!.id, {
+        name,
+        email
+      });
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: 'Benutzer nicht gefunden' });
+      }
+      
+      // Don't send password back to client
+      const { password, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      res.status(500).json({ message: 'Fehler beim Aktualisieren des Benutzerprofils' });
+    }
+  });
+
   // Benutzer-Favoriten
   app.get('/api/user/symbol-favorites', authenticateJWT, async (req, res) => {
     try {

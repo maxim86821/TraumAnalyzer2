@@ -68,6 +68,13 @@ export default function Sidebar({ className = "", onClose }: SidebarProps) {
       icon: (
         <Award className="h-5 w-5 mr-3" />
       )
+    },
+    {
+      name: "Profil",
+      path: "/profile",
+      icon: (
+        <User className="h-5 w-5 mr-3" />
+      )
     }
   ];
 

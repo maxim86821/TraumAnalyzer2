@@ -11,6 +11,7 @@ import AchievementsPage from "@/pages/AchievementsPage";
 import CalendarView from "@/pages/CalendarView";
 import JournalPage from "@/pages/JournalPage";
 import SymbolLibraryPage from "@/pages/SymbolLibraryPage";
+import ProfilePage from "@/pages/ProfilePage";
 import AuthPage from "@/pages/auth-page";
 import Layout from "@/components/Layout";
 import { AuthProvider } from "./hooks/use-auth";
@@ -43,6 +44,11 @@ function Router() {
       )} />
       <ProtectedRoute path="/journal" component={() => <JournalPage />} />
       <ProtectedRoute path="/symbols" component={() => <SymbolLibraryPage />} />
+      <ProtectedRoute path="/profile" component={() => (
+        <Layout>
+          <ProfilePage />
+        </Layout>
+      )} />
       <Route path="/auth" component={AuthPage} />
       {/* Fallback to 404 */}
       <Route component={NotFound} />

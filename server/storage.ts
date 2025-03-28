@@ -35,8 +35,10 @@ const PostgresSessionStore = connectPg(session);
 export interface IStorage {
   // Users
   getUser(id: number): Promise<any | undefined>;
+  getUserById(id: number): Promise<any | undefined>;
   getUserByUsername(username: string): Promise<any | undefined>;
   createUser(user: any): Promise<any>;
+  updateUser(id: number, userData: Partial<{ name?: string, email?: string }>): Promise<any | undefined>;
 
   // Dreams
   createDream(dream: InsertDream): Promise<Dream>;
@@ -492,6 +494,10 @@ export class MemStorage implements IStorage {
   async getUser(id: number): Promise<any | undefined> {
     return this.users.get(id);
   }
+  
+  async getUserById(id: number): Promise<any | undefined> {
+    return this.users.get(id);
+  }
 
   async getUserByUsername(username: string): Promise<any | undefined> {
     return Array.from(this.users.values()).find(
@@ -504,6 +510,21 @@ export class MemStorage implements IStorage {
     const newUser = { ...user, id };
     this.users.set(id, newUser);
     return newUser;
+  }
+  
+  async updateUser(id: number, userData: Partial<{ name?: string, email?: string }>): Promise<any | undefined> {
+    const user = this.users.get(id);
+    if (!user) {
+      return undefined;
+    }
+    
+    const updatedUser = {
+      ...user,
+      ...userData
+    };
+    
+    this.users.set(id, updatedUser);
+    return updatedUser;
   }
 
   // Dream methods
@@ -1458,12 +1479,54 @@ export class DatabaseStorage implements IStorage {
     );
     return result.rows[0] || undefined;
   }
+  
+  async getUserById(id: number): Promise<any | undefined> {
+    const result = await this.pool.query(
+      'SELECT * FROM users WHERE id = $1',
+      [id]
+    );
+    return result.rows[0] || undefined;
+  }
 
   async getUserByUsername(username: string): Promise<any | undefined> {
     const result = await this.pool.query(
       'SELECT * FROM users WHERE username = $1',
       [username]
     );
+    return result.rows[0] || undefined;
+  }
+  
+  async updateUser(id: number, userData: Partial<{ name?: string, email?: string }>): Promise<any | undefined> {
+    // Build the SET clause dynamically based on provided fields
+    const updates = [];
+    const values = [];
+    let paramIndex = 1;
+    
+    if (userData.name !== undefined) {
+      updates.push(`name = $${paramIndex}`);
+      values.push(userData.name);
+      paramIndex++;
+    }
+    
+    if (userData.email !== undefined) {
+      updates.push(`email = $${paramIndex}`);
+      values.push(userData.email);
+      paramIndex++;
+    }
+    
+    // If no fields to update, return the current user
+    if (updates.length === 0) {
+      return this.getUser(id);
+    }
+    
+    // Add the ID as the last parameter
+    values.push(id);
+    
+    const result = await this.pool.query(
+      `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+      values
+    );
+    
     return result.rows[0] || undefined;
   }
 

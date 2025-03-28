@@ -76,7 +76,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onError: (error: Error) => {
       toast({
         title: "Registrierung fehlgeschlagen",
-        description: error.message || "Bitte versuche es mit einem anderen Benutzernamen",
+        description:
+          error.message || "Bitte versuche es mit einem anderen Benutzernamen",
         variant: "destructive",
       });
     },
