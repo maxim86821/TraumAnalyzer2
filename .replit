@@ -40,3 +40,6 @@ waitForPort = 5000
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[objectStorage]
+defaultBucketID = "replit-objstore-6f998a10-9e16-4e15-9571-3150b2229185"

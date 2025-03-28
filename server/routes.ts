@@ -1291,7 +1291,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Don't send password back to client
       const { password, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      
+      // Ensure all expected fields are in the response
+      const profile = {
+        ...userWithoutPassword,
+        username: userWithoutPassword.username || '',
+        name: userWithoutPassword.name || userWithoutPassword.username || '',
+        email: userWithoutPassword.email || ''
+      };
+      
+      res.json(profile);
     } catch (error) {
       console.error('Error fetching user profile:', error);
       res.status(500).json({ message: 'Fehler beim Abrufen des Benutzerprofils' });
@@ -1314,9 +1323,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Don't send password back to client
       const { password, ...userWithoutPassword } = updatedUser;
-      res.json(userWithoutPassword);
+      
+      // Ensure all expected fields are in the response
+      const profile = {
+        ...userWithoutPassword,
+        username: userWithoutPassword.username || '',
+        name: userWithoutPassword.name || userWithoutPassword.username || '',
+        email: userWithoutPassword.email || ''
+      };
+      
+      res.json(profile);
     } catch (error) {
       console.error('Error updating user profile:', error);
+      console.error('Error stack:', (error as Error).stack);
       res.status(500).json({ message: 'Fehler beim Aktualisieren des Benutzerprofils' });
     }
   });
@@ -1324,10 +1343,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Benutzer-Favoriten
   app.get('/api/user/symbol-favorites', authenticateJWT, async (req, res) => {
     try {
+      console.log(`Fetching symbol favorites for user ID: ${req.user!.id}`);
       const favorites = await storage.getUserSymbolFavoritesByUserId(req.user!.id);
       res.json(favorites);
     } catch (error) {
       console.error('Error fetching user symbol favorites:', error);
+      console.error('Error stack:', (error as Error).stack);
       res.status(500).json({ message: 'Fehler beim Abrufen der Benutzer-Favoriten' });
     }
   });

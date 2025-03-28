@@ -6,6 +6,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest } from '@/lib/queryClient';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { Link } from 'wouter';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -55,7 +56,7 @@ export default function ProfilePage() {
   useEffect(() => {
     if (profile) {
       form.reset({
-        name: profile.name || '',
+        name: profile.name || profile.username || '',
         email: profile.email || '',
       });
     }
@@ -64,10 +65,7 @@ export default function ProfilePage() {
   // Update profile mutation
   const updateProfileMutation = useMutation({
     mutationFn: (data: ProfileFormValues) => {
-      return apiRequest('/api/user/profile', {
-        method: 'PATCH',
-        data,
-      });
+      return apiRequest('PATCH', '/api/user/profile', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/user/profile'] });
@@ -199,12 +197,11 @@ export default function ProfilePage() {
             ) : (
               <div className="text-center py-8">
                 <p className="text-muted-foreground">You haven't added any favorite symbols yet.</p>
-                <Button
-                  className="mt-4"
-                  onClick={() => window.location.href = '/symbols'}
-                >
-                  Explore Symbol Library
-                </Button>
+                <Link href="/symbol-library">
+                  <Button className="mt-4">
+                    Explore Symbol Library
+                  </Button>
+                </Link>
               </div>
             )}
           </Card>

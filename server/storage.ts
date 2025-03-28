@@ -2179,6 +2179,109 @@ export class DatabaseStorage implements IStorage {
       updatedAt: userAchievement.updated_at
     };
   }
+
+  // User Symbol Favorites methods
+  async createUserSymbolFavorite(favorite: InsertUserSymbolFavorite): Promise<UserSymbolFavorite> {
+    try {
+      const result = await this.pool.query(
+        `INSERT INTO user_symbol_favorites (user_id, symbol_id, notes)
+         VALUES ($1, $2, $3)
+         RETURNING id, user_id, symbol_id, notes, created_at`,
+        [favorite.userId, favorite.symbolId, favorite.notes]
+      );
+
+      return {
+        id: result.rows[0].id,
+        userId: result.rows[0].user_id,
+        symbolId: result.rows[0].symbol_id,
+        notes: result.rows[0].notes,
+        createdAt: result.rows[0].created_at
+      };
+    } catch (error) {
+      console.error('Error creating user symbol favorite:', error);
+      throw error;
+    }
+  }
+
+  async getUserSymbolFavoritesByUserId(userId: number): Promise<UserSymbolFavorite[]> {
+    try {
+      console.log(`DatabaseStorage.getUserSymbolFavoritesByUserId called with userId: ${userId}`);
+      
+      // First check if the table exists
+      try {
+        const tableCheck = await this.pool.query(
+          `SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_schema = 'public'
+            AND table_name = 'user_symbol_favorites'
+          )`
+        );
+        console.log('Table check result:', tableCheck.rows[0]);
+        
+        if (!tableCheck.rows[0].exists) {
+          console.log('user_symbol_favorites table does not exist, creating it now');
+          await this.pool.query(
+            `CREATE TABLE IF NOT EXISTS user_symbol_favorites (
+              id SERIAL PRIMARY KEY,
+              user_id INTEGER NOT NULL,
+              symbol_id INTEGER NOT NULL,
+              notes TEXT,
+              created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+              FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+              FOREIGN KEY (symbol_id) REFERENCES dream_symbols(id) ON DELETE CASCADE
+            )`
+          );
+          console.log('user_symbol_favorites table created successfully');
+          return []; // Return empty array as the table was just created
+        }
+      } catch (tableError) {
+        console.error('Error checking/creating table:', tableError);
+      }
+      
+      const result = await this.pool.query(
+        `SELECT usf.id, usf.user_id, usf.symbol_id, usf.notes, usf.created_at,
+                ds.name as symbol_name, ds.general_meaning as symbol_meaning
+         FROM user_symbol_favorites usf
+         LEFT JOIN dream_symbols ds ON usf.symbol_id = ds.id
+         WHERE usf.user_id = $1
+         ORDER BY usf.created_at DESC`,
+        [userId]
+      );
+      
+      console.log(`Query result:`, result.rows);
+
+      return result.rows.map(row => ({
+        id: row.id,
+        userId: row.user_id,
+        symbolId: row.symbol_id,
+        notes: row.notes,
+        createdAt: row.created_at,
+        symbol: row.symbol_name ? {
+          name: row.symbol_name,
+          generalMeaning: row.symbol_meaning
+        } : null
+      }));
+    } catch (error) {
+      console.error('Error getting user symbol favorites:', error);
+      console.error('Stack trace:', (error as Error).stack);
+      // Return empty array instead of throwing to avoid breaking the app
+      return [];
+    }
+  }
+
+  async deleteUserSymbolFavorite(id: number): Promise<boolean> {
+    try {
+      const result = await this.pool.query(
+        'DELETE FROM user_symbol_favorites WHERE id = $1 RETURNING id',
+        [id]
+      );
+      
+      return result.rows.length > 0;
+    } catch (error) {
+      console.error('Error deleting user symbol favorite:', error);
+      throw error;
+    }
+  }
 }
 
 // Define MoodData interface for tracking mood information
