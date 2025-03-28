@@ -12,6 +12,7 @@ import CalendarView from "@/pages/CalendarView";
 import JournalPage from "@/pages/JournalPage";
 import SymbolLibraryPage from "@/pages/SymbolLibraryPage";
 import ProfilePage from "@/pages/ProfilePage";
+import DreamGalleryPage from "@/pages/DreamGalleryPage";
 import AuthPage from "@/pages/auth-page";
 import Layout from "@/components/Layout";
 import { AuthProvider } from "./hooks/use-auth";
@@ -44,6 +45,11 @@ function Router() {
       )} />
       <ProtectedRoute path="/journal" component={() => <JournalPage />} />
       <ProtectedRoute path="/symbols" component={() => <SymbolLibraryPage />} />
+      <ProtectedRoute path="/gallery" component={() => (
+        <Layout>
+          <DreamGalleryPage />
+        </Layout>
+      )} />
       <ProtectedRoute path="/profile" component={() => (
         <Layout>
           <ProfilePage />
