@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./ui/card";
 import { Mic, Square, Loader2, CheckCircle, XCircle, Play, Pause, Save } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "./ui/use-toast";
 import { Progress } from "./ui/progress";
 
 interface VoiceRecorderProps {
