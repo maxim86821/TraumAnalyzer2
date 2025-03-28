@@ -474,14 +474,14 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
             <div className="prose max-w-none">
               {editing ? (
                 <Textarea 
-                  value={content}
+                  value={content || ""}
                   onChange={(e) => setContent(e.target.value)}
                   className="min-h-[200px]"
                 />
               ) : (
-                content.split('\n').map((paragraph, index) => (
+                content ? content.split('\n').map((paragraph, index) => (
                   <p key={index}>{paragraph}</p>
-                ))
+                )) : <p>Kein Inhalt vorhanden</p>
               )}
             </div>
           </div>
