@@ -6,27 +6,43 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import NewDream from "@/pages/NewDream";
 import DreamView from "@/pages/DreamView";
+import AuthPage from "@/pages/auth-page";
 import Layout from "@/components/Layout";
+import { AuthProvider } from "@/hooks/use-auth";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 function Router() {
   return (
-    <Layout>
-      <Switch>
-        <Route path="/" component={Home} />
-        <Route path="/new" component={NewDream} />
-        <Route path="/dreams/:id" component={DreamView} />
-        {/* Fallback to 404 */}
-        <Route component={NotFound} />
-      </Switch>
-    </Layout>
+    <Switch>
+      <ProtectedRoute path="/" component={() => (
+        <Layout>
+          <Home />
+        </Layout>
+      )} />
+      <ProtectedRoute path="/new" component={() => (
+        <Layout>
+          <NewDream />
+        </Layout>
+      )} />
+      <ProtectedRoute path="/dreams/:id" component={() => (
+        <Layout>
+          <DreamView />
+        </Layout>
+      )} />
+      <Route path="/auth" component={AuthPage} />
+      {/* Fallback to 404 */}
+      <Route component={NotFound} />
+    </Switch>
   );
 }
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router />
-      <Toaster />
+      <AuthProvider>
+        <Router />
+        <Toaster />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

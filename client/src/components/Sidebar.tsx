@@ -1,4 +1,7 @@
 import { Link, useLocation } from "wouter";
+import { useAuth } from "../hooks/use-auth";
+import { Button } from "@/components/ui/button";
+import { LogOut, User } from "lucide-react";
 
 interface SidebarProps {
   className?: string;
@@ -7,6 +10,7 @@ interface SidebarProps {
 
 export default function Sidebar({ className = "", onClose }: SidebarProps) {
   const [location] = useLocation();
+  const { user, logoutMutation } = useAuth();
 
   // Define navigation items
   const navItems = [
@@ -75,6 +79,25 @@ export default function Sidebar({ className = "", onClose }: SidebarProps) {
           })}
         </ul>
       </nav>
+      
+      {user && (
+        <div className="mt-4 mb-4">
+          <div className="flex items-center gap-2 mb-2 px-3">
+            <User size={18} className="text-muted-foreground" />
+            <span className="text-sm font-medium truncate">{user.username}</span>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full flex items-center gap-2 text-destructive" 
+            onClick={() => logoutMutation.mutate()}
+            disabled={logoutMutation.isPending}
+          >
+            <LogOut size={16} />
+            {logoutMutation.isPending ? 'Abmelden...' : 'Abmelden'}
+          </Button>
+        </div>
+      )}
       
       <div className="mt-auto p-4 bg-gray-50 rounded-lg">
         <p className="text-xs text-gray-500 text-center">Träume mit KI-Analyse</p>

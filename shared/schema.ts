@@ -6,21 +6,33 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  name: text("name"),
+  email: text("email"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
+  name: true,
+  email: true,
+}).extend({
+  // Add validation rules
+  username: z.string().min(3, { message: "Benutzername muss mindestens 3 Zeichen lang sein" }),
+  password: z.string().min(6, { message: "Passwort muss mindestens 6 Zeichen lang sein" }),
+  email: z.string().email({ message: "Ungültige E-Mail-Adresse" }).optional(),
 });
 
 export const dreams = pgTable("dreams", {
   id: serial("id").primaryKey(),
+  userId: integer("user_id"),
   title: text("title").notNull(),
   content: text("content").notNull(),
   imageUrl: text("image_url"),
   date: timestamp("date").notNull().defaultNow(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   analysis: text("analysis"),
+  tags: text("tags").array(),
 });
 
 export const dreamAnalysis = pgTable("dream_analysis", {
@@ -44,6 +56,8 @@ export const insertDreamSchema = createInsertSchema(dreams).omit({
   content: z.string().min(10, { message: "Trauminhalt muss mindestens 10 Zeichen lang sein" }),
   // Date is required
   date: z.string().or(z.date()),
+  // Tags are optional
+  tags: z.array(z.string()).optional(),
 });
 
 // Dream analysis schema

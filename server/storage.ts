@@ -9,6 +9,7 @@ export interface IStorage {
   // Dreams
   createDream(dream: InsertDream): Promise<Dream>;
   getDreams(): Promise<Dream[]>;
+  getDreamsByUserId(userId: number): Promise<Dream[]>;
   getDream(id: number): Promise<Dream | undefined>;
   updateDream(id: number, dream: Partial<InsertDream>): Promise<Dream | undefined>;
   deleteDream(id: number): Promise<boolean>;
@@ -59,12 +60,14 @@ export class MemStorage implements IStorage {
     
     const newDream: Dream = {
       id,
+      userId: dream.userId || null,
       title: dream.title,
       content: dream.content,
       imageUrl: dream.imageUrl || null,
       date: new Date(dream.date),
       createdAt,
-      analysis: null
+      analysis: null,
+      tags: dream.tags || null
     };
     
     this.dreams.set(id, newDream);
@@ -120,6 +123,13 @@ export class MemStorage implements IStorage {
 
     this.dreams.set(dreamId, updatedDream);
     return updatedDream;
+  }
+  
+  // Get dreams by user ID
+  async getDreamsByUserId(userId: number): Promise<Dream[]> {
+    return Array.from(this.dreams.values())
+      .filter(dream => dream.userId === userId)
+      .sort((a, b) => b.date.getTime() - a.date.getTime());
   }
 }
 

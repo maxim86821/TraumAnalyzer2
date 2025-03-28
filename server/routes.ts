@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { analyzeDream } from "./openai";
 import { saveBase64Image, deleteImage } from "./utils";
 import { insertDreamSchema } from "@shared/schema";
+import { setupAuth, authenticateJWT } from "./auth";
 import express from "express";
 import multer from "multer";
 import path from "path";
@@ -22,15 +23,24 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup Auth
+  setupAuth(app);
+  
   // Serve uploaded files
   const uploadsPath = path.join(__dirname, '../uploads');
   app.use('/uploads', express.static(uploadsPath));
 
-  // Get all dreams
-  app.get('/api/dreams', async (req: Request, res: Response) => {
+  // Get all dreams for the authenticated user
+  app.get('/api/dreams', authenticateJWT, async (req: Request, res: Response) => {
     try {
-      const dreams = await storage.getDreams();
-      res.json(dreams);
+      // If user is authenticated, return only their dreams
+      if (req.user) {
+        const dreams = await storage.getDreamsByUserId(req.user.id);
+        return res.json(dreams);
+      }
+      
+      // If no authentication, return empty array
+      res.json([]);
     } catch (error) {
       console.error('Error fetching dreams:', error);
       res.status(500).json({ message: 'Fehler beim Laden der Träume' });
@@ -38,7 +48,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get a specific dream by ID
-  app.get('/api/dreams/:id', async (req: Request, res: Response) => {
+  app.get('/api/dreams/:id', authenticateJWT, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -50,6 +60,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Traum nicht gefunden' });
       }
 
+      // Check if user is the owner of the dream
+      if (dream.userId !== req.user?.id) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Anzeigen dieses Traums' });
+      }
+
       res.json(dream);
     } catch (error) {
       console.error('Error fetching dream:', error);
@@ -58,7 +73,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create a new dream
-  app.post('/api/dreams', async (req: Request, res: Response) => {
+  app.post('/api/dreams', authenticateJWT, async (req: Request, res: Response) => {
     try {
       // Validate the request body
       const parseResult = insertDreamSchema.safeParse(req.body);
@@ -80,6 +95,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Set the user ID from the authenticated user
+      parseResult.data.userId = req.user?.id;
+      
       // Create the dream
       const newDream = await storage.createDream(parseResult.data);
 
@@ -99,7 +117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update a dream
-  app.patch('/api/dreams/:id', async (req: Request, res: Response) => {
+  app.patch('/api/dreams/:id', authenticateJWT, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -110,6 +128,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingDream = await storage.getDream(id);
       if (!existingDream) {
         return res.status(404).json({ message: 'Traum nicht gefunden' });
+      }
+      
+      // Check if user is the owner of the dream
+      if (existingDream.userId !== req.user?.id) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Ändern dieses Traums' });
       }
 
       // Process image if it's included as base64
@@ -156,7 +179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete a dream
-  app.delete('/api/dreams/:id', async (req: Request, res: Response) => {
+  app.delete('/api/dreams/:id', authenticateJWT, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -167,6 +190,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const dream = await storage.getDream(id);
       if (!dream) {
         return res.status(404).json({ message: 'Traum nicht gefunden' });
+      }
+      
+      // Check if user is the owner of the dream
+      if (dream.userId !== req.user?.id) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Löschen dieses Traums' });
       }
 
       // Delete associated image if it exists
@@ -188,7 +216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload dream image
-  app.post('/api/dreams/:id/image', upload.single('image'), async (req: Request, res: Response) => {
+  app.post('/api/dreams/:id/image', authenticateJWT, upload.single('image'), async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -203,6 +231,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const dream = await storage.getDream(id);
       if (!dream) {
         return res.status(404).json({ message: 'Traum nicht gefunden' });
+      }
+      
+      // Check if user is the owner of the dream
+      if (dream.userId !== req.user?.id) {
+        return res.status(403).json({ message: 'Keine Berechtigung zum Ändern dieses Traums' });
       }
 
       // Delete the old image if it exists
