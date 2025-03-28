@@ -35,10 +35,11 @@ export default function DreamView() {
     enabled: dreamId > 0 // Nur abfragen, wenn eine gültige ID vorhanden ist
   });
   
-  // Stelle sicher, dass das Dream-Objekt eine numerische ID hat
+  // Sicherer Umgang mit Dream-Objekten und den IDs
   const dream = fetchedDream ? {
     ...fetchedDream,
-    id: fetchedDream.id ? Number(fetchedDream.id) : 0 // Stelle sicher, dass die ID numerisch ist und niemals null
+    // Normalisiere die ID statt sie zu prüfen - wichtig: Stelle sicher, dass es immer eine positive Zahl ist
+    id: Number(fetchedDream.id) || dreamId  // Verwende die ID aus dem URL-Parameter als Fallback
   } : null;
   
   console.log("DreamView Component - Normalized Dream:", dream ? {

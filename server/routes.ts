@@ -116,22 +116,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get a specific dream by ID
   app.get('/api/dreams/:id', authenticateJWT, async (req: Request, res: Response) => {
     try {
+      console.log(`Dream request - ID param:`, req.params.id, `(type: ${typeof req.params.id})`);
       const id = parseInt(req.params.id);
+      
       if (isNaN(id)) {
+        console.error(`Invalid dream ID format:`, req.params.id);
         return res.status(400).json({ message: 'Ungültige Traum-ID' });
       }
-
+      
+      console.log(`Fetching dream with ID: ${id} (type: ${typeof id})`);
       const dream = await storage.getDream(id);
+      
       if (!dream) {
+        console.error(`Dream with ID ${id} not found`);
         return res.status(404).json({ message: 'Traum nicht gefunden' });
       }
-
+      
+      console.log(`Dream found:`, { id: dream.id, title: dream.title, userId: dream.userId });
+      
       // Check if user is the owner of the dream
       if (dream.userId !== req.user?.id) {
+        console.error(`Permission denied: User ${req.user?.id} attempting to view dream ${id} owned by user ${dream.userId}`);
         return res.status(403).json({ message: 'Keine Berechtigung zum Anzeigen dieses Traums' });
       }
 
-      res.json(dream);
+      // Ensure numeric ID in the response
+      const normalizedDream = {
+        ...dream,
+        id: Number(dream.id)
+      };
+      
+      console.log(`Sending normalized dream:`, { 
+        id: normalizedDream.id, 
+        idType: typeof normalizedDream.id 
+      });
+      
+      res.json(normalizedDream);
     } catch (error) {
       console.error('Error fetching dream:', error);
       res.status(500).json({ message: 'Fehler beim Laden des Traums' });
