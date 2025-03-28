@@ -8,7 +8,13 @@ import {
   InsertAchievement,
   UserAchievement,
   InsertUserAchievement,
-  AchievementProgress
+  AchievementProgress,
+  JournalEntry,
+  InsertJournalEntry,
+  DreamContentEntry,
+  InsertDreamContentEntry,
+  ContentComment,
+  InsertContentComment
 } from "@shared/schema";
 import pg from 'pg';
 import session from "express-session";
@@ -46,6 +52,28 @@ export interface IStorage {
   completeUserAchievement(id: number): Promise<UserAchievement | undefined>;
   getLatestUserAchievements(userId: number, limit: number): Promise<UserAchievement[]>;
 
+  // Journal entries
+  createJournalEntry(entry: InsertJournalEntry): Promise<JournalEntry>;
+  getJournalEntriesByUserId(userId: number): Promise<JournalEntry[]>;
+  getJournalEntry(id: number): Promise<JournalEntry | undefined>;
+  updateJournalEntry(id: number, entry: Partial<InsertJournalEntry>): Promise<JournalEntry | undefined>;
+  deleteJournalEntry(id: number): Promise<boolean>;
+  
+  // Dream content entries for "Was ist Träumen?"
+  createDreamContentEntry(entry: InsertDreamContentEntry): Promise<DreamContentEntry>;
+  getDreamContentEntries(): Promise<DreamContentEntry[]>;
+  getDreamContentEntry(id: number): Promise<DreamContentEntry | undefined>;
+  updateDreamContentEntry(id: number, entry: Partial<InsertDreamContentEntry>): Promise<DreamContentEntry | undefined>;
+  deleteDreamContentEntry(id: number): Promise<boolean>;
+  getFeaturedDreamContentEntries(limit: number): Promise<DreamContentEntry[]>;
+  getDreamContentEntriesByType(contentType: string): Promise<DreamContentEntry[]>;
+  incrementDreamContentViewCount(id: number): Promise<DreamContentEntry | undefined>;
+  
+  // Content comments
+  createContentComment(comment: InsertContentComment): Promise<ContentComment>;
+  getContentCommentsByContentId(contentId: number): Promise<ContentComment[]>;
+  deleteContentComment(id: number): Promise<boolean>;
+  
   // Session store
   sessionStore: session.Store;
 }
@@ -56,11 +84,17 @@ export class MemStorage implements IStorage {
   private dreamAnalyses: Map<number, DreamAnalysis>;
   private achievements: Map<number, Achievement>;
   private userAchievements: Map<number, UserAchievement>;
+  private journalEntries: Map<number, JournalEntry>;
+  private dreamContentEntries: Map<number, DreamContentEntry>;
+  private contentComments: Map<number, ContentComment>;
   private currentUserId: number;
   private currentDreamId: number;
   private currentAnalysisId: number;
   private currentAchievementId: number;
   private currentUserAchievementId: number;
+  private currentJournalEntryId: number;
+  private currentDreamContentEntryId: number;
+  private currentContentCommentId: number;
   public sessionStore: session.Store;
 
   constructor() {
@@ -69,11 +103,17 @@ export class MemStorage implements IStorage {
     this.dreamAnalyses = new Map();
     this.achievements = new Map();
     this.userAchievements = new Map();
+    this.journalEntries = new Map();
+    this.dreamContentEntries = new Map();
+    this.contentComments = new Map();
     this.currentUserId = 1;
     this.currentDreamId = 1;
     this.currentAnalysisId = 1;
     this.currentAchievementId = 1;
     this.currentUserAchievementId = 1;
+    this.currentJournalEntryId = 1;
+    this.currentDreamContentEntryId = 1;
+    this.currentContentCommentId = 1;
     
     // In-Memory Session Store erstellen
     const MemoryStore = require('memorystore')(session);
@@ -417,6 +457,175 @@ export class MemStorage implements IStorage {
       .sort((a, b) => b.unlockedAt.getTime() - a.unlockedAt.getTime())
       .slice(0, limit);
   }
+  
+  // Journal entry methods
+  async createJournalEntry(entry: InsertJournalEntry): Promise<JournalEntry> {
+    const id = this.currentJournalEntryId++;
+    const createdAt = new Date();
+    const date = entry.date ? new Date(entry.date) : new Date();
+    
+    const newEntry: JournalEntry = {
+      id,
+      userId: entry.userId,
+      title: entry.title,
+      content: entry.content,
+      mood: entry.mood || null,
+      tags: entry.tags || null,
+      isPrivate: entry.isPrivate || true,
+      date,
+      createdAt,
+      updatedAt: createdAt,
+      relatedDreamIds: entry.relatedDreamIds || null
+    };
+    
+    this.journalEntries.set(id, newEntry);
+    return newEntry;
+  }
+  
+  async getJournalEntriesByUserId(userId: number): Promise<JournalEntry[]> {
+    return Array.from(this.journalEntries.values())
+      .filter(entry => entry.userId === userId)
+      .sort((a, b) => b.date.getTime() - a.date.getTime());
+  }
+  
+  async getJournalEntry(id: number): Promise<JournalEntry | undefined> {
+    return this.journalEntries.get(id);
+  }
+  
+  async updateJournalEntry(id: number, entryUpdate: Partial<InsertJournalEntry>): Promise<JournalEntry | undefined> {
+    const entry = this.journalEntries.get(id);
+    if (!entry) {
+      return undefined;
+    }
+    
+    const updatedEntry: JournalEntry = {
+      ...entry,
+      ...entryUpdate,
+      // Ensure date is a Date object
+      date: entryUpdate.date ? new Date(entryUpdate.date) : entry.date,
+      updatedAt: new Date()
+    };
+    
+    this.journalEntries.set(id, updatedEntry);
+    return updatedEntry;
+  }
+  
+  async deleteJournalEntry(id: number): Promise<boolean> {
+    return this.journalEntries.delete(id);
+  }
+  
+  // Dream content entry methods
+  async createDreamContentEntry(entry: InsertDreamContentEntry): Promise<DreamContentEntry> {
+    const id = this.currentDreamContentEntryId++;
+    const createdAt = new Date();
+    
+    const newEntry: DreamContentEntry = {
+      id,
+      title: entry.title,
+      summary: entry.summary,
+      content: entry.content,
+      contentType: entry.contentType,
+      url: entry.url || null,
+      imageUrl: entry.imageUrl || null,
+      tags: entry.tags || null,
+      authorId: entry.authorId || null,
+      isFeatured: entry.isFeatured || false,
+      isPublished: entry.isPublished || false,
+      viewCount: 0,
+      createdAt,
+      updatedAt: createdAt,
+      relatedContentIds: entry.relatedContentIds || null
+    };
+    
+    this.dreamContentEntries.set(id, newEntry);
+    return newEntry;
+  }
+  
+  async getDreamContentEntries(): Promise<DreamContentEntry[]> {
+    return Array.from(this.dreamContentEntries.values())
+      .filter(entry => entry.isPublished)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+  
+  async getDreamContentEntry(id: number): Promise<DreamContentEntry | undefined> {
+    return this.dreamContentEntries.get(id);
+  }
+  
+  async updateDreamContentEntry(id: number, entryUpdate: Partial<InsertDreamContentEntry>): Promise<DreamContentEntry | undefined> {
+    const entry = this.dreamContentEntries.get(id);
+    if (!entry) {
+      return undefined;
+    }
+    
+    const updatedEntry: DreamContentEntry = {
+      ...entry,
+      ...entryUpdate,
+      updatedAt: new Date()
+    };
+    
+    this.dreamContentEntries.set(id, updatedEntry);
+    return updatedEntry;
+  }
+  
+  async deleteDreamContentEntry(id: number): Promise<boolean> {
+    return this.dreamContentEntries.delete(id);
+  }
+  
+  async getFeaturedDreamContentEntries(limit: number): Promise<DreamContentEntry[]> {
+    return Array.from(this.dreamContentEntries.values())
+      .filter(entry => entry.isPublished && entry.isFeatured)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, limit);
+  }
+  
+  async getDreamContentEntriesByType(contentType: string): Promise<DreamContentEntry[]> {
+    return Array.from(this.dreamContentEntries.values())
+      .filter(entry => entry.isPublished && entry.contentType === contentType)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+  
+  async incrementDreamContentViewCount(id: number): Promise<DreamContentEntry | undefined> {
+    const entry = this.dreamContentEntries.get(id);
+    if (!entry) {
+      return undefined;
+    }
+    
+    const updatedEntry: DreamContentEntry = {
+      ...entry,
+      viewCount: entry.viewCount + 1
+    };
+    
+    this.dreamContentEntries.set(id, updatedEntry);
+    return updatedEntry;
+  }
+  
+  // Content comment methods
+  async createContentComment(comment: InsertContentComment): Promise<ContentComment> {
+    const id = this.currentContentCommentId++;
+    const createdAt = new Date();
+    
+    const newComment: ContentComment = {
+      id,
+      contentId: comment.contentId,
+      userId: comment.userId,
+      text: comment.text,
+      createdAt,
+      updatedAt: createdAt
+    };
+    
+    this.contentComments.set(id, newComment);
+    return newComment;
+  }
+  
+  async getContentCommentsByContentId(contentId: number): Promise<ContentComment[]> {
+    return Array.from(this.contentComments.values())
+      .filter(comment => comment.contentId === contentId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+  
+  async deleteContentComment(id: number): Promise<boolean> {
+    return this.contentComments.delete(id);
+  }
 }
 
 // PostgreSQL Speicherimplementierung
@@ -495,6 +704,50 @@ export class DatabaseStorage implements IStorage {
         is_completed BOOLEAN DEFAULT FALSE,
         unlocked_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(user_id, achievement_id)
+      );
+      
+      -- Neue Tabellen für Journal-Einträge
+      CREATE TABLE IF NOT EXISTS journal_entries (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        content TEXT NOT NULL,
+        mood INTEGER,
+        tags TEXT[],
+        is_private BOOLEAN NOT NULL DEFAULT TRUE,
+        date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        related_dream_ids INTEGER[]
+      );
+      
+      -- Content-Einträge für "Was ist Träumen?"
+      CREATE TABLE IF NOT EXISTS dream_content_entries (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        summary TEXT NOT NULL,
+        content TEXT NOT NULL,
+        content_type VARCHAR(20) NOT NULL,
+        url TEXT,
+        image_url TEXT,
+        tags TEXT[],
+        author_id INTEGER REFERENCES users(id),
+        is_featured BOOLEAN NOT NULL DEFAULT FALSE,
+        is_published BOOLEAN NOT NULL DEFAULT FALSE,
+        view_count INTEGER NOT NULL DEFAULT 0,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        related_content_ids INTEGER[]
+      );
+      
+      -- Kommentare für Content-Einträge
+      CREATE TABLE IF NOT EXISTS content_comments (
+        id SERIAL PRIMARY KEY,
+        content_id INTEGER REFERENCES dream_content_entries(id) NOT NULL,
+        user_id INTEGER REFERENCES users(id) NOT NULL,
+        text TEXT NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
     `);
   }
@@ -891,6 +1144,295 @@ export class DatabaseStorage implements IStorage {
     return result.rows.map(ua => this.transformUserAchievementDbToApi(ua));
   }
   
+  // Journal entry methods
+  async createJournalEntry(entry: InsertJournalEntry): Promise<JournalEntry> {
+    const result = await this.pool.query(
+      `INSERT INTO journal_entries 
+        (user_id, title, content, mood, tags, is_private, date, related_dream_ids) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+       RETURNING *`,
+      [
+        entry.userId,
+        entry.title,
+        entry.content,
+        entry.mood || null,
+        entry.tags || null,
+        entry.isPrivate || true,
+        entry.date || new Date(),
+        entry.relatedDreamIds || null
+      ]
+    );
+    
+    return this.transformJournalEntryDbToApi(result.rows[0]);
+  }
+  
+  async getJournalEntriesByUserId(userId: number): Promise<JournalEntry[]> {
+    const result = await this.pool.query(
+      'SELECT * FROM journal_entries WHERE user_id = $1 ORDER BY date DESC',
+      [userId]
+    );
+    return result.rows.map(entry => this.transformJournalEntryDbToApi(entry));
+  }
+  
+  async getJournalEntry(id: number): Promise<JournalEntry | undefined> {
+    const result = await this.pool.query(
+      'SELECT * FROM journal_entries WHERE id = $1',
+      [id]
+    );
+    return result.rows[0] ? this.transformJournalEntryDbToApi(result.rows[0]) : undefined;
+  }
+  
+  async updateJournalEntry(id: number, entryUpdate: Partial<InsertJournalEntry>): Promise<JournalEntry | undefined> {
+    // Build the SET part of the query dynamically based on the fields being updated
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramCounter = 1;
+    
+    if (entryUpdate.title !== undefined) {
+      updates.push(`title = $${paramCounter++}`);
+      values.push(entryUpdate.title);
+    }
+    
+    if (entryUpdate.content !== undefined) {
+      updates.push(`content = $${paramCounter++}`);
+      values.push(entryUpdate.content);
+    }
+    
+    if (entryUpdate.mood !== undefined) {
+      updates.push(`mood = $${paramCounter++}`);
+      values.push(entryUpdate.mood);
+    }
+    
+    if (entryUpdate.tags !== undefined) {
+      updates.push(`tags = $${paramCounter++}`);
+      values.push(entryUpdate.tags);
+    }
+    
+    if (entryUpdate.isPrivate !== undefined) {
+      updates.push(`is_private = $${paramCounter++}`);
+      values.push(entryUpdate.isPrivate);
+    }
+    
+    if (entryUpdate.date !== undefined) {
+      updates.push(`date = $${paramCounter++}`);
+      values.push(entryUpdate.date);
+    }
+    
+    if (entryUpdate.relatedDreamIds !== undefined) {
+      updates.push(`related_dream_ids = $${paramCounter++}`);
+      values.push(entryUpdate.relatedDreamIds);
+    }
+    
+    // Always update the updated_at timestamp
+    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+    
+    // If there's nothing to update, return the original entry
+    if (updates.length === 1) { // Only the updated_at field would be updated
+      return this.getJournalEntry(id);
+    }
+    
+    // Add the id parameter
+    values.push(id);
+    
+    const result = await this.pool.query(
+      `UPDATE journal_entries SET ${updates.join(', ')} WHERE id = $${paramCounter} RETURNING *`,
+      values
+    );
+    
+    return result.rows[0] ? this.transformJournalEntryDbToApi(result.rows[0]) : undefined;
+  }
+  
+  async deleteJournalEntry(id: number): Promise<boolean> {
+    const result = await this.pool.query(
+      'DELETE FROM journal_entries WHERE id = $1 RETURNING id',
+      [id]
+    );
+    return result.rows.length > 0;
+  }
+  
+  // Dream content entry methods
+  async createDreamContentEntry(entry: InsertDreamContentEntry): Promise<DreamContentEntry> {
+    const result = await this.pool.query(
+      `INSERT INTO dream_content_entries 
+        (title, summary, content, content_type, url, image_url, tags, author_id, is_featured, is_published) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
+       RETURNING *`,
+      [
+        entry.title,
+        entry.summary,
+        entry.content,
+        entry.contentType,
+        entry.url || null,
+        entry.imageUrl || null,
+        entry.tags || null,
+        entry.authorId || null,
+        entry.isFeatured || false,
+        entry.isPublished || false
+      ]
+    );
+    
+    return this.transformDreamContentEntryDbToApi(result.rows[0]);
+  }
+  
+  async getDreamContentEntries(): Promise<DreamContentEntry[]> {
+    const result = await this.pool.query(
+      'SELECT * FROM dream_content_entries WHERE is_published = true ORDER BY created_at DESC'
+    );
+    return result.rows.map(entry => this.transformDreamContentEntryDbToApi(entry));
+  }
+  
+  async getDreamContentEntry(id: number): Promise<DreamContentEntry | undefined> {
+    const result = await this.pool.query(
+      'SELECT * FROM dream_content_entries WHERE id = $1',
+      [id]
+    );
+    return result.rows[0] ? this.transformDreamContentEntryDbToApi(result.rows[0]) : undefined;
+  }
+  
+  async updateDreamContentEntry(id: number, entryUpdate: Partial<InsertDreamContentEntry>): Promise<DreamContentEntry | undefined> {
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramCounter = 1;
+    
+    if (entryUpdate.title !== undefined) {
+      updates.push(`title = $${paramCounter++}`);
+      values.push(entryUpdate.title);
+    }
+    
+    if (entryUpdate.summary !== undefined) {
+      updates.push(`summary = $${paramCounter++}`);
+      values.push(entryUpdate.summary);
+    }
+    
+    if (entryUpdate.content !== undefined) {
+      updates.push(`content = $${paramCounter++}`);
+      values.push(entryUpdate.content);
+    }
+    
+    if (entryUpdate.contentType !== undefined) {
+      updates.push(`content_type = $${paramCounter++}`);
+      values.push(entryUpdate.contentType);
+    }
+    
+    if (entryUpdate.url !== undefined) {
+      updates.push(`url = $${paramCounter++}`);
+      values.push(entryUpdate.url);
+    }
+    
+    if (entryUpdate.imageUrl !== undefined) {
+      updates.push(`image_url = $${paramCounter++}`);
+      values.push(entryUpdate.imageUrl);
+    }
+    
+    if (entryUpdate.tags !== undefined) {
+      updates.push(`tags = $${paramCounter++}`);
+      values.push(entryUpdate.tags);
+    }
+    
+    if (entryUpdate.authorId !== undefined) {
+      updates.push(`author_id = $${paramCounter++}`);
+      values.push(entryUpdate.authorId);
+    }
+    
+    if (entryUpdate.isFeatured !== undefined) {
+      updates.push(`is_featured = $${paramCounter++}`);
+      values.push(entryUpdate.isFeatured);
+    }
+    
+    if (entryUpdate.isPublished !== undefined) {
+      updates.push(`is_published = $${paramCounter++}`);
+      values.push(entryUpdate.isPublished);
+    }
+    
+    if (entryUpdate.relatedContentIds !== undefined) {
+      updates.push(`related_content_ids = $${paramCounter++}`);
+      values.push(entryUpdate.relatedContentIds);
+    }
+    
+    // Always update the updated_at timestamp
+    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+    
+    // If there's nothing to update, return the original entry
+    if (updates.length === 1) { // Only the updated_at field would be updated
+      return this.getDreamContentEntry(id);
+    }
+    
+    // Add the id parameter
+    values.push(id);
+    
+    const result = await this.pool.query(
+      `UPDATE dream_content_entries SET ${updates.join(', ')} WHERE id = $${paramCounter} RETURNING *`,
+      values
+    );
+    
+    return result.rows[0] ? this.transformDreamContentEntryDbToApi(result.rows[0]) : undefined;
+  }
+  
+  async deleteDreamContentEntry(id: number): Promise<boolean> {
+    const result = await this.pool.query(
+      'DELETE FROM dream_content_entries WHERE id = $1 RETURNING id',
+      [id]
+    );
+    return result.rows.length > 0;
+  }
+  
+  async getFeaturedDreamContentEntries(limit: number): Promise<DreamContentEntry[]> {
+    const result = await this.pool.query(
+      'SELECT * FROM dream_content_entries WHERE is_published = true AND is_featured = true ORDER BY created_at DESC LIMIT $1',
+      [limit]
+    );
+    return result.rows.map(entry => this.transformDreamContentEntryDbToApi(entry));
+  }
+  
+  async getDreamContentEntriesByType(contentType: string): Promise<DreamContentEntry[]> {
+    const result = await this.pool.query(
+      'SELECT * FROM dream_content_entries WHERE is_published = true AND content_type = $1 ORDER BY created_at DESC',
+      [contentType]
+    );
+    return result.rows.map(entry => this.transformDreamContentEntryDbToApi(entry));
+  }
+  
+  async incrementDreamContentViewCount(id: number): Promise<DreamContentEntry | undefined> {
+    const result = await this.pool.query(
+      'UPDATE dream_content_entries SET view_count = view_count + 1 WHERE id = $1 RETURNING *',
+      [id]
+    );
+    return result.rows[0] ? this.transformDreamContentEntryDbToApi(result.rows[0]) : undefined;
+  }
+  
+  // Content comment methods
+  async createContentComment(comment: InsertContentComment): Promise<ContentComment> {
+    const result = await this.pool.query(
+      `INSERT INTO content_comments 
+        (content_id, user_id, text) 
+       VALUES ($1, $2, $3) 
+       RETURNING *`,
+      [
+        comment.contentId,
+        comment.userId,
+        comment.text
+      ]
+    );
+    
+    return this.transformContentCommentDbToApi(result.rows[0]);
+  }
+  
+  async getContentCommentsByContentId(contentId: number): Promise<ContentComment[]> {
+    const result = await this.pool.query(
+      'SELECT * FROM content_comments WHERE content_id = $1 ORDER BY created_at DESC',
+      [contentId]
+    );
+    return result.rows.map(comment => this.transformContentCommentDbToApi(comment));
+  }
+  
+  async deleteContentComment(id: number): Promise<boolean> {
+    const result = await this.pool.query(
+      'DELETE FROM content_comments WHERE id = $1 RETURNING id',
+      [id]
+    );
+    return result.rows.length > 0;
+  }
+  
   // Helper functions to transform database snake_case to API camelCase
   private transformDreamDbToApi(dream: any): Dream {
     return {
@@ -930,6 +1472,53 @@ export class DatabaseStorage implements IStorage {
       progress: userAchievement.progress,
       isCompleted: userAchievement.is_completed,
       unlockedAt: new Date(userAchievement.unlocked_at)
+    };
+  }
+  
+  private transformJournalEntryDbToApi(journalEntry: any): JournalEntry {
+    return {
+      id: journalEntry.id,
+      userId: journalEntry.user_id,
+      title: journalEntry.title,
+      content: journalEntry.content,
+      mood: journalEntry.mood,
+      tags: journalEntry.tags,
+      isPrivate: journalEntry.is_private,
+      date: new Date(journalEntry.date),
+      createdAt: new Date(journalEntry.created_at),
+      updatedAt: new Date(journalEntry.updated_at),
+      relatedDreamIds: journalEntry.related_dream_ids
+    };
+  }
+  
+  private transformDreamContentEntryDbToApi(contentEntry: any): DreamContentEntry {
+    return {
+      id: contentEntry.id,
+      title: contentEntry.title,
+      summary: contentEntry.summary,
+      content: contentEntry.content,
+      contentType: contentEntry.content_type,
+      url: contentEntry.url,
+      imageUrl: contentEntry.image_url,
+      tags: contentEntry.tags,
+      authorId: contentEntry.author_id,
+      isFeatured: contentEntry.is_featured,
+      isPublished: contentEntry.is_published,
+      viewCount: contentEntry.view_count,
+      createdAt: new Date(contentEntry.created_at),
+      updatedAt: new Date(contentEntry.updated_at),
+      relatedContentIds: contentEntry.related_content_ids
+    };
+  }
+  
+  private transformContentCommentDbToApi(comment: any): ContentComment {
+    return {
+      id: comment.id,
+      contentId: comment.content_id,
+      userId: comment.user_id,
+      text: comment.text,
+      createdAt: new Date(comment.created_at),
+      updatedAt: new Date(comment.updated_at)
     };
   }
 }

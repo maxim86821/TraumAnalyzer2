@@ -17,10 +17,11 @@ import {
   PlusIcon, 
   Sparkles, 
   Loader2,
-  ZoomIn 
+  ZoomIn,
+  X
 } from "lucide-react";
 import { useToast } from "../hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -928,7 +929,6 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
           )}
         </div>
       </div>
-    </section>
 
       {/* Image Modal */}
       <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
@@ -938,7 +938,7 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
           </DialogHeader>
           <div className="flex items-center justify-center py-4">
             <img 
-              src={newImage || dream.imageUrl} 
+              src={newImage || dream.imageUrl || ""} 
               alt="Traumbild (Vergrößerte Ansicht)" 
               className="max-h-[70vh] max-w-full object-contain rounded-lg shadow-2xl animate-fadeIn" 
             />
@@ -974,5 +974,6 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </section>
   );
 }

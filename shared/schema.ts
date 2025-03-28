@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -272,3 +272,117 @@ export interface AchievementNotification {
   difficulty: AchievementDifficulty;
   timestamp: string;
 }
+
+// Journaling und Content-Rubrik Tabellen
+
+// Content-Typen für die Content-Rubrik
+export const contentTypes = [
+  "article",      // Artikel
+  "video",        // Video
+  "link",         // Externe Verlinkung
+  "quote",        // Zitat
+  "image",        // Bild
+  "infographic",  // Infografik
+  "audio",        // Audio/Podcast
+  "exercise"      // Übung
+] as const;
+
+export type ContentType = typeof contentTypes[number];
+
+// Journal-Einträge
+export const journalEntries = pgTable("journal_entries", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  mood: integer("mood"), // Stimmung (1-10)
+  tags: text("tags").array(),
+  isPrivate: boolean("is_private").notNull().default(true),
+  date: timestamp("date").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  relatedDreamIds: integer("related_dream_ids").array(), // IDs von verknüpften Träumen
+});
+
+// Insert-Schema für Journal-Einträge
+export const insertJournalEntrySchema = createInsertSchema(journalEntries).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  title: z.string().min(3, { message: "Titel muss mindestens 3 Zeichen lang sein" }),
+  content: z.string().min(10, { message: "Inhalt muss mindestens 10 Zeichen lang sein" }),
+  mood: z.number().min(1).max(10).optional(),
+  tags: z.array(z.string()).optional(),
+  isPrivate: z.boolean().default(true),
+  date: z.string().or(z.date()),
+  relatedDreamIds: z.array(z.number()).optional(),
+});
+
+// Content-Einträge für die Content-Rubrik "Was ist Träumen?"
+export const dreamContentEntries = pgTable("dream_content_entries", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  summary: text("summary").notNull(),
+  content: text("content").notNull(),
+  contentType: varchar("content_type", { length: 20 }).notNull().$type<ContentType>(),
+  url: text("url"), // URL für externes Material (Videos, Links)
+  imageUrl: text("image_url"), // Bild-URL
+  tags: text("tags").array(),
+  authorId: integer("author_id"), // Null bedeutet KI-generierter Inhalt
+  isFeatured: boolean("is_featured").notNull().default(false), // Hervorgehobener Inhalt
+  isPublished: boolean("is_published").notNull().default(false), // Veröffentlicht ja/nein
+  viewCount: integer("view_count").notNull().default(0), // Anzahl der Aufrufe
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  relatedContentIds: integer("related_content_ids").array(), // Verwandte Inhalte
+});
+
+// Insert-Schema für Content-Einträge
+export const insertDreamContentEntrySchema = createInsertSchema(dreamContentEntries).omit({
+  id: true,
+  viewCount: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  title: z.string().min(3, { message: "Titel muss mindestens 3 Zeichen lang sein" }),
+  summary: z.string().min(10, { message: "Zusammenfassung muss mindestens 10 Zeichen lang sein" }),
+  content: z.string().min(50, { message: "Inhalt muss mindestens 50 Zeichen lang sein" }),
+  contentType: z.enum(contentTypes),
+  url: z.string().url().optional(),
+  imageUrl: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  authorId: z.number().optional(),
+  isFeatured: z.boolean().default(false),
+  isPublished: z.boolean().default(false),
+  relatedContentIds: z.array(z.number()).optional(),
+});
+
+// Kommentare für Content-Einträge
+export const contentComments = pgTable("content_comments", {
+  id: serial("id").primaryKey(),
+  contentId: integer("content_id").notNull(),
+  userId: integer("user_id").notNull(),
+  text: text("text").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Insert-Schema für Kommentare
+export const insertContentCommentSchema = createInsertSchema(contentComments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  text: z.string().min(3, { message: "Kommentar muss mindestens 3 Zeichen lang sein" }),
+});
+
+// Typ-Definitionen
+export type JournalEntry = typeof journalEntries.$inferSelect;
+export type InsertJournalEntry = z.infer<typeof insertJournalEntrySchema>;
+
+export type DreamContentEntry = typeof dreamContentEntries.$inferSelect;
+export type InsertDreamContentEntry = z.infer<typeof insertDreamContentEntrySchema>;
+
+export type ContentComment = typeof contentComments.$inferSelect;
+export type InsertContentComment = z.infer<typeof insertContentCommentSchema>;
