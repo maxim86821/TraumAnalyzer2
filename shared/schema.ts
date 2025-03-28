@@ -84,6 +84,11 @@ export interface MoodData {
   beforeSleep?: number; // Stimmung vor dem Schlafen, 1-10
   afterWakeup?: number; // Stimmung nach dem Aufwachen, 1-10
   notes?: string; // Optionale Notizen zur Stimmung
+  energyLevel?: number; // Energielevel am Tag, 1-10
+  stressLevel?: number; // Stresslevel am Tag, 1-10
+  exerciseMinutes?: number; // Sportliche Aktivität in Minuten
+  caffeineIntake?: number; // Koffeinkonsum (Tassen/Gläser)
+  screenTimeBeforeBed?: number; // Bildschirmzeit vor dem Schlafengehen in Minuten
 }
 
 export interface KeywordReference {

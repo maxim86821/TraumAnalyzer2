@@ -797,6 +797,20 @@ export default function DreamDetail({ dream }: DreamDetailProps) {
                   </div>
                 )}
                 
+                {/* Tags */}
+                {dream.tags && dream.tags.length > 0 && (
+                  <div className="mb-3">
+                    <h4 className="text-xs uppercase text-gray-500 font-medium mb-1">Tags</h4>
+                    <div className="flex flex-wrap gap-1.5">
+                      {dream.tags.map((tag, index) => (
+                        <Badge key={index} variant="outline" className="bg-dream-secondary/10 text-dream-secondary hover:bg-dream-secondary/15 border-dream-secondary/20">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
                 {/* Emotions */}
                 {analysis.emotions && analysis.emotions.length > 0 && (
                   <div>

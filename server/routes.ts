@@ -33,7 +33,7 @@ const upload = multer({
 export async function registerRoutes(app: Express): Promise<Server> {
   // Session setup
   const sessionSecret = process.env.SESSION_SECRET || 'supersecretkey';
-  
+
   app.use(session({
     secret: sessionSecret,
     resave: false,
@@ -45,10 +45,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     }
   }));
-  
+
   // Setup Auth
   setupAuth(app);
-  
+
   // Serve uploaded files
   const uploadsPath = path.join(__dirname, '../uploads');
   app.use('/uploads', express.static(uploadsPath));
@@ -61,7 +61,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const dreams = await storage.getDreamsByUserId(req.user.id);
         return res.json(dreams);
       }
-      
+
       // If no authentication, return empty array
       res.json([]);
     } catch (error) {
@@ -80,17 +80,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get time range from query parameters
       const timeRange = req.query.timeRange as string || "30 Tage";
       const limit = parseInt(req.query.limit as string) || 0;
-      
+
       // Get all dreams for the user
       const dreams = await storage.getDreamsByUserId(req.user.id);
-      
+
       // Get all journal entries for the user
       const journalEntries = await storage.getJournalEntriesByUserId(req.user.id);
-      
+
       // Zähle die Gesamtzahl der Einträge (Träume + freigegebene Journaleinträge)
       const includedJournalEntries = journalEntries.filter(entry => entry.includeInAnalysis === true);
       const totalEntries = dreams.length + includedJournalEntries.length;
-      
+
       if (totalEntries < 3) {
         return res.status(400).json({ 
           message: 'Nicht genügend Einträge',
@@ -100,7 +100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Apply limit if specified (nur auf Träume angewendet)
       const dreamsToAnalyze = limit > 0 ? dreams.slice(0, limit) : dreams;
-      
+
       // Prepare dreams for analysis
       const dreamsForAnalysis = dreamsToAnalyze.map(dream => ({
         id: dream.id,
@@ -113,12 +113,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         moodAfterWakeup: dream.moodAfterWakeup || undefined,
         moodNotes: dream.moodNotes || undefined
       }));
-      
+
       // Prepare journal entries for analysis
       const journalForAnalysis = includedJournalEntries.map(entry => {
         // Konvertiere null zu undefined für das mood-Feld
         const mood = entry.mood === null ? undefined : entry.mood;
-        
+
         return {
           id: entry.id,
           content: entry.content,
@@ -129,10 +129,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           includeInAnalysis: true
         };
       });
-      
+
       // Perform pattern analysis with both dreams and journal entries
       const patterns = await analyzePatterns(dreamsForAnalysis, journalForAnalysis, timeRange, req.user.id);
-      
+
       res.json(patterns);
     } catch (error) {
       console.error('Error analyzing patterns:', error);
@@ -148,22 +148,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log(`Dream request - ID param:`, req.params.id, `(type: ${typeof req.params.id})`);
       const id = parseInt(req.params.id);
-      
+
       if (isNaN(id)) {
         console.error(`Invalid dream ID format:`, req.params.id);
         return res.status(400).json({ message: 'Ungültige Traum-ID' });
       }
-      
+
       console.log(`Fetching dream with ID: ${id} (type: ${typeof id})`);
       const dream = await storage.getDream(id);
-      
+
       if (!dream) {
         console.error(`Dream with ID ${id} not found`);
         return res.status(404).json({ message: 'Traum nicht gefunden' });
       }
-      
+
       console.log(`Dream found:`, { id: dream.id, title: dream.title, userId: dream.userId });
-      
+
       // Check if user is the owner of the dream
       if (dream.userId !== req.user?.id) {
         console.error(`Permission denied: User ${req.user?.id} attempting to view dream ${id} owned by user ${dream.userId}`);
@@ -175,12 +175,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...dream,
         id: Number(dream.id)
       };
-      
+
       console.log(`Sending normalized dream:`, { 
         id: normalizedDream.id, 
         idType: typeof normalizedDream.id 
       });
-      
+
       res.json(normalizedDream);
     } catch (error) {
       console.error('Error fetching dream:', error);
@@ -210,7 +210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           parseResult.data.imageUrl = imagePath;
         }
       }
-      
+
       // Process tags if they're included
       if (req.body.tags && Array.isArray(req.body.tags)) {
         parseResult.data.tags = req.body.tags;
@@ -218,7 +218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Set the user ID from the authenticated user
       parseResult.data.userId = req.user?.id;
-      
+
       // Create the dream
       const newDream = await storage.createDream(parseResult.data);
 
@@ -239,10 +239,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`Starting analysis for dream ID: ${newDream.id}`);
         const analysis = await analyzeDream(parseResult.data.content, previousDreams);
         console.log(`Analysis completed for dream ID: ${newDream.id}, saving to database...`);
-        
+
         const updatedDream = await storage.saveDreamAnalysis(newDream.id, analysis);
         console.log(`Analysis saved for dream ID: ${newDream.id}`);
-        
+
         // Update the newDream object with the analysis for immediate response
         newDream.analysis = updatedDream.analysis;
       } catch (err) {
@@ -269,7 +269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!existingDream) {
         return res.status(404).json({ message: 'Traum nicht gefunden' });
       }
-      
+
       // Check if user is the owner of the dream
       if (existingDream.userId !== req.user?.id) {
         return res.status(403).json({ message: 'Keine Berechtigung zum Ändern dieses Traums' });
@@ -281,20 +281,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (parts.length === 2) {
           const mimeType = parts[0].replace('data:', '');
           const base64Data = parts[1];
-          
+
           // Delete the old image if it exists
           if (existingDream.imageUrl) {
             await deleteImage(existingDream.imageUrl);
           }
-          
+
           const imagePath = await saveBase64Image(base64Data, mimeType);
           req.body.imageUrl = imagePath;
         }
-        
+
         // Remove the base64 data from the object to avoid saving it
         delete req.body.imageBase64;
       }
-      
+
       // Process tags if they're included
       if ('tags' in req.body) {
         // Ensure tags is always an array, even if empty
@@ -325,10 +325,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Starting analysis for updated dream ID: ${id}`);
           const analysis = await analyzeDream(req.body.content, previousDreams);
           console.log(`Analysis completed for updated dream ID: ${id}, saving to database...`);
-          
+
           const dreamWithAnalysis = await storage.saveDreamAnalysis(id, analysis);
           console.log(`Analysis saved for updated dream ID: ${id}`);
-          
+
           // Update the updatedDream object with the analysis for immediate response
           updatedDream.analysis = dreamWithAnalysis.analysis;
         } catch (err) {
@@ -356,7 +356,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!dream) {
         return res.status(404).json({ message: 'Traum nicht gefunden' });
       }
-      
+
       // Check if user is the owner of the dream
       if (dream.userId !== req.user?.id) {
         return res.status(403).json({ message: 'Keine Berechtigung zum Löschen dieses Traums' });
@@ -397,7 +397,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!dream) {
         return res.status(404).json({ message: 'Traum nicht gefunden' });
       }
-      
+
       // Check if user is the owner of the dream
       if (dream.userId !== req.user?.id) {
         return res.status(403).json({ message: 'Keine Berechtigung zum Ändern dieses Traums' });
@@ -425,7 +425,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Fehler beim Hochladen des Bildes' });
     }
   });
-  
+
   // Generate AI image for a dream
   app.post('/api/dreams/:id/generate-image', authenticateJWT, async (req: Request, res: Response) => {
     try {
@@ -439,7 +439,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!dream) {
         return res.status(404).json({ message: 'Traum nicht gefunden' });
       }
-      
+
       // Check if user is the owner of the dream
       if (dream.userId !== req.user?.id) {
         return res.status(403).json({ message: 'Keine Berechtigung zum Ändern dieses Traums' });
@@ -473,23 +473,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!imageResponse.ok) {
           throw new Error(`Failed to fetch image: ${imageResponse.statusText}`);
         }
-        
+
         const arrayBuffer = await imageResponse.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
         const base64Data = buffer.toString('base64');
         const mimeType = imageResponse.headers.get('content-type') || 'image/jpeg';
-        
+
         // Delete the old image if it exists
         if (dream.imageUrl) {
           await deleteImage(dream.imageUrl);
         }
-        
+
         // Save the new image
         const imagePath = await saveBase64Image(base64Data, mimeType);
-        
+
         // Update the dream with the new image URL
         const updatedDream = await storage.updateDream(id, { imageUrl: imagePath });
-        
+
         res.json({
           success: true,
           dream: updatedDream
@@ -550,7 +550,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const limit = parseInt(req.query.limit as string) || 5;
       const latestAchievements = await storage.getLatestUserAchievements(req.user.id, limit);
-      
+
       // Fetch full achievement details for each user achievement
       const achievementsWithDetails = await Promise.all(
         latestAchievements.map(async (ua) => {
@@ -561,7 +561,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         })
       );
-      
+
       res.json(achievementsWithDetails);
     } catch (error) {
       console.error('Error fetching latest user achievements:', error);
@@ -598,34 +598,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const userId = req.user.id;
-      
+
       // Get all achievements and user's dreams
       const achievements = await storage.getAllAchievements();
       const dreams = await storage.getDreamsByUserId(userId);
-      
+
       // Get user's existing achievements
       const userAchievements = await storage.getUserAchievements(userId);
-      
+
       // Object to collect new achievements
       const newAchievements = [];
-      
+
       // Check each achievement
       for (const achievement of achievements) {
         // Skip if user already has this achievement and it's completed
         const existingAchievement = userAchievements.find(
           ua => ua.achievementId === achievement.id && ua.isCompleted
         );
-        
+
         if (existingAchievement) {
           continue;
         }
-        
+
         // Get or create user achievement
         let userAchievement = userAchievements.find(ua => ua.achievementId === achievement.id);
-        
+
         // Calculate current progress based on achievement criteria
         let currentValue = 0;
-        
+
         switch (achievement.criteria.type) {
           case "dreamCount":
             currentValue = dreams.length;
@@ -659,7 +659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             break;
           // Additional types would be handled here
         }
-        
+
         // Create progress object
         const progress = {
           currentValue,
@@ -667,7 +667,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lastUpdated: new Date().toISOString(),
           details: achievement.criteria.additionalParams || {}
         };
-        
+
         // If user achievement doesn't exist, create it
         if (!userAchievement) {
           userAchievement = await storage.createUserAchievement({
@@ -680,7 +680,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Otherwise update existing progress
           userAchievement = await storage.updateUserAchievementProgress(userAchievement.id, progress);
         }
-        
+
         // If achievement is completed, add to new achievements
         if (userAchievement && userAchievement.isCompleted && !existingAchievement) {
           const timestamp = userAchievement.unlockedAt.toISOString();
@@ -695,7 +695,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      
+
       res.json({
         achievements: userAchievements,
         newAchievements
@@ -709,31 +709,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Helper functions for achievement processing
   function calculateStreakDays(dreams: any[]): number {
     if (dreams.length === 0) return 0;
-    
+
     // Sort dreams by date (newest first)
     const sortedDreams = [...dreams].sort((a, b) => b.date.getTime() - a.date.getTime());
-    
+
     // Get unique days (in ISO string format YYYY-MM-DD)
     const uniqueDays = new Set<string>();
     sortedDreams.forEach(dream => {
       uniqueDays.add(dream.date.toISOString().split('T')[0]);
     });
-    
+
     // Convert to array and sort (newest first)
     const days = Array.from(uniqueDays).sort().reverse();
-    
+
     // Count consecutive days
     let currentStreak = 1;
     let maxStreak = 1;
-    
+
     for (let i = 1; i < days.length; i++) {
       const prevDay = new Date(days[i-1]);
       const currentDay = new Date(days[i]);
-      
+
       // Check if days are consecutive
       const timeDiff = Math.abs(prevDay.getTime() - currentDay.getTime());
       const dayDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
-      
+
       if (dayDiff === 1) {
         currentStreak++;
         maxStreak = Math.max(maxStreak, currentStreak);
@@ -741,33 +741,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         currentStreak = 1;
       }
     }
-    
+
     return maxStreak;
   }
-  
+
   function countUniqueTags(dreams: any[]): number {
     const allTags = new Set<string>();
-    
+
     dreams.forEach(dream => {
       if (dream.tags && Array.isArray(dream.tags)) {
         dream.tags.forEach((tag: string) => allTags.add(tag));
       }
     });
-    
+
     return allTags.size;
   }
 
   // =======================================================
   // Journal API Routes
   // =======================================================
-  
+
   // Get all journal entries for a user
   app.get('/api/journal', authenticateJWT, async (req: Request, res: Response) => {
     try {
       if (!req.user) {
         return res.status(401).json({ message: 'Nicht authentifiziert' });
       }
-      
+
       const entries = await storage.getJournalEntriesByUserId(req.user.id);
       res.json(entries);
     } catch (error) {
@@ -775,22 +775,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Fehler beim Laden der Journaleinträge' });
     }
   });
-  
+
   // Generiert ein Stimmungsbild für einen Journaleintrag
   app.post('/api/journal/generate-image', authenticateJWT, async (req: Request, res: Response) => {
     try {
       if (!req.user) {
         return res.status(401).json({ message: 'Nicht authentifiziert' });
       }
-      
+
       const { journalContent, colorImpression, spontaneousThought, tags, mood } = req.body;
-      
+
       if (!journalContent || !colorImpression || !spontaneousThought) {
         return res.status(400).json({ 
           message: 'Journalinhalt, Farbeindrücke und spontane Gedanken werden benötigt' 
         });
       }
-      
+
       // OpenAI API aufrufen, um ein Bild zu generieren
       const { imageUrl, description } = await generateJournalMoodImage(
         journalContent,
@@ -799,14 +799,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         tags,
         mood
       );
-      
+
       res.json({ imageUrl, description });
     } catch (error) {
       console.error('Error generating journal mood image:', error);
       res.status(500).json({ message: 'Fehler bei der Generierung des Stimmungsbildes' });
     }
   });
-  
+
   // Get a specific journal entry
   app.get('/api/journal/:id', authenticateJWT, async (req: Request, res: Response) => {
     try {
@@ -814,38 +814,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(id)) {
         return res.status(400).json({ message: 'Ungültige Eintrags-ID' });
       }
-      
+
       const entry = await storage.getJournalEntry(id);
       if (!entry) {
         return res.status(404).json({ message: 'Eintrag nicht gefunden' });
       }
-      
+
       // Check if user is the owner of the entry
       if (entry.userId !== req.user?.id) {
         return res.status(403).json({ message: 'Keine Berechtigung zum Anzeigen dieses Eintrags' });
       }
-      
+
       res.json(entry);
     } catch (error) {
       console.error('Error fetching journal entry:', error);
       res.status(500).json({ message: 'Fehler beim Laden des Journaleintrags' });
     }
   });
-  
+
   // Create a new journal entry
   app.post('/api/journal', authenticateJWT, async (req: Request, res: Response) => {
     try {
       if (!req.user) {
         return res.status(401).json({ message: 'Nicht authentifiziert' });
       }
-      
+
       // Überprüfe, ob die Pflichtfelder vorhanden sind
       if (!req.body.title || !req.body.content) {
         return res.status(400).json({ 
           message: 'Titel und Inhalt sind erforderlich',
         });
       }
-      
+
       // Korrekt typisiertes Objekt mit erforderlichen und optionalen Feldern
       const journalData: InsertJournalEntry = {
         userId: req.user.id,
@@ -862,7 +862,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.body.mood !== undefined) journalData.mood = req.body.mood;
       if (req.body.imageUrl) journalData.imageUrl = req.body.imageUrl;
       if (req.body.relatedDreamIds) journalData.relatedDreamIds = req.body.relatedDreamIds;
-      
+
       // Create the journal entry
       const newEntry = await storage.createJournalEntry(journalData);
       res.status(201).json(newEntry);
@@ -871,7 +871,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Fehler beim Erstellen des Journaleintrags' });
     }
   });
-  
+
   // Update a journal entry
   app.patch('/api/journal/:id', authenticateJWT, async (req: Request, res: Response) => {
     try {
@@ -879,28 +879,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(id)) {
         return res.status(400).json({ message: 'Ungültige Eintrags-ID' });
       }
-      
+
       // Get the existing entry
       const existingEntry = await storage.getJournalEntry(id);
       if (!existingEntry) {
         return res.status(404).json({ message: 'Eintrag nicht gefunden' });
       }
-      
+
       // Check if user is the owner of the entry
       if (existingEntry.userId !== req.user?.id) {
         return res.status(403).json({ message: 'Keine Berechtigung zum Ändern dieses Eintrags' });
       }
-      
+
       // Überprüfe, ob die Pflichtfelder vorhanden sind
       if (req.body.title === '' || req.body.content === '') {
         return res.status(400).json({ 
           message: 'Titel und Inhalt dürfen nicht leer sein',
         });
       }
-      
+
       // Bereinige die Eingabedaten für das Update
       const updateData: any = {};
-      
+
       // Nur Felder aktualisieren, die tatsächlich gesendet wurden
       if ('title' in req.body) updateData.title = req.body.title;
       if ('content' in req.body) updateData.content = req.body.content;
@@ -910,26 +910,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if ('imageUrl' in req.body) updateData.imageUrl = req.body.imageUrl;
       if ('includeInAnalysis' in req.body) updateData.includeInAnalysis = req.body.includeInAnalysis;
       if ('relatedDreamIds' in req.body) updateData.relatedDreamIds = req.body.relatedDreamIds;
-      
+
       // Process tags if they're included
       if ('tags' in req.body) {
         // Ensure tags is always an array, even if empty
         updateData.tags = Array.isArray(req.body.tags) ? req.body.tags : [];
       }
-      
+
       // Update the journal entry
       const updatedEntry = await storage.updateJournalEntry(id, updateData);
       if (!updatedEntry) {
         return res.status(404).json({ message: 'Eintrag nicht gefunden' });
       }
-      
+
       res.json(updatedEntry);
     } catch (error) {
       console.error('Error updating journal entry:', error);
       res.status(500).json({ message: 'Fehler beim Aktualisieren des Journaleintrags' });
     }
   });
-  
+
   // Delete a journal entry
   app.delete('/api/journal/:id', authenticateJWT, async (req: Request, res: Response) => {
     try {
@@ -937,31 +937,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(id)) {
         return res.status(400).json({ message: 'Ungültige Eintrags-ID' });
       }
-      
+
       // Get the entry
       const entry = await storage.getJournalEntry(id);
       if (!entry) {
         return res.status(404).json({ message: 'Eintrag nicht gefunden' });
       }
-      
+
       // Check if user is the owner of the entry
       if (entry.userId !== req.user?.id) {
         return res.status(403).json({ message: 'Keine Berechtigung zum Löschen dieses Eintrags' });
       }
-      
+
       // Delete the entry
       const success = await storage.deleteJournalEntry(id);
       if (!success) {
         return res.status(404).json({ message: 'Eintrag nicht gefunden' });
       }
-      
+
       res.status(204).send();
     } catch (error) {
       console.error('Error deleting journal entry:', error);
       res.status(500).json({ message: 'Fehler beim Löschen des Journaleintrags' });
     }
   });
-  
+
   const httpServer = createServer(app);
   // File upload route for journal and other images
   app.post('/api/upload', authenticateJWT, upload.single('image'), async (req: Request, res: Response) => {
@@ -1004,11 +1004,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/cultures/:id', async (req, res) => {
     try {
       const culture = await storage.getCulture(parseInt(req.params.id));
-      
+
       if (!culture) {
         return res.status(404).json({ message: 'Kultur nicht gefunden' });
       }
-      
+
       res.json(culture);
     } catch (error) {
       console.error('Error fetching culture:', error);
@@ -1029,11 +1029,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/cultures/:id', authenticateJWT, async (req, res) => {
     try {
       const culture = await storage.updateCulture(parseInt(req.params.id), req.body);
-      
+
       if (!culture) {
         return res.status(404).json({ message: 'Kultur nicht gefunden' });
       }
-      
+
       res.json(culture);
     } catch (error) {
       console.error('Error updating culture:', error);
@@ -1044,11 +1044,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/cultures/:id', authenticateJWT, async (req, res) => {
     try {
       const deleted = await storage.deleteCulture(parseInt(req.params.id));
-      
+
       if (!deleted) {
         return res.status(404).json({ message: 'Kultur nicht gefunden' });
       }
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error('Error deleting culture:', error);
@@ -1060,7 +1060,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/dream-symbols', async (req, res) => {
     try {
       const { category, query } = req.query;
-      
+
       let symbols;
       if (category) {
         symbols = await storage.getDreamSymbolsByCategory(category as string);
@@ -1069,7 +1069,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         symbols = await storage.getAllDreamSymbols();
       }
-      
+
       res.json(symbols);
     } catch (error) {
       console.error('Error fetching dream symbols:', error);
@@ -1080,11 +1080,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/dream-symbols/:id', async (req, res) => {
     try {
       const symbol = await storage.getDreamSymbol(parseInt(req.params.id));
-      
+
       if (!symbol) {
         return res.status(404).json({ message: 'Traumsymbol nicht gefunden' });
       }
-      
+
       res.json(symbol);
     } catch (error) {
       console.error('Error fetching dream symbol:', error);
@@ -1105,11 +1105,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/dream-symbols/:id', authenticateJWT, async (req, res) => {
     try {
       const symbol = await storage.updateDreamSymbol(parseInt(req.params.id), req.body);
-      
+
       if (!symbol) {
         return res.status(404).json({ message: 'Traumsymbol nicht gefunden' });
       }
-      
+
       res.json(symbol);
     } catch (error) {
       console.error('Error updating dream symbol:', error);
@@ -1120,11 +1120,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/dream-symbols/:id', authenticateJWT, async (req, res) => {
     try {
       const deleted = await storage.deleteDreamSymbol(parseInt(req.params.id));
-      
+
       if (!deleted) {
         return res.status(404).json({ message: 'Traumsymbol nicht gefunden' });
       }
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error('Error deleting dream symbol:', error);
@@ -1136,7 +1136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/cultural-interpretations', async (req, res) => {
     try {
       const { symbolId, cultureId } = req.query;
-      
+
       let interpretations;
       if (symbolId) {
         interpretations = await storage.getCulturalInterpretationsBySymbolId(parseInt(symbolId as string));
@@ -1145,7 +1145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         return res.status(400).json({ message: 'Entweder symbolId oder cultureId muss angegeben werden' });
       }
-      
+
       res.json(interpretations);
     } catch (error) {
       console.error('Error fetching cultural interpretations:', error);
@@ -1156,11 +1156,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/cultural-interpretations/:id', async (req, res) => {
     try {
       const interpretation = await storage.getCulturalInterpretation(parseInt(req.params.id));
-      
+
       if (!interpretation) {
         return res.status(404).json({ message: 'Kulturelle Interpretation nicht gefunden' });
       }
-      
+
       res.json(interpretation);
     } catch (error) {
       console.error('Error fetching cultural interpretation:', error);
@@ -1181,11 +1181,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/cultural-interpretations/:id', authenticateJWT, async (req, res) => {
     try {
       const interpretation = await storage.updateCulturalInterpretation(parseInt(req.params.id), req.body);
-      
+
       if (!interpretation) {
         return res.status(404).json({ message: 'Kulturelle Interpretation nicht gefunden' });
       }
-      
+
       res.json(interpretation);
     } catch (error) {
       console.error('Error updating cultural interpretation:', error);
@@ -1196,11 +1196,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/cultural-interpretations/:id', authenticateJWT, async (req, res) => {
     try {
       const deleted = await storage.deleteCulturalInterpretation(parseInt(req.params.id));
-      
+
       if (!deleted) {
         return res.status(404).json({ message: 'Kulturelle Interpretation nicht gefunden' });
       }
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error('Error deleting cultural interpretation:', error);
@@ -1212,11 +1212,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/symbol-comparisons', async (req, res) => {
     try {
       const { symbolId } = req.query;
-      
+
       if (!symbolId) {
         return res.status(400).json({ message: 'symbolId muss angegeben werden' });
       }
-      
+
       const comparisons = await storage.getSymbolComparisonsBySymbolId(parseInt(symbolId as string));
       res.json(comparisons);
     } catch (error) {
@@ -1228,11 +1228,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/symbol-comparisons/:id', async (req, res) => {
     try {
       const comparison = await storage.getSymbolComparison(parseInt(req.params.id));
-      
+
       if (!comparison) {
         return res.status(404).json({ message: 'Symbol-Vergleich nicht gefunden' });
       }
-      
+
       res.json(comparison);
     } catch (error) {
       console.error('Error fetching symbol comparison:', error);
@@ -1253,11 +1253,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/symbol-comparisons/:id', authenticateJWT, async (req, res) => {
     try {
       const comparison = await storage.updateSymbolComparison(parseInt(req.params.id), req.body);
-      
+
       if (!comparison) {
         return res.status(404).json({ message: 'Symbol-Vergleich nicht gefunden' });
       }
-      
+
       res.json(comparison);
     } catch (error) {
       console.error('Error updating symbol comparison:', error);
@@ -1268,11 +1268,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/symbol-comparisons/:id', authenticateJWT, async (req, res) => {
     try {
       const deleted = await storage.deleteSymbolComparison(parseInt(req.params.id));
-      
+
       if (!deleted) {
         return res.status(404).json({ message: 'Symbol-Vergleich nicht gefunden' });
       }
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error('Error deleting symbol comparison:', error);
@@ -1298,7 +1298,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         symbolId: req.body.symbolId,
         notes: req.body.notes
       });
-      
+
       res.status(201).json(favorite);
     } catch (error) {
       console.error('Error creating user symbol favorite:', error);
@@ -1309,15 +1309,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/user/symbol-favorites/:id', authenticateJWT, async (req, res) => {
     try {
       const deleted = await storage.deleteUserSymbolFavorite(parseInt(req.params.id));
-      
+
       if (!deleted) {
         return res.status(404).json({ message: 'Benutzer-Favorit nicht gefunden' });
       }
-      
+
       res.json({ success: true });
     } catch (error) {
       console.error('Error deleting user symbol favorite:', error);
       res.status(500).json({ message: 'Fehler beim Löschen des Benutzer-Favoriten' });
+    }
+  });
+
+  // Update dream tags
+  app.patch('/api/dreams/:id/tags', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const dreamId = parseInt(req.params.id, 10);
+      const { tags } = req.body;
+
+      if (!Array.isArray(tags)) {
+        return res.status(400).json({ message: 'Tags must be an array' });
+      }
+
+      const dream = await storage.getDreamById(dreamId);
+
+      if (!dream) {
+        return res.status(404).json({ message: 'Dream not found' });
+      }
+
+      if (dream.userId !== req.user.id) {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+
+      const updatedDream = await storage.updateDreamTags(dreamId, tags);
+
+      res.json(updatedDream);
+    } catch (error) {
+      console.error('Error updating dream tags:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // Update dream mood data
+  app.patch('/api/dreams/:id/mood', authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Nicht authentifiziert' });
+      }
+
+      const dreamId = parseInt(req.params.id, 10);
+      const { beforeSleep, afterWakeup, notes } = req.body;
+
+      // Validate mood data
+      const moodData: MoodData = {};
+
+      if (beforeSleep !== undefined) {
+        if (typeof beforeSleep !== 'number' || beforeSleep < 1 || beforeSleep > 10) {
+          return res.status(400).json({ message: 'Stimmung vor dem Schlafen muss zwischen 1 und 10 liegen' });
+        }
+        moodData.beforeSleep = beforeSleep;
+      }
+
+      if (afterWakeup !== undefined) {
+        if (typeof afterWakeup !== 'number' || afterWakeup < 1 || afterWakeup > 10) {
+          return res.status(400).json({ message: 'Stimmung nach dem Aufwachen muss zwischen 1 und 10 liegen' });
+        }
+        moodData.afterWakeup = afterWakeup;
+      }
+
+      if (notes !== undefined) {
+        if (typeof notes !== 'string') {
+          return res.status(400).json({ message: 'Notizen müssen ein Text sein' });
+        }
+        moodData.notes = notes;
+      }
+
+      const dream = await storage.getDreamById(dreamId);
+
+      if (!dream) {
+        return res.status(404).json({ message: 'Traum nicht gefunden' });
+      }
+
+      if (dream.userId !== req.user.id) {
+        return res.status(403).json({ message: 'Nicht berechtigt' });
+      }
+
+      // Update the mood data in the database
+      const updatedDream = await storage.updateDreamMood(dreamId, moodData);
+
+      res.json(updatedDream);
+    } catch (error) {
+      console.error('Error updating dream mood:', error);
+      res.status(500).json({ message: 'Interner Serverfehler' });
     }
   });
 
