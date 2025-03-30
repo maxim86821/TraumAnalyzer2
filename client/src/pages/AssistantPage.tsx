@@ -21,7 +21,7 @@ const AssistantPage = () => {
       </Layout>
     );
   }
-  console.log('Debug: User is authenticated and accessing the AssistantPage.');
+  console.log("Debug: User is authenticated and accessing the AssistantPage.");
 
   return (
     <Layout>
