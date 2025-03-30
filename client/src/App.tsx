@@ -80,11 +80,27 @@ function Router() {
       />
       <ProtectedRoute path="/assistant" component={() => <AssistantPage />} />
       <ProtectedRoute path="/community" component={() => <CommunityPage />} />
-      <Route path="/auth" component={AuthPage} />
-      {/* Fallback to 404 */}
-      <Route component={NotFound} />
-    </Switch>
-  );
+      {/* Public routes */}
+        <Route path="/auth" component={AuthPage} />
+        <Route path="/login" component={AuthPage} />
+        
+        {/* Protected routes */}
+        <ProtectedRoute path="/dreams/new" component={NewDream} />
+        <ProtectedRoute path="/dreams/:id" component={DreamView} />
+        <ProtectedRoute path="/patterns" component={DreamPatterns} />
+        <ProtectedRoute path="/achievements" component={AchievementsPage} />
+        <ProtectedRoute path="/calendar" component={CalendarView} />
+        <ProtectedRoute path="/journal" component={JournalPage} />
+        <ProtectedRoute path="/symbols" component={SymbolLibraryPage} />
+        <ProtectedRoute path="/profile" component={ProfilePage} />
+        <ProtectedRoute path="/gallery" component={DreamGalleryPage} />
+        <ProtectedRoute path="/community" component={CommunityPage} />
+        <ProtectedRoute path="/assistant" component={AssistantPage} />
+        
+        {/* Fallback to 404 */}
+        <Route component={NotFound} />
+      </Switch>
+    );
 }
 
 function App() {
