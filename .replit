@@ -93,7 +93,7 @@ args = "nodejs"
 [[workflows.workflow]]
 name = "Run Production"
 author = 38207286
-mode = "sequential"
+mode = "parallel"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
