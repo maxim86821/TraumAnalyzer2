@@ -1,0 +1,319 @@
+Storage and Databases
+Key-Value Store
+
+Copy page
+
+Learn how to use Replit’s built-in key-value database to store and manage data in your Replit Apps. No configuration required - just import and start coding.
+
+​
+What is the Relpit Key-Value Store?
+Replit Key-Value Store is a simple, user-friendly key-value store inside of every Replit App. No configuration is required; you can get started right away!
+
+Here’s a short video on how to use the Replit database, or read the text explanation below.
+
+
+​
+Using Replit Key-Value Store
+Every Replit App can access and interact with its own unique Replit Key-Value Store. This database can be accessed from the library, and requires no configuration beyond import. Interacting with the Replit Key-Value Store follows much of the same syntax and logic as creating and interacting with the key-value pairs of a Python dictionary.
+
+​
+Importing the database
+To access the Replit database we use import db:
+
+
+Copy
+from replit import db
+If you run into errors during deployment, make sure you’re using replit version 3.3.0 or above. For a Python Replit App, you can see what version you’re using by running pip show replit. To upgrade, run upm add 'replit>=3.3.0'.
+
+​
+Creating data
+The Replit Key-Value Store works a lot like a Python dictionary, so we can add data to our database by assigning values to keys using square bracket indexing:
+
+
+Copy
+from replit import db
+
+# Add a key and associated value to the database
+db["key1"] = "value1"
+Replit Key-Value Store is able to handle different types of values like lists, dictionaries, integers, floats, NoneType, and strings:
+
+
+Copy
+from replit import db
+
+db["key1"] = "value1"
+db["integer_1"] = 100
+db["float_1"] = 9.99
+db["my_list"] = [1,2,3]
+db["my_dictionary"] = {"key_a": "value_a", "key_b": "value_b"}
+db["none_key"] = None
+Make use of 2D lists as a value to create table-like structures within your database:
+
+
+Copy
+from replit import db
+
+db["2D_key"] = [["id","name"],[1,"James"],[2,"Angel"]]
+
+for column in db["2D_key"]:
+    print(column)
+Output:
+
+
+Copy
+ObservedList(value=["id","name"])
+ObservedList(value=[1,"James"])
+ObservedList(value=[2,"Angel"])
+The ObservedList object you see in the output is a Replit Key-Value Store object that acts like a Python list and can be indexed as such.
+
+​
+Reading data
+Read from your database by referencing the key of the value:
+
+
+Copy
+from replit import db
+
+# Create data in the database
+db["key1"] = "value1"
+db["my_list"] = [1,2,3]
+db["my_dictionary"] = {"key_a": "value_a", "key_b": "value_b"}
+
+# Access and print data from the database
+print(db["key1"])
+print(db["my_list"][0])
+print(db["my_dictionary"]["key_a"])
+Output:
+
+
+Copy
+value1
+1
+value_a
+We can use the built-in Python dictionary method .get() to retrieve the value at the key passed in as an argument:
+
+
+Copy
+from replit import db
+
+# Create data for the database
+db["float_1"] = 9.99
+
+# Access the value of the data created by its key
+print(db.get("float_1"))
+We can loop through the keys stored in the database to get access to the values of those keys:
+
+
+Copy
+from replit import db
+
+# Create data for the database
+db["key1"] = "value1"
+db["my_list"] = [1,2,3]
+db["my_dictionary"] = {"key_a": "value_a", "key_b": "value_b"}
+
+# Access the keys from the database and print the values associated for key in db
+  print(db.get(key))
+The .keys() method returns a list of the keys in our database:
+
+
+Copy
+from replit import db
+
+# Create data for the database
+db["key1"] = "value1"
+db["my_list"] = [1,2,3]
+db["my_dictionary"] = {"key_a": "value_a", "key_b": "value_b"}
+
+# Print all the keys from the database
+print(db.keys())
+Output:
+
+
+Copy
+{'key1', 'my_list', 'my_dictionary', '2D_keys'}
+The .prefix() method allows us to get the values of keys with only part of that key. This allows us to return multiple values for keys that share the same prefix:
+
+
+Copy
+from replit import db
+
+# Create data for the database
+db["key1"] = "value1"
+db["my_list"] = [1,2,3]
+db["my_dictionary"] = {"key_a": "value_a", "key_b": "value_b"}
+
+# Print all the keys from the database that have a prefix of "my"
+print(db.prefix("my"))
+Output:
+
+
+Copy
+('my_dictionary', 'my_list')
+​
+Updating data
+We can update values that are stored in our database by assigning new values to their associated key:
+
+
+Copy
+from replit import db
+
+# Create data with "float_1" as key and print
+db["float_1"] = 9.99
+print(db[“float_1”])
+
+# Update data at "float_1" key and print
+db[“float_1”] = 3.33
+print(db[“float_1”])
+Output:
+
+
+Copy
+9.99
+3.33
+We can also mutate numbers that are stored in our database:
+
+
+Copy
+from replit import db
+
+# Create data with "float_1" as key and print
+db["float_1"] = 9.99
+
+# Perform an operation on the data
+db["float_1"] += 0.01
+
+# Print result of operation
+print(db["float_1"])
+Output:
+
+
+Copy
+10.0
+​
+Deleting data
+We make use of the del keyword and square bracket indexing to delete key-value pairings from our database:
+
+
+Copy
+from replit import db
+
+# Create data for the database
+db["float_1"] = 9.99
+
+# Delete the data we added at the key "float_1"
+del db["float_1"]
+if "float_1" not in db:
+	print("Value deleted successfully.")
+Output:
+
+
+Copy
+Value deleted successfully.
+​
+Summary
+Overall, the Replit Key-Value Store is a simple and useful database that allows us to easily and dynamically update our data. The features resembling the Python dictionary mean we can use the built-in Python dictionary functions to interact with our database.
+
+​
+FAQs
+​
+Where can I find my store?
+When viewing your Replit App, you’ll find the Replit Key-Value Store icon toward the bottom of the sidebar – it’s the second last icon. That’s Replit’s key-value database, built right into your Replit App!
+
+​
+How can I access my store?
+To access the Replit Key-Value Store, you can use a library or simple curl commands.
+
+Replit provides official clients. Use one of these clients if your Replit App is in one of these languages:
+
+Python
+Node.js
+Go
+​
+How do I use my store?
+When you click on the Replit Key-Value Store icon in the sidebar, you’ll see some instructions. If your Replit App is in a language that has an official Replit Key-Value Store client, you can quickly import it and start using Replit Key-Value Store by clicking on the “Insert” buttons.
+
+If your language does not have a client, we provide some usage examples below. They are found below, and are a useful reference if you wish to write your own Replit Key-Value Store client.
+
+Set
+
+
+Copy
+curl $REPLIT_DB_URL -d '<key>=<value>'
+If your key and value don’t use any unsafe characters, you can use an alternative version:
+
+
+Copy
+curl -XPOST $REPLIT_DB_URL/<key>=<value>
+Get
+
+
+Copy
+curl $REPLIT_DB_URL/<key>
+Delete
+
+
+Copy
+curl -XDELETE $REPLIT_DB_URL/<key>
+Delete returns status code 204 if the key was deleted or 404 if the key did not exist.
+
+List
+
+
+Copy
+curl $REPLIT_DB_URL --get -d 'prefix=<key>'
+or
+
+
+Copy
+curl "$REPLIT_DB_URL?prefix=<key>"
+The returned keys will be separated by newlines.
+
+Listing also takes a query parameter: encode=true. If set, the returned keys will be URL encoded. This lets you safely handle keys that contain newlines.
+
+​
+What is REPLIT_DB_URL?
+This is the environment variable we have created with your Replit App. It is the key that will allow you to access your database.
+
+The clients listed above take care of using REPLIT_DB_URL for you, but you will need it if you want to write your own client or use a database from a language that doesn’t yet have a client. Here are two examples:
+
+Python:
+
+
+Copy
+import os
+print(os.getenv("REPLIT_DB_URL"))
+Node.js:
+
+
+Copy
+console.log(process.env.REPLIT_DB_URL)
+REPLIT_DB_URL provides full access to your database. Therefore, you should take care not to expose it to the world or share it with people you don’t trust.
+
+The value of REPLIT_DB_URL changes from time to time, so we recommend that you don’t copy it elsewhere. Subsequent reads by the same process will see the same value. We will restart your Replit App if we need to change it after it has been read.
+
+Note: REPLIT_DB_URL is not available in Deployments. Instead, the value of the URL is stored in /tmp/replitdb. If you are writing a client for Replit Key-Value Store, read the value from /tmp/replitdb first, and fall back to the environment variable if that file does not exist.
+
+​
+What limits does Replit Key-Value Store have?
+The limits are currently:
+
+50 MiB per store (sum of keys and values)
+5,000 keys per store
+1000 bytes per key
+5 MiB per value
+There are rate limits that apply to all operations. You will receive an HTTP 429 if you exceed them. We recommend implementing an exponential backoff and retry to handle this case.
+
+​
+How can I tell how much storage I’m using?
+The Replit Key-Value Store pane tool in the sidebar shows you the number of keys in your store along with the total storage occupied by your keys and values.
+
+​
+Is my store private?
+Yes, each store is private and isolated. Every Replit App has its own database, and they are not shared among Replit App.
+
+​
+How do I share a store across Replit App?
+The easiest way to do this is to use one Replit App as the primary store and have other Replit App connect to it via web hosting. Here’s an example Replit App in Python.
+
+Any requests sent to the above Replit App will operate on its store, so sending requests to it from other Replit App means that they all share the same information.
