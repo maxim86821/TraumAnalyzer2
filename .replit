@@ -33,11 +33,11 @@ REPLIT_DISABLE_PACKAGE_LAYER = "1"
 
 [deployment]
 deploymentTarget = "autoscale"
-build = ["sh", "-c", "npm run build"]
+build = ["sh", "-c", "npm install && npm run build"]
 run = ["sh", "-c", "node dist/index.js"]
 
 [workflows]
-runButton = "Dev"
+runButton = "Run"
 
 [[workflows.workflow]]
 name = "Project"
@@ -157,6 +157,19 @@ args = "npm install"
 
 [[workflows.workflow]]
 name = "Dev"
+author = 38207286
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm install"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+
+[[workflows.workflow]]
+name = "Run"
 author = 38207286
 mode = "sequential"
 
