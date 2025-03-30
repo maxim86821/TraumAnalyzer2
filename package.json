@@ -112,6 +112,5 @@
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
-upm add node
   }
 }
