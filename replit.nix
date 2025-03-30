@@ -1,5 +1,6 @@
 {pkgs}: {
   deps = [
+    pkgs.gnomeExtensions.net-speed
     pkgs.emacsPackages.solo-jazz-theme
     pkgs.cudaPackages.cuda_nvprof
     pkgs.libcardiacarrest
@@ -29,6 +30,10 @@
     pkgs.rPackages.AllPossibleSpellings
     pkgs.deepin.dwayland
     pkgs.nodePackages.prettier
-    pkgs.postgresql
+    pkgs.postgresql{ pkgs }: {
+      deps = [
+        pkgs.nodejs
+      ];
+    }
   ];
 }

@@ -147,6 +147,9 @@ args = "npm run build"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm start"
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm install"
 
 [[ports]]
 localPort = 5000
