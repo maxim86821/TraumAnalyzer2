@@ -6,7 +6,7 @@ Copy page
 Learn how to use Replit’s built-in key-value database to store and manage data in your Replit Apps. No configuration required - just import and start coding.
 
 ​
-What is the Relpit Key-Value Store?
+What is the Replit Key-Value Store?
 Replit Key-Value Store is a simple, user-friendly key-value store inside of every Replit App. No configuration is required; you can get started right away!
 
 Here’s a short video on how to use the Replit database, or read the text explanation below.
@@ -112,8 +112,9 @@ db["key1"] = "value1"
 db["my_list"] = [1,2,3]
 db["my_dictionary"] = {"key_a": "value_a", "key_b": "value_b"}
 
-# Access the keys from the database and print the values associated for key in db
-  print(db.get(key))
+# Access the keys from the database and print the values associated
+for key in db.keys():
+    print(db.get(key))
 The .keys() method returns a list of the keys in our database:
 
 
@@ -160,11 +161,11 @@ from replit import db
 
 # Create data with "float_1" as key and print
 db["float_1"] = 9.99
-print(db[“float_1”])
+print(db["float_1"])
 
 # Update data at "float_1" key and print
-db[“float_1”] = 3.33
-print(db[“float_1”])
+db["float_1"] = 3.33
+print(db["float_1"])
 Output:
 
 
