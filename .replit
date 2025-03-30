@@ -114,6 +114,14 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
+args = "echo \"Node version: $(node --version)\""
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "echo \"NPM version: $(npm --version)\" "
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
 args = "npm install"
 
 [[workflows.workflow.tasks]]
