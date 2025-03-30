@@ -151,10 +151,6 @@ args = "npm run build"
 task = "shell.exec"
 args = "npm start"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm install"
-
 [[workflows.workflow]]
 name = "Dev"
 author = 38207286
@@ -186,7 +182,7 @@ localPort = 5000
 externalPort = 80
 
 [objectStorage]
-defaultBucketID = "replit-objstore-6f998a10-9e16-4e15-9571-3150b2229185"
+defaultBucketID = "replit-objstore-4aeec843-ae08-4edb-9fa6-2cf425d4c57e"
 
 [rules]
 

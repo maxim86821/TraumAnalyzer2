@@ -223,5 +223,6 @@ export function setupAuth(app: Express) {
     res.json(req.user);
   });
 
+
   // Return nothing, authenticateJWT is already exported
 }
