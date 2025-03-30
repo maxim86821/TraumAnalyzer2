@@ -23,7 +23,7 @@ build = ["sh", "-c", "npm run build"]
 run = ["sh", "-c", "npm start"]
 
 [workflows]
-runButton = "Start application"
+runButton = "Development"
 
 [[workflows.workflow]]
 name = "Project"
@@ -111,10 +111,6 @@ args = "npm run dev"
 name = "Development"
 author = 38207286
 mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "prybar-nodejs -q"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
