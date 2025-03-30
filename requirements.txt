@@ -1,0 +1,4 @@
+# It seems there is a typo in the instructions, here's an attempt to correct and create the code:
+
+# Here is a package that might be intended
+requests==2.26.0
